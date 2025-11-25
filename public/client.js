@@ -131,8 +131,8 @@ fetch('/api/user')
   .then(data => {
     if (data.username) {
       username = data.username;
-      // Check if user is admin (assuming first user or specific username is admin)
-      isAdmin = data.username === 'thatswitchguy' || data.username === 'ikhan'; // Change this to your username
+      // Check if user is admin
+      isAdmin = data.username === 'thatswitchguy' || data.username === 'ikhan';
       socket.emit('join', { username: username, room: currentRoom });
       loadRooms();
       loadOnlineUsers();

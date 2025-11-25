@@ -1,3 +1,4 @@
+
 const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
@@ -6,7 +7,7 @@ const path = require('path');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
-const PORT = process.env.PORT || 3000; // Updated to use port 5000
+const PORT = process.env.PORT || 5000;
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -18,12 +19,12 @@ app.use(session({
   saveUninitialized: true,
   cookie: { secure: false }
 }));
-let currentRoom = 'room1'; // default room
 
 // File paths for persistent storage
 const usersFile = path.join(__dirname, 'users.json');
 const roomsFile = path.join(__dirname, 'rooms.json');
 const generalMessagesFile = path.join(__dirname, 'general_messages.json');
+const bannedUsersFile = path.join(__dirname, 'banned_users.json');
 
 // Load users from file or use empty object
 let users = {};
@@ -37,7 +38,7 @@ try {
   users = {};
 }
 
-// Load rooms from file or use defaults - three default rooms now
+// Load rooms from file or use defaults
 const defaultRooms = {
   'general': 'General Discussion',
   'suggestions': 'Suggestions',
@@ -50,7 +51,6 @@ try {
   if (fs.existsSync(roomsFile)) {
     const roomData = fs.readFileSync(roomsFile, 'utf8');
     const loadedRooms = JSON.parse(roomData);
-    // Always ensure general room exists, then add custom rooms
     rooms = { ...defaultRooms, ...loadedRooms.rooms };
     additionalRoomsCreated = loadedRooms.additionalRoomsCreated || 0;
   }
@@ -118,6 +118,26 @@ try {
   profilePictures = {};
 }
 
+// Load banned users with expiration times
+let bannedUsers = {};
+try {
+  if (fs.existsSync(bannedUsersFile)) {
+    const bannedData = fs.readFileSync(bannedUsersFile, 'utf8');
+    bannedUsers = JSON.parse(bannedData);
+    // Clean up expired bans on load
+    const now = Date.now();
+    Object.keys(bannedUsers).forEach(user => {
+      if (bannedUsers[user].expiresAt && bannedUsers[user].expiresAt < now) {
+        delete bannedUsers[user];
+      }
+    });
+    saveBannedUsers();
+  }
+} catch (error) {
+  console.error('Error loading banned users:', error);
+  bannedUsers = {};
+}
+
 // Save users to file
 function saveUsers() {
   try {
@@ -142,10 +162,9 @@ function saveRoomMessages(roomId) {
         fileName = path.join(__dirname, 'tech_support_messages.json');
         break;
       default:
-        return; // Don't save messages for custom rooms
+        return;
     }
 
-    // Keep only the last 100 messages to prevent file from growing too large
     const messagesToSave = roomMessages[roomId].slice(-100);
     fs.writeFileSync(fileName, JSON.stringify(messagesToSave, null, 2));
   } catch (error) {
@@ -158,7 +177,7 @@ function saveDMMessages(user1, user2, messages) {
   try {
     const dmKey = [user1, user2].sort().join('_');
     const dmFile = path.join(__dirname, `dm_${dmKey}.json`);
-    const messagesToSave = messages.slice(-100); // Keep last 100 messages
+    const messagesToSave = messages.slice(-100);
     fs.writeFileSync(dmFile, JSON.stringify(messagesToSave, null, 2));
   } catch (error) {
     console.error('Error saving DM messages:', error);
@@ -174,15 +193,38 @@ function saveProfilePictures() {
   }
 }
 
-// Track online users and banned users
+// Save banned users to file
+function saveBannedUsers() {
+  try {
+    fs.writeFileSync(bannedUsersFile, JSON.stringify(bannedUsers, null, 2));
+  } catch (error) {
+    console.error('Error saving banned users:', error);
+  }
+}
+
+// Track online users
 let onlineUsers = new Set();
-let bannedUsers = new Set();
-const adminUsers = new Set(['ikhan', 'your_username_here']); // Add your username here
+const adminUsers = new Set(['ikhan', 'thatswitchguy']);
+
+// Check if user is banned
+function isUserBanned(username) {
+  if (!bannedUsers[username]) return false;
+  
+  const ban = bannedUsers[username];
+  if (!ban.expiresAt) return true; // Permanent ban
+  
+  if (ban.expiresAt < Date.now()) {
+    delete bannedUsers[username];
+    saveBannedUsers();
+    return false;
+  }
+  
+  return true;
+}
 
 // Save rooms to file
 function saveRooms() {
   try {
-    // Only save non-default rooms
     const defaultRoomIds = ['general', 'suggestions', 'tech-support'];
     const customRooms = {};
     Object.keys(rooms).forEach(roomId => {
@@ -208,7 +250,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Home route - always redirect to login first
+// Home route
 app.get('/', (req, res) => {
   if (req.username) {
     res.redirect('/chat');
@@ -217,16 +259,20 @@ app.get('/', (req, res) => {
   }
 });
 
-// Chat route (same as home)
+// Chat route
 app.get('/chat', (req, res) => {
   if (req.username) {
+    if (isUserBanned(req.username)) {
+      req.session.destroy();
+      return res.send('You have been banned. <a href="/login">Return to login</a>');
+    }
     res.sendFile(__dirname + '/public/index.html');
   } else {
-    res.redirect('/login'); // Redirect to login if not authenticated
+    res.redirect('/login');
   }
 });
 
-// Login page - clear any existing session
+// Login page
 app.get('/login', (req, res) => {
   req.session.destroy((err) => {
     if (err) {
@@ -273,7 +319,7 @@ app.post('/register', async (req, res) => {
       createdAt: new Date()
     };
 
-    saveUsers(); // Save users to file
+    saveUsers();
     req.session.username = username;
     res.redirect('/chat');
   } catch (error) {
@@ -288,6 +334,10 @@ app.post('/login', async (req, res) => {
 
   if (!username || !password) {
     return res.send('Username and password are required. <a href="/login">Try again</a>.');
+  }
+
+  if (isUserBanned(username)) {
+    return res.send('You have been banned. <a href="/login">Return to login</a>');
   }
 
   const user = users[username];
@@ -352,8 +402,6 @@ app.get('/account', (req, res) => {
   }
 });
 
-
-
 // API to get all users for DM list
 app.get('/api/users', (req, res) => {
   if (!req.username) {
@@ -410,7 +458,7 @@ app.post('/api/rooms', (req, res) => {
 
   rooms[roomId] = roomName;
   additionalRoomsCreated++;
-  saveRooms(); // Save rooms to file
+  saveRooms();
 
   res.json({ roomId, roomName, success: true });
 });
@@ -428,14 +476,13 @@ app.put('/api/rooms/:roomId', (req, res) => {
     return res.status(404).json({ error: 'Room not found' });
   }
 
-  // Prevent renaming default rooms
   const defaultRoomIds = ['general', 'suggestions', 'tech-support'];
   if (defaultRoomIds.includes(roomId)) {
     return res.status(400).json({ error: 'Cannot rename default rooms' });
   }
 
   rooms[roomId] = newName;
-  saveRooms(); // Save rooms to file
+  saveRooms();
   res.json({ roomId, roomName: newName, success: true });
 });
 
@@ -454,7 +501,7 @@ app.delete('/api/rooms/:roomId', (req, res) => {
 
   delete rooms[roomId];
   additionalRoomsCreated--;
-  saveRooms(); // Save rooms to file
+  saveRooms();
 
   res.json({ success: true });
 });
@@ -481,7 +528,6 @@ app.post('/api/profile-picture', (req, res) => {
     return res.status(400).json({ error: 'Invalid profile picture URL' });
   }
 
-  // Basic URL validation
   try {
     new URL(profilePicture);
   } catch (error) {
@@ -506,7 +552,7 @@ app.delete('/api/profile-picture', (req, res) => {
   res.json({ success: true });
 });
 
-// API to get any user's profile picture (for displaying in user lists)
+// API to get any user's profile picture
 app.get('/api/user-profile/:username', (req, res) => {
   if (!req.username) {
     return res.status(401).json({ error: 'Not authenticated' });
@@ -546,7 +592,6 @@ app.put('/api/:roomId/messages/:messageIndex', (req, res) => {
 
   saveRoomMessages(roomId);
 
-  // Broadcast the edit to all users in the room
   io.to(roomId).emit('message edited', {
     roomId,
     messageIndex: index,
@@ -579,7 +624,6 @@ app.delete('/api/:roomId/messages/:messageIndex', (req, res) => {
   roomMessages[roomId].splice(index, 1);
   saveRoomMessages(roomId);
 
-  // Broadcast the deletion to all users in the room
   io.to(roomId).emit('message deleted', {
     roomId,
     messageIndex: index
@@ -631,7 +675,6 @@ app.put('/api/dm/:targetUser/messages/:messageIndex', (req, res) => {
 
   saveDMMessages(req.username, targetUser, dmHistory);
 
-  // Broadcast the edit to both users
   const targetSocket = Array.from(io.sockets.sockets.values())
     .find(s => s.username === targetUser);
   const senderSocket = Array.from(io.sockets.sockets.values())
@@ -690,7 +733,6 @@ app.delete('/api/dm/:targetUser/messages/:messageIndex', (req, res) => {
   dmHistory.splice(index, 1);
   saveDMMessages(req.username, targetUser, dmHistory);
 
-  // Broadcast the deletion to both users
   const targetSocket = Array.from(io.sockets.sockets.values())
     .find(s => s.username === targetUser);
   const senderSocket = Array.from(io.sockets.sockets.values())
@@ -732,7 +774,6 @@ app.post('/api/change-username', async (req, res) => {
   }
 
   try {
-    // Update user data
     const userData = users[req.username];
     delete users[req.username];
     users[newUsername] = {
@@ -740,7 +781,6 @@ app.post('/api/change-username', async (req, res) => {
       username: newUsername
     };
 
-    // Update profile picture if exists
     if (profilePictures[req.username]) {
       profilePictures[newUsername] = profilePictures[req.username];
       delete profilePictures[req.username];
@@ -749,7 +789,6 @@ app.post('/api/change-username', async (req, res) => {
 
     saveUsers();
 
-    // Disconnect user to force re-login
     const userSocket = Array.from(io.sockets.sockets.values())
       .find(s => s.username === req.username);
     if (userSocket) {
@@ -785,13 +824,11 @@ app.post('/api/change-password', async (req, res) => {
   }
 
   try {
-    // Verify current password
     const validPassword = await bcrypt.compare(currentPassword, user.password);
     if (!validPassword) {
       return res.status(400).json({ error: 'Current password is incorrect' });
     }
 
-    // Hash new password
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
     users[req.username].password = hashedNewPassword;
 
@@ -804,8 +841,6 @@ app.post('/api/change-password', async (req, res) => {
   }
 });
 
-
-
 // Socket.io connection handling
 io.on('connection', (socket) => {
   let user;
@@ -817,7 +852,6 @@ io.on('connection', (socket) => {
     socket.username = user;
     socket.join(currentRoom);
 
-    // Add user to online users
     onlineUsers.add(user);
     io.emit('user online', Array.from(onlineUsers));
 
@@ -857,7 +891,6 @@ io.on('connection', (socket) => {
       timestamp: new Date().toLocaleTimeString()
     };
 
-    // Save message to file for default rooms
     if (roomMessages[currentRoom]) {
       roomMessages[currentRoom].push(messageData);
       saveRoomMessages(currentRoom);
@@ -875,7 +908,6 @@ io.on('connection', (socket) => {
       timestamp: new Date().toLocaleTimeString()
     };
 
-    // Save DM to file
     const dmKey = [user, targetUser].sort().join('_');
     const dmFile = path.join(__dirname, `dm_${dmKey}.json`);
     let dmHistory = [];
@@ -892,7 +924,6 @@ io.on('connection', (socket) => {
     dmHistory.push(messageData);
     saveDMMessages(user, targetUser, dmHistory);
 
-    // Send to target user if online
     const targetSocket = Array.from(io.sockets.sockets.values())
       .find(s => s.username === targetUser);
 
@@ -900,25 +931,38 @@ io.on('connection', (socket) => {
       targetSocket.emit('dm message', messageData);
     }
 
-    // Send back to sender for confirmation
     socket.emit('dm message', messageData);
   });
 
   socket.on('ban user', (data) => {
     if (adminUsers.has(user)) {
-      const { targetUser } = data;
-      bannedUsers.add(targetUser);
+      const { targetUser, banMinutes } = data;
+      
+      const banData = {
+        bannedBy: user,
+        bannedAt: Date.now()
+      };
+      
+      if (banMinutes === 0) {
+        banData.expiresAt = null; // Permanent ban
+      } else {
+        banData.expiresAt = Date.now() + (banMinutes * 60 * 1000);
+      }
+      
+      bannedUsers[targetUser] = banData;
+      saveBannedUsers();
 
-      // Disconnect the banned user
       const targetSocket = Array.from(io.sockets.sockets.values())
         .find(s => s.username === targetUser);
 
       if (targetSocket) {
-        targetSocket.emit('banned', { message: 'You have been banned from the chat.' });
+        const banMessage = banMinutes === 0 
+          ? 'You have been permanently banned from the chat.'
+          : `You have been banned for ${banMinutes} minutes.`;
+        targetSocket.emit('banned', { message: banMessage });
         targetSocket.disconnect();
       }
 
-      // Notify all users
       io.emit('user banned', { bannedUser: targetUser, byAdmin: user });
     }
   });
