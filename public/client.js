@@ -166,11 +166,12 @@ function loadRooms() {
     roomDiv.onclick = () => switchRoom(roomId);
 
     // Add right-click context menu
-    roomDiv.addEventListener('contextmenu', (e) => {
+    roomDiv.oncontextmenu = (e) => {
       e.preventDefault();
       e.stopPropagation();
       showContextMenu(e, roomId, true);
-    });
+      return false;
+    };
 
     roomList.appendChild(roomDiv);
   });
@@ -201,11 +202,12 @@ function loadRooms() {
           roomDiv.onclick = () => switchRoom(roomId);
 
           // Add right-click context menu
-          roomDiv.addEventListener('contextmenu', (e) => {
+          roomDiv.oncontextmenu = (e) => {
             e.preventDefault();
             e.stopPropagation();
             showContextMenu(e, roomId, false);
-          });
+            return false;
+          };
 
           roomList.appendChild(roomDiv);
         }
@@ -598,7 +600,7 @@ function showContextMenu(event, roomId, isDefault) {
 
 function startRename(roomId) {
   const roomItems = document.querySelectorAll('.room-item');
-  const roomItem = Array.from(roomItems).find(item => item.textContent === `<span class="room-hash">#</span>${roomId}`);
+  const roomItem = Array.from(roomItems).find(item => item.textContent.includes(`#${roomId}`));
 
   if (roomItem) {
     const currentName = roomId;
