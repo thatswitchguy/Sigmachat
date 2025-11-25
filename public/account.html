@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Account</title>
+  <link rel="stylesheet" href="/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <div id="account-container">
+    <div id="account-sidebar">
+      <div id="account-nav">
+        <h3>Account Settings</h3>
+        <div class="nav-item active" data-section="profile">Profile</div>
+        <div class="nav-item" data-section="privacy">Privacy & Safety</div>
+        <div class="nav-item" data-section="notifications">Notifications</div>
+      </div>
+      <div id="account-actions">
+        <button id="general-btn">General</button>
+        <button id="back-to-chat">Back to Chat</button>
+        <button id="logout-account">Logout</button>
+      </div>
+    </div>
+
+    <div id="account-content">
+      <div id="profile-section" class="account-section active">
+        <h2>My Account</h2>
+        <div class="profile-card">
+          <div class="profile-avatar">
+            <img id="user-profile-pic" src="" alt="Profile Picture" style="display: none;">
+            <div id="user-initial" style="display: block;"></div>
+          </div>
+          <div class="profile-info">
+            <h3 id="profile-username"></h3>
+            <p class="profile-status">Online</p>
+          </div>
+        </div>
+
+        <div class="account-details">
+          <div class="detail-row">
+            <label>Username</label>
+            <span id="username-display"></span>
+          </div>
+          <div class="detail-row">
+            <label>Account Created</label>
+            <span id="account-created"></span>
+          </div>
+        </div>
+
+        <div class="account-management">
+          <div class="username-change-section">
+            <h4>Change Username</h4>
+            <div class="input-group">
+              <input type="text" id="new-username" placeholder="Enter new username" minlength="3" maxlength="20">
+              <button id="change-username-btn">Change Username</button>
+            </div>
+          </div>
+
+          <div class="password-change-section">
+            <h4>Change Password</h4>
+            <div class="input-group">
+              <input type="password" id="current-password" placeholder="Current password">
+              <input type="password" id="new-password" placeholder="New password" minlength="6">
+              <input type="password" id="confirm-password" placeholder="Confirm new password" minlength="6">
+              <button id="change-password-btn">Change Password</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-picture-section">
+          <label for="profile-url">Profile Picture URL:</label>
+          <input type="url" id="profile-url" placeholder="Enter image URL">
+          <button id="update-profile-pic">Update Picture</button>
+          <button id="remove-profile-pic">Remove Picture</button>
+        </div>
+      </div>
+
+      <div id="privacy-section" class="account-section">
+        <h2>Privacy & Safety</h2>
+        <div class="setting-group">
+          <h4>Direct Messages</h4>
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="allow-dms" checked>
+              Allow direct messages from server members
+            </label>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <h4>Data & Privacy</h4>
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="data-usage" checked>
+              Use data to improve Discord
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div id="notifications-section" class="account-section">
+        <h2>Notifications</h2>
+        <div class="setting-group">
+          <h4>Desktop Notifications</h4>
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="desktop-notifications" checked>
+              Enable desktop notifications
+            </label>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <h4>Sounds</h4>
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="message-sounds" checked>
+              Message notification sounds
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let username = null;
+
+    // Load user info
+    fetch('/api/user')
+      .then(response => response.json())
+      .then(data => {
+        if (data.username) {
+          username = data.username;
+          document.getElementById('profile-username').textContent = username;
+          document.getElementById('username-display').textContent = username;
+          document.getElementById('user-initial').textContent = username.charAt(0).toUpperCase();
+          document.getElementById('account-created').textContent = 'Recently'; // Could be enhanced with actual date
+        }
+      })
+      .catch(() => {
+        window.location.href = '/login';
+      });
+
+    // Navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        // Remove active from all nav items and sections
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        document.querySelectorAll('.account-section').forEach(section => section.classList.remove('active'));
+
+        // Add active to clicked nav item
+        item.classList.add('active');
+
+        // Show corresponding section
+        const sectionId = item.dataset.section + '-section';
+        document.getElementById(sectionId).classList.add('active');
+      });
+    });
+
+    // General button
+    document.getElementById('general-btn').addEventListener('click', () => {
+      window.location.href = '/chat';
+    });
+
+    // Back to chat
+    document.getElementById('back-to-chat').addEventListener('click', () => {
+      window.location.href = '/chat';
+    });
+
+    // Logout
+    document.getElementById('logout-account').addEventListener('click', () => {
+      fetch('/logout', { method: 'POST' })
+        .then(() => {
+          window.location.href = '/login';
+        })
+        .catch(err => {
+          console.error('Logout failed:', err);
+        });
+    });
+
+    // Load current profile picture
+    function loadProfilePicture() {
+      fetch('/api/profile-picture')
+        .then(response => response.json())
+        .then(data => {
+          const profilePic = document.getElementById('user-profile-pic');
+          const userInitial = document.getElementById('user-initial');
+          const profileUrl = document.getElementById('profile-url');
+          
+          if (data.profilePicture) {
+            profilePic.src = data.profilePicture;
+            profilePic.style.display = 'block';
+            userInitial.style.display = 'none';
+            profileUrl.value = data.profilePicture;
+          } else {
+            profilePic.style.display = 'none';
+            userInitial.style.display = 'block';
+            profileUrl.value = '';
+          }
+        })
+        .catch(error => {
+          console.error('Error loading profile picture:', error);
+          document.getElementById('user-profile-pic').style.display = 'none';
+          document.getElementById('user-initial').style.display = 'block';
+        });
+    }
+    
+    loadProfilePicture();
+
+    // Update profile picture
+    document.getElementById('update-profile-pic').addEventListener('click', () => {
+      const profileUrl = document.getElementById('profile-url').value.trim();
+      if (profileUrl) {
+        fetch('/api/profile-picture', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ profilePicture: profileUrl })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            loadProfilePicture(); // Reload to ensure proper display
+            alert('Profile picture updated successfully!');
+          } else {
+            alert('Failed to update profile picture: ' + data.error);
+          }
+        })
+        .catch(error => {
+          console.error('Error updating profile picture:', error);
+          alert('Failed to update profile picture');
+        });
+      } else {
+        alert('Please enter a valid image URL');
+      }
+    });
+
+    // Remove profile picture
+    document.getElementById('remove-profile-pic').addEventListener('click', () => {
+      if (confirm('Are you sure you want to remove your profile picture?')) {
+        fetch('/api/profile-picture', {
+          method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            loadProfilePicture(); // Reload to ensure proper display
+            alert('Profile picture removed successfully!');
+          } else {
+            alert('Failed to remove profile picture: ' + data.error);
+          }
+        })
+        .catch(error => {
+          console.error('Error removing profile picture:', error);
+          alert('Failed to remove profile picture');
+        });
+      }
+    });
+
+    // Change username
+    document.getElementById('change-username-btn').addEventListener('click', () => {
+      const newUsername = document.getElementById('new-username').value.trim();
+      if (!newUsername) {
+        alert('Please enter a new username');
+        return;
+      }
+      
+      if (newUsername.length < 3 || newUsername.length > 20) {
+        alert('Username must be between 3 and 20 characters');
+        return;
+      }
+
+      if (confirm('Are you sure you want to change your username? This action cannot be undone.')) {
+        fetch('/api/change-username', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ newUsername })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Username changed successfully! Please log in again.');
+            fetch('/logout', { method: 'POST' })
+              .then(() => {
+                window.location.href = '/login';
+              });
+          } else {
+            alert('Failed to change username: ' + data.error);
+          }
+        })
+        .catch(error => {
+          console.error('Error changing username:', error);
+          alert('Failed to change username');
+        });
+      }
+    });
+
+    // Change password
+    document.getElementById('change-password-btn').addEventListener('click', () => {
+      const currentPassword = document.getElementById('current-password').value;
+      const newPassword = document.getElementById('new-password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        alert('Please fill in all password fields');
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        alert('New password must be at least 6 characters');
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        alert('New password and confirmation do not match');
+        return;
+      }
+
+      if (confirm('Are you sure you want to change your password?')) {
+        fetch('/api/change-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ currentPassword, newPassword })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Password changed successfully!');
+            // Clear password fields
+            document.getElementById('current-password').value = '';
+            document.getElementById('new-password').value = '';
+            document.getElementById('confirm-password').value = '';
+          } else {
+            alert('Failed to change password: ' + data.error);
+          }
+        })
+        .catch(error => {
+          console.error('Error changing password:', error);
+          alert('Failed to change password');
+        });
+      }
+    });
+  </script>
+</body>
+</html>

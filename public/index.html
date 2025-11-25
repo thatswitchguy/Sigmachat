@@ -1,0 +1,56 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sigma chat</title>
+  <link rel="stylesheet" href="/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <div id="chat-container">
+    <div id="sidebar">
+      <div id="sidebar-header">
+        <h3>Chat Rooms</h3>
+      </div>
+      <div id="room-list"></div>
+      <div id="create-room">
+        <form id="create-room-form">
+          <input id="create-room-input" type="text" placeholder="Create new room..." maxlength="20" minlength="3">
+          <button id="create-room-btn" type="submit">Create Room</button>
+          <div class="room-count" id="room-count">0/3 additional rooms created</div>
+        </form>
+      </div>
+      
+      <div id="dm-section">
+        <div id="dm-header">
+          <h3>Direct Messages</h3>
+        </div>
+        <div id="dm-list"></div>
+        <div id="online-users">
+          <h4>Online Users</h4>
+          <div id="online-user-list"></div>
+        </div>
+      </div>
+    </div>
+    <div id="main-chat">
+      <div id="chat-header">
+        <h3 id="current-room">#general</h3>
+        <div id="header-actions">
+          <button id="general-btn">general</button>
+          <button id="account-btn">Account</button>
+          <button id="logout-btn">Logout</button>
+        </div>
+      </div>
+      <div id="messages"></div>
+      <div id="form">
+        <form>
+          <input id="input" autocomplete="off" placeholder="Message #general" maxlength="2000" />
+          <button type="submit">Send</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/client.js"></script>
+</body>
+</html>

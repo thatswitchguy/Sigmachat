@@ -1,0 +1,22 @@
+{
+  "thatswitchguy": {
+    "username": "thatswitchguy",
+    "password": "$2b$10$3.1WWaDWN3xdWjuoDLpFa.Lt2SerRx/A4vGxe4k/nWxc//V06XU1q",
+    "createdAt": "2025-06-29T14:12:05.766Z"
+  },
+  "ikhan": {
+    "username": "ikhan",
+    "password": "$2b$10$D7B7aCejIQjoOrSTlzEkn.uf20PgEPCjoGExAaTV3xWEXhYHDqsdO",
+    "createdAt": "2025-06-29T14:27:42.284Z"
+  },
+  "thesigma": {
+    "username": "thesigma",
+    "password": "$2b$10$Md4Bg6s6tUSXkSNoOS9fs.BSIQ.PA71eK9mwrHOW5IHKmFEg7LMom",
+    "createdAt": "2025-07-03T16:45:57.239Z"
+  },
+  "test": {
+    "username": "test",
+    "password": "$2b$10$OmP80dMzX/vvQ/ICPwKLxOVMjRHOfsUd9J8ZZJo.oZuyQV.P4E7.S",
+    "createdAt": "2025-07-03T16:49:49.562Z"
+  }
+}

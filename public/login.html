@@ -1,0 +1,26 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sigma Chat</title>
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <div class="login-container">
+      <div>
+        <h2>Log in</h2>
+        <p style="color: #b9bbbe; margin-bottom: 30px; text-align: center;">Welcome back to Sigma Chat!</p>
+        <form action="/login" method="post">
+          <input type="text" name="username" placeholder="Username" required minlength="3" maxlength="20" />
+          <input type="password" name="password" placeholder="Password" required minlength="6" />
+          <button type="submit">Log In</button>
+        </form>
+        <p style="color: #b9bbbe; margin-top: 20px; text-align: center;">
+          Don't have an account? <a href="/register" style="color: #00aff4; text-decoration: none;">Create account</a>
+        </p>
+      </div>
+    </div>
+  </body>
+  </html>
+  
