@@ -1,7 +1,7 @@
 {
   "rooms": {
-    "gaming": "gaming",
-    "non": "non"
+    "non": "non",
+    "gaming": "gaming"
   },
   "additionalRoomsCreated": 2
 }
