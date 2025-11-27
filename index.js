@@ -287,6 +287,11 @@ app.get('/register', (req, res) => {
   res.sendFile(__dirname + '/public/register.html');
 });
 
+// Iframe embed page
+app.get('/iframe', (req, res) => {
+  res.sendFile(__dirname + '/public/iframe.html');
+});
+
 // Registration endpoint
 app.post('/register', async (req, res) => {
   const { username, password, confirmPassword } = req.body;
