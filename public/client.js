@@ -277,8 +277,9 @@ function loadOnlineUsers() {
       return response.json();
     })
     .then(allUsers => {
-      // Filter out banned users and current user
-      const visibleUsers = allUsers.filter(user => !bannedUsers.has(user) && user !== username);
+      // Filter out banned users and current user - use Set to avoid duplicates
+      const visibleUsersSet = new Set(allUsers.filter(user => !bannedUsers.has(user) && user !== username));
+      const visibleUsers = Array.from(visibleUsersSet);
 
       if (visibleUsers.length === 0) {
         const noUsersDiv = document.createElement('div');
@@ -330,8 +331,9 @@ function loadOnlineUsers() {
     })
     .catch(error => {
       console.error('Error loading users:', error);
-      // Fallback to showing only online users
-      const visibleOnlineUsers = onlineUsers.filter(user => !bannedUsers.has(user));
+      // Fallback to showing only online users - use Set to avoid duplicates
+      const visibleOnlineUsersSet = new Set(onlineUsers.filter(user => !bannedUsers.has(user) && user !== username));
+      const visibleOnlineUsers = Array.from(visibleOnlineUsersSet);
       
       if (visibleOnlineUsers.length === 0) {
         const noUsersDiv = document.createElement('div');
@@ -833,6 +835,9 @@ socket.on('user online', (users) => {
 
 socket.on('user banned', (data) => {
   bannedUsers.add(data.bannedUser);
+  
+  // Remove from online users
+  onlineUsers = onlineUsers.filter(user => user !== data.bannedUser);
   
   // If currently in DM with banned user, close it
   if (currentDM === data.bannedUser) {
