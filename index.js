@@ -968,6 +968,11 @@ io.on('connection', (socket) => {
       
       if (banMinutes === 0) {
         banData.expiresAt = null; // Permanent ban
+        // Delete user account permanently if permanent ban
+        if (users[targetUser]) {
+          delete users[targetUser];
+          fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
+        }
       } else {
         banData.expiresAt = Date.now() + (banMinutes * 60 * 1000);
       }

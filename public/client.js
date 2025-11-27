@@ -70,6 +70,11 @@ scrollDownBtn.addEventListener('click', () => {
   scrollDownBtn.classList.remove('show');
 });
 
+// Function to handle create room button click - redirect to room creation page
+function openCreateRoom() {
+  window.location.href = '/room-create.html';
+}
+
 // Load available rooms
 function loadRooms() {
   const roomList = document.getElementById('room-list');
@@ -881,6 +886,23 @@ document.addEventListener('DOMContentLoaded', () => {
         .catch(err => {
           console.error('Logout failed:', err);
         });
+    });
+  }
+  
+  // Create room button - redirect to room creation page
+  const createRoomBtn = document.getElementById('create-room-btn');
+  if (createRoomBtn) {
+    createRoomBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      openCreateRoom();
+    });
+  }
+
+  const createRoomForm = document.getElementById('create-room-form');
+  if (createRoomForm) {
+    createRoomForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      openCreateRoom();
     });
   }
 });
