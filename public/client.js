@@ -272,9 +272,18 @@ function loadOnlineUsers() {
       return response.json();
     })
     .then(allUsers => {
-      allUsers.forEach(user => {
-        if (bannedUsers.has(user)) return; // Don't show banned users
+      // Filter out banned users and current user
+      const visibleUsers = allUsers.filter(user => !bannedUsers.has(user) && user !== username);
 
+      if (visibleUsers.length === 0) {
+        const noUsersDiv = document.createElement('div');
+        noUsersDiv.className = 'online-user';
+        noUsersDiv.innerHTML = '<span class="user-name" style="color: #72767d; font-style: italic;">No other users available</span>';
+        onlineUserList.appendChild(noUsersDiv);
+        return;
+      }
+
+      visibleUsers.forEach(user => {
         const isOnline = onlineUsers.includes(user);
         const userDiv = document.createElement('div');
         userDiv.className = 'online-user';
@@ -284,10 +293,22 @@ function loadOnlineUsers() {
           banButton = `<button class="ban-btn" onclick="banUser('${user}')">Ban</button>`;
         }
 
-        // Get user's profile picture
+        // Set initial content with fallback
+        userDiv.innerHTML = `
+          <div class="user-avatar ${isOnline ? 'online' : 'offline'}">${user.charAt(0).toUpperCase()}</div>
+          <span class="user-name">${user} ${isOnline ? '(online)' : '(offline)'}</span>
+          <button class="dm-btn" onclick="startDM('${user}')">DM</button>
+          ${banButton}
+        `;
+        onlineUserList.appendChild(userDiv);
+
+        // Get user's profile picture and update
         fetch(`/api/user-profile/${user}`)
           .then(response => response.json())
           .then(profileData => {
+            // Check if user div still exists in the list (in case list was cleared)
+            if (!onlineUserList.contains(userDiv)) return;
+
             let avatarContent;
             if (profileData.profilePicture) {
               avatarContent = `<img src="${profileData.profilePicture}" alt="${user}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">`;
@@ -295,37 +316,27 @@ function loadOnlineUsers() {
               avatarContent = user.charAt(0).toUpperCase();
             }
 
-            userDiv.innerHTML = `
-              <div class="user-avatar ${isOnline ? 'online' : 'offline'}">${avatarContent}</div>
-              <span class="user-name">${user} ${isOnline ? '(online)' : '(offline)'}</span>
-              <button class="dm-btn" onclick="startDM('${user}')">DM</button>
-              ${banButton}
-            `;
+            userDiv.querySelector('.user-avatar').innerHTML = avatarContent;
           })
           .catch(() => {
-            // Fallback to initials if profile picture fails to load
-            userDiv.innerHTML = `
-              <div class="user-avatar ${isOnline ? 'online' : 'offline'}">${user.charAt(0).toUpperCase()}</div>
-              <span class="user-name">${user} ${isOnline ? '(online)' : '(offline)'}</span>
-              <button class="dm-btn" onclick="startDM('${user}')">DM</button>
-              ${banButton}
-            `;
+            // Already has fallback, do nothing
           });
-        onlineUserList.appendChild(userDiv);
       });
-
-      // If no users available, show message
-      if (allUsers.length === 0) {
-        const noUsersDiv = document.createElement('div');
-        noUsersDiv.className = 'online-user';
-        noUsersDiv.innerHTML = '<span class="user-name" style="color: #72767d; font-style: italic;">No other users available</span>';
-        onlineUserList.appendChild(noUsersDiv);
-      }
     })
     .catch(error => {
       console.error('Error loading users:', error);
       // Fallback to showing only online users
-      onlineUsers.forEach(user => {
+      const visibleOnlineUsers = onlineUsers.filter(user => !bannedUsers.has(user));
+      
+      if (visibleOnlineUsers.length === 0) {
+        const noUsersDiv = document.createElement('div');
+        noUsersDiv.className = 'online-user';
+        noUsersDiv.innerHTML = '<span class="user-name" style="color: #72767d; font-style: italic;">No other users available</span>';
+        onlineUserList.appendChild(noUsersDiv);
+        return;
+      }
+
+      visibleOnlineUsers.forEach(user => {
         const userDiv = document.createElement('div');
         userDiv.className = 'online-user';
         userDiv.innerHTML = `
