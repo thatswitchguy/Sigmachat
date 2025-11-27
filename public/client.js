@@ -150,6 +150,39 @@ fetch('/api/user')
 
 const input = document.getElementById('input');
 const messages = document.getElementById('messages');
+const scrollDownBtn = document.getElementById('scroll-down-btn');
+
+// Scroll tracking
+let isScrolledToBottom = true;
+
+// Function to check if scrolled to bottom
+function checkScrollPosition() {
+  const threshold = 50; // Allow 50px tolerance
+  isScrolledToBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight < threshold;
+  
+  if (isScrolledToBottom) {
+    scrollDownBtn.classList.remove('show');
+  } else {
+    scrollDownBtn.classList.add('show');
+  }
+}
+
+// Function to auto-scroll if user was at bottom
+function autoScrollIfAtBottom() {
+  if (isScrolledToBottom) {
+    messages.scrollTop = messages.scrollHeight;
+  }
+}
+
+// Listen to scroll events
+messages.addEventListener('scroll', checkScrollPosition);
+
+// Click handler for scroll button
+scrollDownBtn.addEventListener('click', () => {
+  messages.scrollTop = messages.scrollHeight;
+  isScrolledToBottom = true;
+  scrollDownBtn.classList.remove('show');
+});
 
 // Load available rooms
 function loadRooms() {
@@ -333,7 +366,7 @@ function loadRoomMessages(roomId) {
           messages.appendChild(messageDiv);
         }
       });
-      messages.scrollTop = messages.scrollHeight;
+      autoScrollIfAtBottom();
     })
     .catch(error => {
       console.error('Error loading general messages:', error);
@@ -512,7 +545,7 @@ function startDM(targetUser) {
           });
         messages.appendChild(messageDiv);
       });
-      messages.scrollTop = messages.scrollHeight;
+      autoScrollIfAtBottom();
     })
     .catch(error => {
       console.error('Error loading DM history:', error);
@@ -842,7 +875,7 @@ socket.on('chat message', (data) => {
   }
 
   messages.appendChild(messageDiv);
-  messages.scrollTop = messages.scrollHeight;
+  autoScrollIfAtBottom();
 });
 
 socket.on('room switched', (room) => {
@@ -880,7 +913,7 @@ socket.on('dm message', (data) => {
       <span class="content">${processedMessage}</span>
     `;
     messages.appendChild(messageDiv);
-    messages.scrollTop = messages.scrollHeight;
+    autoScrollIfAtBottom();
   }
 
   // Update DM history
@@ -904,7 +937,7 @@ socket.on('user banned', (data) => {
   messageDiv.className = 'message system';
   messageDiv.innerHTML = `<span class="content">${data.bannedUser} was banned by ${data.byAdmin}</span>`;
   messages.appendChild(messageDiv);
-  messages.scrollTop = messages.scrollHeight;
+  autoScrollIfAtBottom();
 });
 
 socket.on('banned', (data) => {
@@ -989,7 +1022,7 @@ function processMessageForDM(message) {
         <span class="content">Sent DM to <span class="dm-highlight">@${targetUser}</span>: ${dmMessage}</span>
       `;
       messages.appendChild(messageDiv);
-      messages.scrollTop = messages.scrollHeight;
+      autoScrollIfAtBottom();
 
       return true; // Message was processed as DM
     }
