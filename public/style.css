@@ -255,7 +255,34 @@ body {
   background-color: #4752c4;
 }
 
+#scroll-down-btn {
+  position: absolute;
+  bottom: 80px;
+  right: 30px;
+  width: 32px;
+  height: 32px;
+  background-color: #36393f;
+  color: white;
+  border: 2px solid white;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, transform 0.2s;
+  z-index: 100;
+  padding: 0;
+}
 
+#scroll-down-btn:hover {
+  background-color: #4f545c;
+  transform: scale(1.1);
+}
+
+#scroll-down-btn.show {
+  display: flex;
+}
 
 #messages {
   flex: 1;
@@ -264,6 +291,7 @@ body {
   background-color: #36393f;
   scrollbar-width: thin;
   scrollbar-color: #202225 #2f3136;
+  position: relative;
 }
 
 .message {
