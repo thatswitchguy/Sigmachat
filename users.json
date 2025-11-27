@@ -4,11 +4,6 @@
     "password": "$2b$10$3.1WWaDWN3xdWjuoDLpFa.Lt2SerRx/A4vGxe4k/nWxc//V06XU1q",
     "createdAt": "2025-06-29T14:12:05.766Z"
   },
-  "ikhan": {
-    "username": "ikhan",
-    "password": "$2b$10$D7B7aCejIQjoOrSTlzEkn.uf20PgEPCjoGExAaTV3xWEXhYHDqsdO",
-    "createdAt": "2025-06-29T14:27:42.284Z"
-  },
   "thesigma": {
     "username": "thesigma",
     "password": "$2b$10$Md4Bg6s6tUSXkSNoOS9fs.BSIQ.PA71eK9mwrHOW5IHKmFEg7LMom",
@@ -23,5 +18,10 @@
     "username": "test account",
     "password": "$2b$10$6CpQQHZzwiR4wt4RQgFH5OgKMAnR17nB2Z1EtIQVjg01vke3IVpNK",
     "createdAt": "2025-11-27T20:06:32.770Z"
+  },
+  "other_banana": {
+    "username": "other_banana",
+    "password": "$2b$10$1vCEhf7Ca7H55LMOLT69QeRqythoWA3k1uQJXCZGpO0qH7NCJZW9W",
+    "createdAt": "2025-11-27T20:21:41.200Z"
   }
 }
