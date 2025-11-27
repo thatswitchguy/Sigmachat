@@ -469,11 +469,14 @@ function startDM(targetUser) {
               </div>
             ` : '';
 
+            const dmDate = messageData.date || '';
+            const dmTime = messageData.time || messageData.timestamp || '';
             messageDiv.innerHTML = `
               <div style="display: flex; align-items: center;" onmouseenter="showMessageActions(this)" onmouseleave="hideMessageActions(this)">
                 ${avatarContent}
                 <div style="flex: 1;">
-                  <span class="timestamp">[${messageData.timestamp}]</span>
+                  ${dmDate ? `<div class="message-date">${dmDate}</div>` : ''}
+                  <span class="timestamp">[${dmTime}]</span>
                   <span class="username">${messageData.from}:</span>
                   <span class="content">${processedMessage}</span>
                   ${editedIndicator}
@@ -492,10 +495,13 @@ function startDM(targetUser) {
               </div>
             ` : '';
 
+            const dmDate2 = messageData.date || '';
+            const dmTime2 = messageData.time || messageData.timestamp || '';
             messageDiv.innerHTML = `
               <div style="display: flex; align-items: center;" onmouseenter="showMessageActions(this)" onmouseleave="hideMessageActions(this)">
                 <div style="flex: 1;">
-                  <span class="timestamp">[${messageData.timestamp}]</span>
+                  ${dmDate2 ? `<div class="message-date">${dmDate2}</div>` : ''}
+                  <span class="timestamp">[${dmTime2}]</span>
                   <span class="username">${messageData.from}:</span>
                   <span class="content">${processedMessage}</span>
                   ${editedIndicator}
@@ -795,11 +801,14 @@ socket.on('chat message', (data) => {
           </div>
         ` : '';
 
+        const msgDate = data.date || '';
+        const msgTime = data.time || '';
         messageDiv.innerHTML = `
           <div style="display: flex; align-items: center;" onmouseenter="showMessageActions(this)" onmouseleave="hideMessageActions(this)">
             ${avatarContent}
             <div style="flex: 1;">
-              <span class="timestamp">[${data.timestamp}]</span>
+              ${msgDate ? `<div class="message-date">${msgDate}</div>` : ''}
+              <span class="timestamp">[${msgTime}]</span>
               <span class="username">${data.username}:</span>
               <span class="content">${processedMessage}</span>
             </div>
@@ -816,10 +825,13 @@ socket.on('chat message', (data) => {
           </div>
         ` : '';
 
+        const msgDate2 = data.date || '';
+        const msgTime2 = data.time || '';
         messageDiv.innerHTML = `
           <div style="display: flex; align-items: center;" onmouseenter="showMessageActions(this)" onmouseleave="hideMessageActions(this)">
             <div style="flex: 1;">
-              <span class="timestamp">[${data.timestamp}]</span>
+              ${msgDate2 ? `<div class="message-date">${msgDate2}</div>` : ''}
+              <span class="timestamp">[${msgTime2}]</span>
               <span class="username">${data.username}:</span>
               <span class="content">${processedMessage}</span>
             </div>
@@ -859,8 +871,11 @@ socket.on('dm message', (data) => {
     // Process image URLs that end with image extensions but might have query parameters
     processedMessage = processedMessage.replace(/(https?:\/\/[^\s]*\.(jpg|jpeg|png|gif|webp|svg)[^\s]*)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
 
+    const dmMsgDate = data.date || '';
+    const dmMsgTime = data.time || '';
     messageDiv.innerHTML = `
-      <span class="timestamp">[${data.timestamp}]</span>
+      ${dmMsgDate ? `<div class="message-date">${dmMsgDate}</div>` : ''}
+      <span class="timestamp">[${dmMsgTime}]</span>
       <span class="username">${data.from}:</span>
       <span class="content">${processedMessage}</span>
     `;
@@ -965,8 +980,11 @@ function processMessageForDM(message) {
       // Show in chat that DM was sent
       const messageDiv = document.createElement('div');
       messageDiv.className = 'message';
+      const nowDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const nowTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
       messageDiv.innerHTML = `
-        <span class="timestamp">[${new Date().toLocaleTimeString()}]</span>
+        <div class="message-date">${nowDate}</div>
+        <span class="timestamp">[${nowTime}]</span>
         <span class="username">${username}:</span>
         <span class="content">Sent DM to <span class="dm-highlight">@${targetUser}</span>: ${dmMessage}</span>
       `;

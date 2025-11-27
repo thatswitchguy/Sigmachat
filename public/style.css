@@ -32,6 +32,16 @@
 #main-chat ~ .embed-button {
   display: none;
 }
+
+.message-date {
+  color: #72767d;
+  font-size: 10px;
+  font-weight: 500;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 * {
   margin: 0;
   padding: 0;
