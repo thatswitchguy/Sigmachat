@@ -846,6 +846,14 @@ app.post('/api/change-password', async (req, res) => {
   }
 });
 
+// Helper function to format timestamp with date and time (no seconds)
+function formatTimestamp() {
+  const now = new Date();
+  const date = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  return { date, time };
+}
+
 // Socket.io connection handling
 io.on('connection', (socket) => {
   let user;
@@ -860,29 +868,35 @@ io.on('connection', (socket) => {
     onlineUsers.add(user);
     io.emit('user online', Array.from(onlineUsers));
 
+    const ts = formatTimestamp();
     socket.to(currentRoom).emit('chat message', {
       username: 'System',
       message: `${user} joined #${currentRoom}.`,
-      timestamp: new Date().toLocaleTimeString()
+      date: ts.date,
+      time: ts.time
     });
   });
 
   socket.on('switch room', (newRoom) => {
     if (rooms[newRoom]) {
       socket.leave(currentRoom);
+      let ts = formatTimestamp();
       socket.to(currentRoom).emit('chat message', {
         username: 'System',
         message: `${user} left #${currentRoom}.`,
-        timestamp: new Date().toLocaleTimeString()
+        date: ts.date,
+        time: ts.time
       });
 
       currentRoom = newRoom;
       socket.join(currentRoom);
 
+      ts = formatTimestamp();
       socket.to(currentRoom).emit('chat message', {
         username: 'System',
         message: `${user} joined #${currentRoom}.`,
-        timestamp: new Date().toLocaleTimeString()
+        date: ts.date,
+        time: ts.time
       });
 
       socket.emit('room switched', currentRoom);
@@ -890,10 +904,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('chat message', (msg) => {
+    const ts = formatTimestamp();
     const messageData = {
       username: user,
       message: msg,
-      timestamp: new Date().toLocaleTimeString()
+      date: ts.date,
+      time: ts.time
     };
 
     if (roomMessages[currentRoom]) {
@@ -906,11 +922,13 @@ io.on('connection', (socket) => {
 
   socket.on('dm message', (data) => {
     const { targetUser, message } = data;
+    const ts = formatTimestamp();
     const messageData = {
       from: user,
       to: targetUser,
       message: message,
-      timestamp: new Date().toLocaleTimeString()
+      date: ts.date,
+      time: ts.time
     };
 
     const dmKey = [user, targetUser].sort().join('_');

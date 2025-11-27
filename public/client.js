@@ -289,11 +289,14 @@ function loadRoomMessages(roomId) {
                 </div>
               ` : '';
 
+              const date = messageData.date || '';
+              const time = messageData.time || '';
               messageDiv.innerHTML = `
                 <div style="display: flex; align-items: center;" onmouseenter="showMessageActions(this)" onmouseleave="hideMessageActions(this)">
                   ${avatarContent}
                   <div style="flex: 1;">
-                    <span class="timestamp">[${messageData.timestamp}]</span>
+                    ${date ? `<div class="message-date">${date}</div>` : ''}
+                    <span class="timestamp">[${time}]</span>
                     <span class="username">${messageData.username}:</span>
                     <span class="content">${processedMessage}</span>
                     ${editedIndicator}
@@ -312,10 +315,13 @@ function loadRoomMessages(roomId) {
                 </div>
               ` : '';
 
+              const date = messageData.date || '';
+              const time = messageData.time || '';
               messageDiv.innerHTML = `
                 <div style="display: flex; align-items: center;" onmouseenter="showMessageActions(this)" onmouseleave="hideMessageActions(this)">
                   <div style="flex: 1;">
-                    <span class="timestamp">[${messageData.timestamp}]</span>
+                    ${date ? `<div class="message-date">${date}</div>` : ''}
+                    <span class="timestamp">[${time}]</span>
                     <span class="username">${messageData.username}:</span>
                     <span class="content">${processedMessage}</span>
                     ${editedIndicator}
