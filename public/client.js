@@ -1,117 +1,3 @@
-// Function to show ban options
-function showBanOptions(targetUser) {
-    if (!isAdmin) {
-        alert('You do not have permission to ban users.');
-        return;
-    }
-
-    const banTime = prompt(`Ban ${targetUser} for how many minutes? (Enter a number, 0 for permanent ban):`, '60');
-
-    if (banTime !== null) {
-        const banMinutes = parseInt(banTime, 10);
-
-        if (!isNaN(banMinutes)) {
-            banUser(targetUser, banMinutes);
-        } else {
-            alert('Invalid ban duration. Please enter a number.');
-        }
-    }
-}
-
-// Modified banUser function to accept duration
-function banUser(targetUser, banMinutes) {
-    if (!isAdmin) {
-        alert('You do not have permission to ban users.');
-        return;
-    }
-
-    if (confirm(`Are you sure you want to ban ${targetUser} for ${banMinutes === 0 ? 'permanently' : banMinutes + ' minutes'}?`)) {
-        socket.emit('ban user', { targetUser: targetUser, banMinutes: banMinutes });
-        bannedUsers.add(targetUser);
-        loadOnlineUsers();
-        alert(`${targetUser} has been banned.`);
-    }
-}
-
-// Modify the online user list to include ban options
-function loadOnlineUsers() {
-    const onlineUserList = document.getElementById('online-user-list');
-    onlineUserList.innerHTML = '';
-
-    // Load all users for DM capability
-    fetch('/api/users')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to fetch users');
-            }
-            return response.json();
-        })
-        .then(allUsers => {
-            allUsers.forEach(user => {
-                if (bannedUsers.has(user)) return; // Don't show banned users
-
-                const isOnline = onlineUsers.includes(user);
-                const userDiv = document.createElement('div');
-                userDiv.className = 'online-user';
-
-                let banButton = '';
-                if (isAdmin && user !== username) {
-                    banButton = `<button class="ban-btn" onclick="showBanOptions('${user}')">Ban</button>`; // Use showBanOptions
-                }
-
-                // Get user's profile picture
-                fetch(`/api/user-profile/${user}`)
-                    .then(response => response.json())
-                    .then(profileData => {
-                        let avatarContent;
-                        if (profileData.profilePicture) {
-                            avatarContent = `<img src="${profileData.profilePicture}" alt="${user}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">`;
-                        } else {
-                            avatarContent = user.charAt(0).toUpperCase();
-                        }
-
-                        userDiv.innerHTML = `
-                            <div class="user-avatar ${isOnline ? 'online' : 'offline'}">${avatarContent}</div>
-                            <span class="user-name">${user} ${isOnline ? '(online)' : '(offline)'}</span>
-                            <button class="dm-btn" onclick="startDM('${user}')">DM</button>
-                            ${banButton}
-                        `;
-                    })
-                    .catch(() => {
-                        // Fallback to initials if profile picture fails to load
-                        userDiv.innerHTML = `
-                            <div class="user-avatar ${isOnline ? 'online' : 'offline'}">${user.charAt(0).toUpperCase()}</div>
-                            <span class="user-name">${user} ${isOnline ? '(online)' : '(offline)'}</span>
-                            <button class="dm-btn" onclick="startDM('${user}')">DM</button>
-                            ${banButton}
-                        `;
-                    });
-                onlineUserList.appendChild(userDiv);
-            });
-
-            // If no users available, show message
-            if (allUsers.length === 0) {
-                const noUsersDiv = document.createElement('div');
-                noUsersDiv.className = 'online-user';
-                noUsersDiv.innerHTML = '<span class="user-name" style="color: #72767d; font-style: italic;">No other users available</span>';
-                onlineUserList.appendChild(noUsersDiv);
-            }
-        })
-        .catch(error => {
-            console.error('Error loading users:', error);
-            // Fallback to showing only online users
-            onlineUsers.forEach(user => {
-                const userDiv = document.createElement('div');
-                userDiv.className = 'online-user';
-                userDiv.innerHTML = `
-                    <div class="user-avatar online">${user.charAt(0).toUpperCase()}</div>
-                    <span class="user-name">${user} (online)</span>
-                    <button class="dm-btn" onclick="startDM('${user}')">DM</button>
-                `;
-                onlineUserList.appendChild(userDiv);
-            });
-        });
-}
 // Context menu for room items
 const socket = io();
 
@@ -931,6 +817,15 @@ socket.on('user online', (users) => {
 
 socket.on('user banned', (data) => {
   bannedUsers.add(data.bannedUser);
+  
+  // If currently in DM with banned user, close it
+  if (currentDM === data.bannedUser) {
+    currentDM = null;
+    messages.innerHTML = '';
+    document.getElementById('current-room').textContent = '#general';
+    document.getElementById('input').placeholder = 'Message #general';
+  }
+  
   loadOnlineUsers();
 
   const messageDiv = document.createElement('div');

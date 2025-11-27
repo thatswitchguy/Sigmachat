@@ -18,5 +18,10 @@
     "username": "test",
     "password": "$2b$10$OmP80dMzX/vvQ/ICPwKLxOVMjRHOfsUd9J8ZZJo.oZuyQV.P4E7.S",
     "createdAt": "2025-07-03T16:49:49.562Z"
+  },
+  "test account": {
+    "username": "test account",
+    "password": "$2b$10$6CpQQHZzwiR4wt4RQgFH5OgKMAnR17nB2Z1EtIQVjg01vke3IVpNK",
+    "createdAt": "2025-11-27T20:06:32.770Z"
   }
 }
