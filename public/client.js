@@ -295,7 +295,7 @@ function loadOnlineUsers() {
 
         let banButton = '';
         if (isAdmin && user !== username) {
-          banButton = `<button class="ban-btn" onclick="banUser('${user}')">Ban</button>`;
+          banButton = `<button class="ban-btn" onclick="showBanOptions('${user}')">Ban</button>`;
         }
 
         // Set initial content with fallback
@@ -907,15 +907,36 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Ban user function (admin only)
-function banUser(targetUser) {
+// Show ban options with duration prompt (admin only)
+function showBanOptions(targetUser) {
   if (!isAdmin) {
     alert('You do not have permission to ban users.');
     return;
   }
 
-  if (confirm(`Are you sure you want to ban ${targetUser}?`)) {
-    socket.emit('ban user', { targetUser: targetUser });
+  const banTime = prompt(`Ban ${targetUser} for how many minutes? (Enter a number, 0 for permanent ban):`, '60');
+
+  if (banTime !== null) {
+    const banMinutes = parseInt(banTime, 10);
+
+    if (!isNaN(banMinutes) && banMinutes >= 0) {
+      banUser(targetUser, banMinutes);
+    } else {
+      alert('Invalid ban duration. Please enter a valid number.');
+    }
+  }
+}
+
+// Ban user function (admin only)
+function banUser(targetUser, banMinutes) {
+  if (!isAdmin) {
+    alert('You do not have permission to ban users.');
+    return;
+  }
+
+  const banMessage = banMinutes === 0 ? 'permanently' : `for ${banMinutes} minutes`;
+  if (confirm(`Are you sure you want to ban ${targetUser} ${banMessage}?`)) {
+    socket.emit('ban user', { targetUser: targetUser, banMinutes: banMinutes });
     bannedUsers.add(targetUser);
     loadOnlineUsers();
     alert(`${targetUser} has been banned.`);

@@ -442,7 +442,7 @@ app.get('/api/dm/:targetUser', (req, res) => {
 
 // API to create a new room
 app.post('/api/rooms', (req, res) => {
-  const { roomName } = req.body;
+  const { roomName, selectedUsers } = req.body;
 
   if (!roomName || roomName.length < 3 || roomName.length > 20) {
     return res.status(400).json({ error: 'Room name must be between 3 and 20 characters' });
@@ -456,11 +456,12 @@ app.post('/api/rooms', (req, res) => {
     return res.status(400).json({ error: 'Maximum number of additional rooms reached (3)' });
   }
 
-  const roomId = roomName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const roomId = roomName.toLowerCase().replace(/[^a-z0-9-]/g, '');
   if (roomId.length < 3) {
     return res.status(400).json({ error: 'Room name must contain at least 3 alphanumeric characters' });
   }
 
+  // Store room name (selectedUsers is for future private room feature)
   rooms[roomId] = roomName;
   additionalRoomsCreated++;
   saveRooms();
