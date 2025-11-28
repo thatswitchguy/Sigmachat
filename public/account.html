@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
+  <div class="notification-container" id="notification-container"></div>
   <div id="account-container">
     <div id="account-sidebar">
       <div id="account-nav">
@@ -298,6 +299,41 @@
       }
     });
 
+    // Notification system
+    function showNotification(message, type = 'info', title = '') {
+      const container = document.getElementById('notification-container');
+      if (!container) return;
+
+      const notification = document.createElement('div');
+      notification.className = `notification-toast ${type}`;
+      
+      const titleText = title || (type === 'error' ? 'Error' : type === 'success' ? 'Success' : type === 'warning' ? 'Warning' : 'Notification');
+      
+      notification.innerHTML = `
+        <div class="notification-content">
+          <div class="notification-title">${titleText}</div>
+          <div class="notification-message">${message}</div>
+        </div>
+        <button class="notification-close">&times;</button>
+      `;
+      
+      container.appendChild(notification);
+      
+      const closeBtn = notification.querySelector('.notification-close');
+      closeBtn.addEventListener('click', () => {
+        notification.classList.add('closing');
+        setTimeout(() => notification.remove(), 300);
+      });
+      
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        if (notification.parentElement) {
+          notification.classList.add('closing');
+          setTimeout(() => notification.remove(), 300);
+        }
+      }, 5000);
+    }
+
     // Change password
     document.getElementById('change-password-btn').addEventListener('click', () => {
       const currentPassword = document.getElementById('current-password').value;
@@ -305,17 +341,17 @@
       const confirmPassword = document.getElementById('confirm-password').value;
 
       if (!currentPassword || !newPassword || !confirmPassword) {
-        alert('Please fill in all password fields');
+        showNotification('Please fill in all password fields', 'warning');
         return;
       }
 
       if (newPassword.length < 6) {
-        alert('New password must be at least 6 characters');
+        showNotification('New password must be at least 6 characters', 'warning');
         return;
       }
 
       if (newPassword !== confirmPassword) {
-        alert('New password and confirmation do not match');
+        showNotification('New password and confirmation do not match', 'error');
         return;
       }
 
@@ -330,13 +366,13 @@
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            alert('Password changed successfully!');
+            showNotification('Password changed successfully!', 'success');
             // Clear password fields
             document.getElementById('current-password').value = '';
             document.getElementById('new-password').value = '';
             document.getElementById('confirm-password').value = '';
           } else {
-            alert('Failed to change password: ' + data.error);
+            showNotification('Failed to change password: ' + data.error, 'error');
           }
         })
         .catch(error => {

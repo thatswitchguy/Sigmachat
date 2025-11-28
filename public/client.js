@@ -11,6 +11,41 @@ let dmHistories = {};
 let isAdmin = false;
 let bannedUsers = new Set();
 
+// Notification system
+function showNotification(message, type = 'info', title = '') {
+  const container = document.getElementById('notification-container');
+  if (!container) return;
+
+  const notification = document.createElement('div');
+  notification.className = `notification-toast ${type}`;
+  
+  const titleText = title || (type === 'error' ? 'Error' : type === 'success' ? 'Success' : type === 'warning' ? 'Warning' : 'Notification');
+  
+  notification.innerHTML = `
+    <div class="notification-content">
+      <div class="notification-title">${titleText}</div>
+      <div class="notification-message">${message}</div>
+    </div>
+    <button class="notification-close">&times;</button>
+  `;
+  
+  container.appendChild(notification);
+  
+  const closeBtn = notification.querySelector('.notification-close');
+  closeBtn.addEventListener('click', () => {
+    notification.classList.add('closing');
+    setTimeout(() => notification.remove(), 300);
+  });
+  
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    if (notification.parentElement) {
+      notification.classList.add('closing');
+      setTimeout(() => notification.remove(), 300);
+    }
+  }, 5000);
+}
+
 // Check if user is logged in
 fetch('/api/user')
   .then(response => response.json())
@@ -479,12 +514,12 @@ function createRoom(roomName) {
       loadRooms();
       document.getElementById('create-room-input').value = '';
     } else {
-      alert(data.error || 'Failed to create room');
+      showNotification(data.error || 'Failed to create room', 'error');
     }
   })
   .catch(error => {
     console.error('Error creating room:', error);
-    alert('Failed to create room');
+    showNotification('Failed to create room', 'error');
   });
 }
 
@@ -598,13 +633,13 @@ function renameRoom(roomId, newName) {
     if (data.success) {
       loadRooms();
     } else {
-      alert(data.error || 'Failed to rename room');
+      showNotification(data.error || 'Failed to rename room', 'error');
       loadRooms();
     }
   })
   .catch(error => {
     console.error('Error renaming room:', error);
-    alert('Failed to rename room');
+    showNotification('Failed to rename room', 'error');
     loadRooms();
   });
 }
@@ -623,12 +658,12 @@ function deleteRoom(roomId) {
         }
         loadRooms();
       } else {
-        alert(data.error || 'Failed to delete room');
+        showNotification(data.error || 'Failed to delete room', 'error');
       }
     })
     .catch(error => {
       console.error('Error deleting room:', error);
-      alert('Failed to delete room');
+      showNotification('Failed to delete room', 'error');
     });
   }
 }
@@ -857,8 +892,10 @@ socket.on('user banned', (data) => {
 });
 
 socket.on('banned', (data) => {
-  alert(data.message);
-  window.location.href = '/login';
+  showNotification(data.message, 'error', 'Account Banned');
+  setTimeout(() => {
+    window.location.href = '/login';
+  }, 3000);
 });
 
 // Navigation button functionality
@@ -915,7 +952,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Show ban options with duration prompt (admin only)
 function showBanOptions(targetUser) {
   if (!isAdmin) {
-    alert('You do not have permission to ban users.');
+    showNotification('You do not have permission to ban users.', 'error');
     return;
   }
 
@@ -927,7 +964,7 @@ function showBanOptions(targetUser) {
     if (!isNaN(banMinutes) && banMinutes >= 0) {
       banUser(targetUser, banMinutes);
     } else {
-      alert('Invalid ban duration. Please enter a valid number.');
+      showNotification('Invalid ban duration. Please enter a valid number.', 'error');
     }
   }
 }
@@ -935,7 +972,7 @@ function showBanOptions(targetUser) {
 // Ban user function (admin only)
 function banUser(targetUser, banMinutes) {
   if (!isAdmin) {
-    alert('You do not have permission to ban users.');
+    showNotification('You do not have permission to ban users.', 'error');
     return;
   }
 
@@ -944,7 +981,7 @@ function banUser(targetUser, banMinutes) {
     socket.emit('ban user', { targetUser: targetUser, banMinutes: banMinutes });
     bannedUsers.add(targetUser);
     loadOnlineUsers();
-    alert(`${targetUser} has been banned.`);
+    showNotification(`${targetUser} has been banned ${banMessage}.`, 'success', 'User Banned');
   }
 }
 
@@ -1124,13 +1161,13 @@ function editMessage(roomOrUser, messageIndex, type) {
             contentSpan.parentNode.appendChild(editedSpan);
           }
         } else {
-          alert(data.error || 'Failed to edit message');
+          showNotification(data.error || 'Failed to edit message', 'error');
           cancelEdit();
         }
       })
       .catch(error => {
         console.error('Error editing message:', error);
-        alert('Failed to edit message');
+        showNotification('Failed to edit message', 'error');
         cancelEdit();
       });
     } else {
@@ -1177,12 +1214,12 @@ function deleteMessage(roomOrUser, messageIndex, type) {
           updateMessageIndices();
         }
       } else {
-        alert(data.error || 'Failed to delete message');
+        showNotification(data.error || 'Failed to delete message', 'error');
       }
     })
     .catch(error => {
       console.error('Error deleting message:', error);
-      alert('Failed to delete message');
+      showNotification('Failed to delete message', 'error');
     });
   }
 }
