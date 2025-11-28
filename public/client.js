@@ -645,27 +645,29 @@ function renameRoom(roomId, newName) {
 }
 
 function deleteRoom(roomId) {
-  if (confirm(`Are you sure you want to delete the room "#${roomId}"? This action cannot be undone.`)) {
-    fetch(`/api/rooms/${roomId}`, {
-      method: 'DELETE'
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        // If we're in the deleted room, switch to general
-        if (currentRoom === roomId) {
-          switchRoom('general');
-        }
-        loadRooms();
-      } else {
-        showNotification(data.error || 'Failed to delete room', 'error');
+  // Show confirmation notification
+  showNotification(`Deleting room "#${roomId}"...`, 'warning', 'Confirm Delete');
+  
+  fetch(`/api/rooms/${roomId}`, {
+    method: 'DELETE'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // If we're in the deleted room, switch to general
+      if (currentRoom === roomId) {
+        switchRoom('general');
       }
-    })
-    .catch(error => {
-      console.error('Error deleting room:', error);
-      showNotification('Failed to delete room', 'error');
-    });
-  }
+      loadRooms();
+      showNotification(`Room "#${roomId}" deleted successfully`, 'success');
+    } else {
+      showNotification(data.error || 'Failed to delete room', 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error deleting room:', error);
+    showNotification('Failed to delete room', 'error');
+  });
 }
 
 function switchRoom(roomId) {
@@ -956,17 +958,8 @@ function showBanOptions(targetUser) {
     return;
   }
 
-  const banTime = prompt(`Ban ${targetUser} for how many minutes? (Enter a number, 0 for permanent ban):`, '60');
-
-  if (banTime !== null) {
-    const banMinutes = parseInt(banTime, 10);
-
-    if (!isNaN(banMinutes) && banMinutes >= 0) {
-      banUser(targetUser, banMinutes);
-    } else {
-      showNotification('Invalid ban duration. Please enter a valid number.', 'error');
-    }
-  }
+  // Default to 60 minutes ban
+  banUser(targetUser, 60);
 }
 
 // Ban user function (admin only)
@@ -977,12 +970,10 @@ function banUser(targetUser, banMinutes) {
   }
 
   const banMessage = banMinutes === 0 ? 'permanently' : `for ${banMinutes} minutes`;
-  if (confirm(`Are you sure you want to ban ${targetUser} ${banMessage}?`)) {
-    socket.emit('ban user', { targetUser: targetUser, banMinutes: banMinutes });
-    bannedUsers.add(targetUser);
-    loadOnlineUsers();
-    showNotification(`${targetUser} has been banned ${banMessage}.`, 'success', 'User Banned');
-  }
+  socket.emit('ban user', { targetUser: targetUser, banMinutes: banMinutes });
+  bannedUsers.add(targetUser);
+  loadOnlineUsers();
+  showNotification(`${targetUser} has been banned ${banMessage}.`, 'success', 'User Banned');
 }
 
 // Process @username mentions for DM
@@ -1193,35 +1184,34 @@ function editMessage(roomOrUser, messageIndex, type) {
 }
 
 function deleteMessage(roomOrUser, messageIndex, type) {
-  if (confirm('Are you sure you want to delete this message?')) {
-    let url;
-    if (type === 'room') {
-      url = `/api/${roomOrUser}/messages/${messageIndex}`;
-    } else {
-      url = `/api/dm/${roomOrUser}/messages/${messageIndex}`;
-    }
-
-    fetch(url, {
-      method: 'DELETE'
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        const messageDiv = document.querySelector(`[data-message-index="${messageIndex}"]`);
-        if (messageDiv) {
-          messageDiv.remove();
-          // Update message indices for remaining messages
-          updateMessageIndices();
-        }
-      } else {
-        showNotification(data.error || 'Failed to delete message', 'error');
-      }
-    })
-    .catch(error => {
-      console.error('Error deleting message:', error);
-      showNotification('Failed to delete message', 'error');
-    });
+  let url;
+  if (type === 'room') {
+    url = `/api/${roomOrUser}/messages/${messageIndex}`;
+  } else {
+    url = `/api/dm/${roomOrUser}/messages/${messageIndex}`;
   }
+
+  fetch(url, {
+    method: 'DELETE'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      const messageDiv = document.querySelector(`[data-message-index="${messageIndex}"]`);
+      if (messageDiv) {
+        messageDiv.remove();
+        // Update message indices for remaining messages
+        updateMessageIndices();
+        showNotification('Message deleted', 'success');
+      }
+    } else {
+      showNotification(data.error || 'Failed to delete message', 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error deleting message:', error);
+    showNotification('Failed to delete message', 'error');
+  });
 }
 
 function updateMessageIndices() {

@@ -223,80 +223,78 @@
         .then(data => {
           if (data.success) {
             loadProfilePicture(); // Reload to ensure proper display
-            alert('Profile picture updated successfully!');
+            showNotification('Profile picture updated successfully!', 'success');
           } else {
-            alert('Failed to update profile picture: ' + data.error);
+            showNotification('Failed to update profile picture: ' + data.error, 'error');
           }
         })
         .catch(error => {
           console.error('Error updating profile picture:', error);
-          alert('Failed to update profile picture');
+          showNotification('Failed to update profile picture', 'error');
         });
       } else {
-        alert('Please enter a valid image URL');
+        showNotification('Please enter a valid image URL', 'warning');
       }
     });
 
     // Remove profile picture
     document.getElementById('remove-profile-pic').addEventListener('click', () => {
-      if (confirm('Are you sure you want to remove your profile picture?')) {
-        fetch('/api/profile-picture', {
-          method: 'DELETE'
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            loadProfilePicture(); // Reload to ensure proper display
-            alert('Profile picture removed successfully!');
-          } else {
-            alert('Failed to remove profile picture: ' + data.error);
-          }
-        })
-        .catch(error => {
-          console.error('Error removing profile picture:', error);
-          alert('Failed to remove profile picture');
-        });
-      }
+      fetch('/api/profile-picture', {
+        method: 'DELETE'
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          loadProfilePicture(); // Reload to ensure proper display
+          showNotification('Profile picture removed successfully!', 'success');
+        } else {
+          showNotification('Failed to remove profile picture: ' + data.error, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error removing profile picture:', error);
+        showNotification('Failed to remove profile picture', 'error');
+      });
     });
 
     // Change username
     document.getElementById('change-username-btn').addEventListener('click', () => {
       const newUsername = document.getElementById('new-username').value.trim();
       if (!newUsername) {
-        alert('Please enter a new username');
+        showNotification('Please enter a new username', 'warning');
         return;
       }
       
       if (newUsername.length < 3 || newUsername.length > 20) {
-        alert('Username must be between 3 and 20 characters');
+        showNotification('Username must be between 3 and 20 characters', 'warning');
         return;
       }
 
-      if (confirm('Are you sure you want to change your username? This action cannot be undone.')) {
-        fetch('/api/change-username', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ newUsername })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            alert('Username changed successfully! Please log in again.');
+      fetch('/api/change-username', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ newUsername })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showNotification('Username changed successfully! Please log in again.', 'success');
+          setTimeout(() => {
             fetch('/logout', { method: 'POST' })
               .then(() => {
                 window.location.href = '/login';
               });
-          } else {
-            alert('Failed to change username: ' + data.error);
-          }
-        })
-        .catch(error => {
-          console.error('Error changing username:', error);
-          alert('Failed to change username');
-        });
-      }
+          }, 2000);
+        } else {
+          showNotification('Failed to change username: ' + data.error, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error changing username:', error);
+        showNotification('Failed to change username', 'error');
+      });
     });
 
     // Notification system
@@ -355,31 +353,29 @@
         return;
       }
 
-      if (confirm('Are you sure you want to change your password?')) {
-        fetch('/api/change-password', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ currentPassword, newPassword })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            showNotification('Password changed successfully!', 'success');
-            // Clear password fields
-            document.getElementById('current-password').value = '';
-            document.getElementById('new-password').value = '';
-            document.getElementById('confirm-password').value = '';
-          } else {
-            showNotification('Failed to change password: ' + data.error, 'error');
-          }
-        })
-        .catch(error => {
-          console.error('Error changing password:', error);
-          alert('Failed to change password');
-        });
-      }
+      fetch('/api/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ currentPassword, newPassword })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showNotification('Password changed successfully!', 'success');
+          // Clear password fields
+          document.getElementById('current-password').value = '';
+          document.getElementById('new-password').value = '';
+          document.getElementById('confirm-password').value = '';
+        } else {
+          showNotification('Failed to change password: ' + data.error, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error changing password:', error);
+        showNotification('Failed to change password', 'error');
+      });
     });
   </script>
 </body>
