@@ -420,7 +420,7 @@ function startDM(targetUser) {
   updatePreferences();
   
   if (!allowDMs) {
-    showNotification('You have disabled direct messages in your account settings.', 'warning');
+    showNotification('The user has disabled direct messages from DMs from other server members', 'warning');
     return;
   }
 

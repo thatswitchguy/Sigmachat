@@ -368,7 +368,7 @@
       const confirmPassword = document.getElementById('confirm-password').value;
 
       if (!currentPassword || !newPassword || !confirmPassword) {
-        showNotification('Please fill in all password fields', 'warning');
+        showNotification('Please fill in all password fields', 'error');
         return;
       }
 
