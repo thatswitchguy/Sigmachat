@@ -381,18 +381,18 @@ app.post('/login', async (req, res) => {
   }
 
   if (isUserBanned(username)) {
-    return res.send('You have been banned. <a href="/login">Return to login</a>');
+    return res.sendFile(__dirname + '/public/banned.html');
   }
 
   const user = users[username];
   if (!user) {
-    return res.send('Invalid username or password. <a href="/login">Try again</a> or <a href="/register">Register</a>.');
+    return res.sendFile(__dirname + '/public/invalid-credentials.html');
   }
 
   try {
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
-      return res.send('Invalid username or password. <a href="/login">Try again</a>.');
+      return res.sendFile(__dirname + '/public/invalid-credentials.html');
     }
 
     req.session.username = username;
