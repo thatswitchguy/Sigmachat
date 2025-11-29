@@ -126,6 +126,16 @@
   <script>
     let username = null;
 
+    // Load notification preferences from localStorage
+    const messageSoundsCheckbox = document.getElementById('message-sounds');
+    const notificationsEnabled = localStorage.getItem('notificationsEnabled') !== 'false';
+    messageSoundsCheckbox.checked = notificationsEnabled;
+
+    // Save notification preference when toggled
+    messageSoundsCheckbox.addEventListener('change', () => {
+      localStorage.setItem('notificationsEnabled', messageSoundsCheckbox.checked ? 'true' : 'false');
+    });
+
     // Load user info
     fetch('/api/user')
       .then(response => response.json())

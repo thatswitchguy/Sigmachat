@@ -10,15 +10,17 @@ let onlineUsers = [];
 let dmHistories = {};
 let isAdmin = false;
 let bannedUsers = new Set();
+let notificationsEnabled = localStorage.getItem('notificationsEnabled') !== 'false'; // Default to true
 
 // Play notification sound for incoming messages
 function playNotificationSound() {
+  if (!notificationsEnabled) return;
+  
   try {
-    // Try multiple audio formats for compatibility
-    const audio = new Audio('/notification.mp3') || new Audio('/notification.wav') || new Audio('/notification.ogg');
+    const audio = new Audio('/notification.wav');
     audio.volume = 0.5;
     audio.play().catch(() => {
-      // Silently fail if audio can't be played (browser policy, file not found, etc)
+      // Silently fail if audio can't be played
     });
   } catch (e) {
     // Silently fail - notification is optional
@@ -741,6 +743,11 @@ if (createRoomForm) {
 }
 
 socket.on('chat message', (data) => {
+  // Play notification sound only if user is NOT currently in this room and message is from another user
+  if (currentRoom !== data.room && data.username !== username && data.username !== 'System') {
+    playNotificationSound();
+  }
+
   const messageDiv = document.createElement('div');
   messageDiv.className = data.username === 'System' ? 'message system' : 'message';
   
@@ -827,11 +834,6 @@ socket.on('chat message', (data) => {
 
   messages.appendChild(messageDiv);
   autoScrollIfAtBottom();
-  
-  // Play notification sound only for messages from other users
-  if (data.username !== username && data.username !== 'System') {
-    playNotificationSound();
-  }
 });
 
 socket.on('room switched', (room) => {
@@ -839,9 +841,16 @@ socket.on('room switched', (room) => {
 });
 
 socket.on('dm message', (data) => {
+  const dmUser = data.from === username ? data.to : data.from;
+  
+  // Play notification sound if user is NOT currently viewing this DM and message is from the other user
+  const isCurrentDM = (currentDM === data.from && data.to === username) || (currentDM === data.to && data.from === username);
+  if (!isCurrentDM && data.from !== username) {
+    playNotificationSound();
+  }
+
   // Only show if we're in the DM with this user
-  if ((currentDM === data.from && data.to === username) || 
-      (currentDM === data.to && data.from === username)) {
+  if (isCurrentDM) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message dm-message';
 
@@ -870,15 +879,9 @@ socket.on('dm message', (data) => {
     `;
     messages.appendChild(messageDiv);
     autoScrollIfAtBottom();
-    
-    // Play notification sound only for messages from the other user
-    if (data.from !== username) {
-      playNotificationSound();
-    }
   }
 
   // Update DM history
-  const dmUser = data.from === username ? data.to : data.from;
   if (!dmHistories[dmUser]) {
     dmHistories[dmUser] = [];
   }
