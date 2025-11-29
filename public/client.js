@@ -185,17 +185,14 @@ function loadRooms() {
 function updateRoomCount() {
   const roomCountElement = document.getElementById('room-count');
   const createRoomBtn = document.getElementById('create-room-btn');
-  const createRoomInput = document.getElementById('create-room-input');
 
   roomCountElement.textContent = `${additionalRoomsCreated}/${maxAdditionalRooms} additional rooms created`;
 
   if (additionalRoomsCreated >= maxAdditionalRooms) {
     createRoomBtn.disabled = true;
-    createRoomInput.disabled = true;
     createRoomBtn.textContent = 'Max Rooms Reached';
   } else {
     createRoomBtn.disabled = false;
-    createRoomInput.disabled = false;
     createRoomBtn.textContent = 'Create Room';
   }
 }
@@ -720,15 +717,14 @@ document.querySelector('#form form').addEventListener('submit', (e) => {
   }
 });
 
-// Create room form
+// Create room form - now just redirects to room creation page
 const createRoomForm = document.getElementById('create-room-form');
-createRoomForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const roomName = document.getElementById('create-room-input').value.trim();
-  if (roomName && roomName.length >= 3) {
-    createRoom(roomName);
-  }
-});
+if (createRoomForm) {
+  createRoomForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    openCreateRoom();
+  });
+}
 
 socket.on('chat message', (data) => {
   const messageDiv = document.createElement('div');
@@ -884,6 +880,11 @@ socket.on('user banned', (data) => {
     document.getElementById('input').placeholder = 'Message #general';
   }
   
+  // Clear the user list before reloading to prevent duplicates
+  const onlineUserList = document.getElementById('online-user-list');
+  if (onlineUserList) {
+    onlineUserList.innerHTML = '';
+  }
   loadOnlineUsers();
 
   const messageDiv = document.createElement('div');
@@ -958,8 +959,103 @@ function showBanOptions(targetUser) {
     return;
   }
 
-  // Default to 60 minutes ban
-  banUser(targetUser, 60);
+  // Create and show ban modal
+  const existingModal = document.getElementById('ban-modal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'ban-modal';
+  modal.className = 'ban-modal';
+  modal.innerHTML = `
+    <div class="ban-modal-content">
+      <h2>Ban User: ${targetUser}</h2>
+      <p>Select an action for this user:</p>
+      
+      <div class="ban-options">
+        <div class="ban-option">
+          <label>Temporary Ban (minutes):</label>
+          <div class="ban-time-options">
+            <button class="ban-time-btn" data-minutes="5">5 min</button>
+            <button class="ban-time-btn" data-minutes="15">15 min</button>
+            <button class="ban-time-btn" data-minutes="30">30 min</button>
+            <button class="ban-time-btn" data-minutes="60">1 hour</button>
+            <button class="ban-time-btn" data-minutes="1440">24 hours</button>
+          </div>
+          <div class="custom-time">
+            <input type="number" id="custom-ban-time" placeholder="Custom minutes" min="1" max="10080">
+            <button class="ban-time-btn custom" id="custom-ban-btn">Apply</button>
+          </div>
+        </div>
+        
+        <div class="ban-divider"></div>
+        
+        <div class="ban-option danger">
+          <button class="permanent-ban-btn" id="permanent-ban-btn">Permanent Ban</button>
+          <p class="warning-text">User will be banned forever and cannot access the chat.</p>
+        </div>
+        
+        <div class="ban-divider"></div>
+        
+        <div class="ban-option danger">
+          <button class="delete-user-btn" id="delete-user-btn">Delete User Account</button>
+          <p class="warning-text">This will permanently delete the user's account and ban them.</p>
+        </div>
+      </div>
+      
+      <div class="ban-modal-footer">
+        <button class="cancel-btn" id="cancel-ban-btn">Cancel</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Add event listeners
+  const timeBtns = modal.querySelectorAll('.ban-time-btn:not(.custom)');
+  timeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const minutes = parseInt(btn.dataset.minutes);
+      banUser(targetUser, minutes);
+      modal.remove();
+    });
+  });
+
+  document.getElementById('custom-ban-btn').addEventListener('click', () => {
+    const customTime = parseInt(document.getElementById('custom-ban-time').value);
+    if (customTime && customTime > 0) {
+      banUser(targetUser, customTime);
+      modal.remove();
+    } else {
+      showNotification('Please enter a valid number of minutes', 'error');
+    }
+  });
+
+  document.getElementById('permanent-ban-btn').addEventListener('click', () => {
+    if (confirm(`Are you sure you want to PERMANENTLY ban ${targetUser}? This cannot be undone.`)) {
+      banUser(targetUser, 0);
+      modal.remove();
+    }
+  });
+
+  document.getElementById('delete-user-btn').addEventListener('click', () => {
+    if (confirm(`Are you sure you want to DELETE ${targetUser}'s account? This will permanently remove them.`)) {
+      banUser(targetUser, 0);
+      modal.remove();
+    }
+  });
+
+  document.getElementById('cancel-ban-btn').addEventListener('click', () => {
+    modal.remove();
+  });
+
+  // Close on click outside
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
 }
 
 // Ban user function (admin only)

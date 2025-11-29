@@ -1684,3 +1684,161 @@ margin-right: 8px;
   background-color: #4f545c;
   cursor: not-allowed;
 }
+
+/* Ban Modal Styles */
+.ban-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+  animation: fadeIn 0.2s;
+}
+
+.ban-modal-content {
+  background-color: #2f3136;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 450px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.ban-modal-content h2 {
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.ban-modal-content > p {
+  color: #b9bbbe;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.ban-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ban-option {
+  padding: 16px;
+  background-color: #36393f;
+  border-radius: 6px;
+}
+
+.ban-option label {
+  color: #dcddde;
+  font-size: 14px;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.ban-time-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ban-time-btn {
+  padding: 8px 16px;
+  background-color: #5865f2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.ban-time-btn:hover {
+  background-color: #4752c4;
+}
+
+.custom-time {
+  display: flex;
+  gap: 8px;
+}
+
+.custom-time input {
+  flex: 1;
+  padding: 8px 12px;
+  background-color: #40444b;
+  border: 1px solid #202225;
+  border-radius: 4px;
+  color: #dcddde;
+  font-size: 14px;
+}
+
+.custom-time input:focus {
+  outline: none;
+  border-color: #5865f2;
+}
+
+.ban-divider {
+  height: 1px;
+  background-color: #40444b;
+}
+
+.ban-option.danger {
+  border: 1px solid rgba(237, 66, 69, 0.3);
+}
+
+.permanent-ban-btn,
+.delete-user-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #ed4245;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-bottom: 8px;
+}
+
+.permanent-ban-btn:hover,
+.delete-user-btn:hover {
+  background-color: #c73d3f;
+}
+
+.warning-text {
+  color: #b9bbbe;
+  font-size: 12px;
+  margin: 0;
+  text-align: center;
+}
+
+.ban-modal-footer {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ban-modal-footer .cancel-btn {
+  padding: 10px 24px;
+  background-color: #4f545c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.ban-modal-footer .cancel-btn:hover {
+  background-color: #5d6269;
+}

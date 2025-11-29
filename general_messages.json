@@ -182,5 +182,11 @@
     "message": "im new",
     "date": "Nov 27, 2025",
     "time": "08:24 PM"
+  },
+  {
+    "username": "other_banana",
+    "message": "@ other_banana hello",
+    "date": "Nov 29, 2025",
+    "time": "08:29 AM"
   }
 ]

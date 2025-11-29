@@ -12,5 +12,12 @@
     "message": "why hello there",
     "date": "Nov 28, 2025",
     "time": "11:53 AM"
+  },
+  {
+    "from": "other_banana",
+    "to": "thatswitchguy",
+    "message": "hello",
+    "date": "Nov 29, 2025",
+    "time": "08:29 AM"
   }
 ]

@@ -48,15 +48,35 @@ let rooms = { ...defaultRooms };
 let roomMembers = {};
 let additionalRoomsCreated = 0;
 
+// Track room memberships (who can access which rooms)
+const roomMembersFile = path.join(__dirname, 'room_members.json');
+
+// First load room members from file
+try {
+  if (fs.existsSync(roomMembersFile)) {
+    const memberData = fs.readFileSync(roomMembersFile, 'utf8');
+    roomMembers = JSON.parse(memberData);
+  }
+} catch (error) {
+  console.error('Error loading room members:', error);
+  roomMembers = {};
+}
+
+// Then load rooms and merge member info
 try {
   if (fs.existsSync(roomsFile)) {
     const roomData = fs.readFileSync(roomsFile, 'utf8');
     const loadedRooms = JSON.parse(roomData);
     const customRooms = loadedRooms.rooms || {};
     Object.keys(customRooms).forEach(roomId => {
-      rooms[roomId] = customRooms[roomId];
-      if (customRooms[roomId].members) {
-        roomMembers[roomId] = customRooms[roomId].members;
+      const room = customRooms[roomId];
+      if (typeof room === 'object' && room !== null) {
+        rooms[roomId] = room;
+        if (room.members && Array.isArray(room.members) && room.members.length > 0) {
+          roomMembers[roomId] = room.members;
+        }
+      } else if (typeof room === 'string') {
+        rooms[roomId] = { name: room, members: [] };
       }
     });
     additionalRoomsCreated = loadedRooms.additionalRoomsCreated || 0;
@@ -67,20 +87,6 @@ try {
 }
 
 const maxAdditionalRooms = 3;
-
-// Track room memberships (who can access which rooms)
-const roomMembersFile = path.join(__dirname, 'room_members.json');
-let roomMembers = {};
-
-try {
-  if (fs.existsSync(roomMembersFile)) {
-    const memberData = fs.readFileSync(roomMembersFile, 'utf8');
-    roomMembers = JSON.parse(memberData);
-  }
-} catch (error) {
-  console.error('Error loading room members:', error);
-  roomMembers = {};
-}
 
 function saveRoomMembers() {
   try {
