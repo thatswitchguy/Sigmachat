@@ -257,6 +257,35 @@ function isUserBanned(username) {
   return true;
 }
 
+// Get ban information for display
+function getBanInfo(username) {
+  const banRecord = bannedUsers[username];
+  if (!banRecord) {
+    return null;
+  }
+
+  if (!banRecord.expiresAt) {
+    return { type: 'permanent' };
+  }
+
+  const remainingMs = banRecord.expiresAt - Date.now();
+  if (remainingMs <= 0) {
+    return null;
+  }
+
+  const remainingMinutes = Math.ceil(remainingMs / 60000);
+  const hours = Math.floor(remainingMinutes / 60);
+  const minutes = remainingMinutes % 60;
+
+  return {
+    type: 'temporary',
+    remainingMinutes,
+    hours,
+    minutes,
+    expiresAt: banRecord.expiresAt
+  };
+}
+
 // Save rooms to file
 function saveRooms() {
   try {
@@ -381,7 +410,10 @@ app.post('/login', async (req, res) => {
   }
 
   if (isUserBanned(username)) {
-    return res.sendFile(__dirname + '/public/banned.html');
+    const banInfo = getBanInfo(username);
+    const banType = banInfo?.type === 'permanent' ? 'permanent' : 'temporary';
+    const banDuration = banInfo?.type === 'temporary' ? `${banInfo.hours}h${banInfo.minutes}m` : '';
+    return res.redirect(`/banned.html?type=${banType}&duration=${encodeURIComponent(banDuration)}`);
   }
 
   const user = users[username];
