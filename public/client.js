@@ -11,6 +11,17 @@ let dmHistories = {};
 let isAdmin = false;
 let bannedUsers = new Set();
 let notificationsEnabled = localStorage.getItem('notificationsEnabled') !== 'false'; // Default to true
+let allowDMs = localStorage.getItem('allowDMs') !== 'false'; // Default to true
+let desktopNotifications = localStorage.getItem('desktopNotifications') !== 'false'; // Default to true
+let dataUsage = localStorage.getItem('dataUsage') !== 'false'; // Default to true
+
+// Update preferences when they change
+function updatePreferences() {
+  allowDMs = localStorage.getItem('allowDMs') !== 'false';
+  desktopNotifications = localStorage.getItem('desktopNotifications') !== 'false';
+  dataUsage = localStorage.getItem('dataUsage') !== 'false';
+  notificationsEnabled = localStorage.getItem('notificationsEnabled') !== 'false';
+}
 
 // Play notification sound for incoming messages
 function playNotificationSound() {
@@ -405,6 +416,14 @@ function loadOnlineUsers() {
 }
 
 function startDM(targetUser) {
+  // Update preferences before starting DM
+  updatePreferences();
+  
+  if (!allowDMs) {
+    showNotification('You have disabled direct messages in your account settings.', 'warning');
+    return;
+  }
+
   currentDM = targetUser;
   currentRoom = null;
   messages.innerHTML = '';

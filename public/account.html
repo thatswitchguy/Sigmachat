@@ -126,12 +126,31 @@
   <script>
     let username = null;
 
-    // Load notification preferences from localStorage
+    // Load preferences from localStorage
+    const allowDMsCheckbox = document.getElementById('allow-dms');
+    const dataUsageCheckbox = document.getElementById('data-usage');
+    const desktopNotificationsCheckbox = document.getElementById('desktop-notifications');
     const messageSoundsCheckbox = document.getElementById('message-sounds');
-    const notificationsEnabled = localStorage.getItem('notificationsEnabled') !== 'false';
-    messageSoundsCheckbox.checked = notificationsEnabled;
 
-    // Save notification preference when toggled
+    // Load saved preferences
+    allowDMsCheckbox.checked = localStorage.getItem('allowDMs') !== 'false';
+    dataUsageCheckbox.checked = localStorage.getItem('dataUsage') !== 'false';
+    desktopNotificationsCheckbox.checked = localStorage.getItem('desktopNotifications') !== 'false';
+    messageSoundsCheckbox.checked = localStorage.getItem('notificationsEnabled') !== 'false';
+
+    // Save preferences when toggled
+    allowDMsCheckbox.addEventListener('change', () => {
+      localStorage.setItem('allowDMs', allowDMsCheckbox.checked ? 'true' : 'false');
+    });
+
+    dataUsageCheckbox.addEventListener('change', () => {
+      localStorage.setItem('dataUsage', dataUsageCheckbox.checked ? 'true' : 'false');
+    });
+
+    desktopNotificationsCheckbox.addEventListener('change', () => {
+      localStorage.setItem('desktopNotifications', desktopNotificationsCheckbox.checked ? 'true' : 'false');
+    });
+
     messageSoundsCheckbox.addEventListener('change', () => {
       localStorage.setItem('notificationsEnabled', messageSoundsCheckbox.checked ? 'true' : 'false');
     });
