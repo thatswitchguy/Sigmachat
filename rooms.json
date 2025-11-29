@@ -1,4 +1,12 @@
 {
-  "rooms": {},
-  "additionalRoomsCreated": 0
+  "rooms": {
+    "testisbest": {
+      "name": "test is best",
+      "members": [
+        "thatswitchguy",
+        "test account"
+      ]
+    }
+  },
+  "additionalRoomsCreated": 1
 }

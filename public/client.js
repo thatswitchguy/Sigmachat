@@ -11,6 +11,20 @@ let dmHistories = {};
 let isAdmin = false;
 let bannedUsers = new Set();
 
+// Play notification sound for incoming messages
+function playNotificationSound() {
+  try {
+    // Try multiple audio formats for compatibility
+    const audio = new Audio('/notification.mp3') || new Audio('/notification.wav') || new Audio('/notification.ogg');
+    audio.volume = 0.5;
+    audio.play().catch(() => {
+      // Silently fail if audio can't be played (browser policy, file not found, etc)
+    });
+  } catch (e) {
+    // Silently fail - notification is optional
+  }
+}
+
 // Notification system
 function showNotification(message, type = 'info', title = '') {
   const container = document.getElementById('notification-container');
@@ -813,6 +827,11 @@ socket.on('chat message', (data) => {
 
   messages.appendChild(messageDiv);
   autoScrollIfAtBottom();
+  
+  // Play notification sound only for messages from other users
+  if (data.username !== username && data.username !== 'System') {
+    playNotificationSound();
+  }
 });
 
 socket.on('room switched', (room) => {
@@ -851,6 +870,11 @@ socket.on('dm message', (data) => {
     `;
     messages.appendChild(messageDiv);
     autoScrollIfAtBottom();
+    
+    // Play notification sound only for messages from the other user
+    if (data.from !== username) {
+      playNotificationSound();
+    }
   }
 
   // Update DM history
