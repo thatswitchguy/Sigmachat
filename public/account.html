@@ -126,34 +126,59 @@
   <script>
     let username = null;
 
-    // Load preferences from localStorage
+    // Load preferences from server
     const allowDMsCheckbox = document.getElementById('allow-dms');
     const dataUsageCheckbox = document.getElementById('data-usage');
     const desktopNotificationsCheckbox = document.getElementById('desktop-notifications');
     const messageSoundsCheckbox = document.getElementById('message-sounds');
 
-    // Load saved preferences
-    allowDMsCheckbox.checked = localStorage.getItem('allowDMs') !== 'false';
-    dataUsageCheckbox.checked = localStorage.getItem('dataUsage') !== 'false';
-    desktopNotificationsCheckbox.checked = localStorage.getItem('desktopNotifications') !== 'false';
-    messageSoundsCheckbox.checked = localStorage.getItem('notificationsEnabled') !== 'false';
+    // Load saved preferences from server
+    function loadUserSettings() {
+      fetch('/api/user-settings')
+        .then(response => response.json())
+        .then(settings => {
+          allowDMsCheckbox.checked = settings.allowDMs !== false;
+          dataUsageCheckbox.checked = settings.dataUsage !== false;
+          desktopNotificationsCheckbox.checked = settings.desktopNotifications !== false;
+          messageSoundsCheckbox.checked = settings.messageSounds !== false;
+        })
+        .catch(error => {
+          console.error('Error loading settings:', error);
+          // Fallback to defaults
+          allowDMsCheckbox.checked = true;
+          dataUsageCheckbox.checked = true;
+          desktopNotificationsCheckbox.checked = true;
+          messageSoundsCheckbox.checked = true;
+        });
+    }
 
-    // Save preferences when toggled
-    allowDMsCheckbox.addEventListener('change', () => {
-      localStorage.setItem('allowDMs', allowDMsCheckbox.checked ? 'true' : 'false');
-    });
+    loadUserSettings();
 
-    dataUsageCheckbox.addEventListener('change', () => {
-      localStorage.setItem('dataUsage', dataUsageCheckbox.checked ? 'true' : 'false');
-    });
+    // Save preferences to server when toggled
+    function saveUserSettings() {
+      const settings = {
+        allowDMs: allowDMsCheckbox.checked,
+        dataUsage: dataUsageCheckbox.checked,
+        desktopNotifications: desktopNotificationsCheckbox.checked,
+        messageSounds: messageSoundsCheckbox.checked
+      };
 
-    desktopNotificationsCheckbox.addEventListener('change', () => {
-      localStorage.setItem('desktopNotifications', desktopNotificationsCheckbox.checked ? 'true' : 'false');
-    });
+      fetch('/api/user-settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(settings)
+      })
+      .catch(error => {
+        console.error('Error saving settings:', error);
+      });
+    }
 
-    messageSoundsCheckbox.addEventListener('change', () => {
-      localStorage.setItem('notificationsEnabled', messageSoundsCheckbox.checked ? 'true' : 'false');
-    });
+    allowDMsCheckbox.addEventListener('change', saveUserSettings);
+    dataUsageCheckbox.addEventListener('change', saveUserSettings);
+    desktopNotificationsCheckbox.addEventListener('change', saveUserSettings);
+    messageSoundsCheckbox.addEventListener('change', saveUserSettings);
 
     // Load user info
     fetch('/api/user')

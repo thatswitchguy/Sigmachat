@@ -1163,6 +1163,45 @@ io.on('connection', (socket) => {
   });
 });
 
+// API to get user settings
+app.get('/api/user-settings', (req, res) => {
+  if (!req.username) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  if (!userSettings[req.username]) {
+    userSettings[req.username] = {
+      allowDMs: true,
+      dataUsage: true,
+      desktopNotifications: true,
+      messageSounds: true
+    };
+  }
+
+  res.json(userSettings[req.username]);
+});
+
+// API to update user settings
+app.post('/api/user-settings', (req, res) => {
+  if (!req.username) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const { allowDMs, dataUsage, desktopNotifications, messageSounds } = req.body;
+
+  if (!userSettings[req.username]) {
+    userSettings[req.username] = {};
+  }
+
+  if (typeof allowDMs === 'boolean') userSettings[req.username].allowDMs = allowDMs;
+  if (typeof dataUsage === 'boolean') userSettings[req.username].dataUsage = dataUsage;
+  if (typeof desktopNotifications === 'boolean') userSettings[req.username].desktopNotifications = desktopNotifications;
+  if (typeof messageSounds === 'boolean') userSettings[req.username].messageSounds = messageSounds;
+
+  saveUserSettings();
+  res.json({ success: true, settings: userSettings[req.username] });
+});
+
 // Start the server
 http.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);

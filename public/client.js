@@ -10,17 +10,30 @@ let onlineUsers = [];
 let dmHistories = {};
 let isAdmin = false;
 let bannedUsers = new Set();
-let notificationsEnabled = localStorage.getItem('notificationsEnabled') !== 'false'; // Default to true
-let allowDMs = localStorage.getItem('allowDMs') !== 'false'; // Default to true
-let desktopNotifications = localStorage.getItem('desktopNotifications') !== 'false'; // Default to true
-let dataUsage = localStorage.getItem('dataUsage') !== 'false'; // Default to true
+let notificationsEnabled = true;
+let allowDMs = true;
+let desktopNotifications = true;
+let dataUsage = true;
+
+// Load user preferences from server
+function loadUserPreferences() {
+  fetch('/api/user-settings')
+    .then(response => response.json())
+    .then(settings => {
+      allowDMs = settings.allowDMs !== false;
+      desktopNotifications = settings.desktopNotifications !== false;
+      dataUsage = settings.dataUsage !== false;
+      notificationsEnabled = settings.messageSounds !== false;
+    })
+    .catch(error => {
+      console.error('Error loading user preferences:', error);
+      // Use defaults on error
+    });
+}
 
 // Update preferences when they change
 function updatePreferences() {
-  allowDMs = localStorage.getItem('allowDMs') !== 'false';
-  desktopNotifications = localStorage.getItem('desktopNotifications') !== 'false';
-  dataUsage = localStorage.getItem('dataUsage') !== 'false';
-  notificationsEnabled = localStorage.getItem('notificationsEnabled') !== 'false';
+  loadUserPreferences();
 }
 
 // Play notification sound for incoming messages
@@ -81,6 +94,8 @@ fetch('/api/user')
       username = data.username;
       // Check if user is admin
       isAdmin = data.username === 'thatswitchguy' || data.username === 'ikhan';
+      // Load user preferences from server
+      loadUserPreferences();
       socket.emit('join', { username: username, room: currentRoom });
       loadRooms();
       loadOnlineUsers();
