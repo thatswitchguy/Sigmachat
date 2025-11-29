@@ -153,6 +153,30 @@ try {
   profilePictures = {};
 }
 
+// File path for user settings
+const userSettingsFile = path.join(__dirname, 'user_settings.json');
+
+// Load user settings from file
+let userSettings = {};
+try {
+  if (fs.existsSync(userSettingsFile)) {
+    const settingsData = fs.readFileSync(userSettingsFile, 'utf8');
+    userSettings = JSON.parse(settingsData);
+  }
+} catch (error) {
+  console.error('Error loading user settings:', error);
+  userSettings = {};
+}
+
+// Save user settings to file
+function saveUserSettings() {
+  try {
+    fs.writeFileSync(userSettingsFile, JSON.stringify(userSettings, null, 2));
+  } catch (error) {
+    console.error('Error saving user settings:', error);
+  }
+}
+
 // Load banned users with expiration times
 let bannedUsers = {};
 try {
