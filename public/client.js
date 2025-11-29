@@ -1068,7 +1068,6 @@ function banUser(targetUser, banMinutes) {
   const banMessage = banMinutes === 0 ? 'permanently' : `for ${banMinutes} minutes`;
   socket.emit('ban user', { targetUser: targetUser, banMinutes: banMinutes });
   bannedUsers.add(targetUser);
-  loadOnlineUsers();
   showNotification(`${targetUser} has been banned ${banMessage}.`, 'success', 'User Banned');
 }
 
