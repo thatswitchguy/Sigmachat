@@ -40,18 +40,25 @@ try {
 
 // Load rooms from file or use defaults
 const defaultRooms = {
-  'general': 'General Discussion',
-  'suggestions': 'Suggestions',
-  'tech-support': 'Tech Support'
+  'general': { name: 'General Discussion', members: null },
+  'suggestions': { name: 'Suggestions', members: null },
+  'tech-support': { name: 'Tech Support', members: null }
 };
 let rooms = { ...defaultRooms };
+let roomMembers = {};
 let additionalRoomsCreated = 0;
 
 try {
   if (fs.existsSync(roomsFile)) {
     const roomData = fs.readFileSync(roomsFile, 'utf8');
     const loadedRooms = JSON.parse(roomData);
-    rooms = { ...defaultRooms, ...loadedRooms.rooms };
+    const customRooms = loadedRooms.rooms || {};
+    Object.keys(customRooms).forEach(roomId => {
+      rooms[roomId] = customRooms[roomId];
+      if (customRooms[roomId].members) {
+        roomMembers[roomId] = customRooms[roomId].members;
+      }
+    });
     additionalRoomsCreated = loadedRooms.additionalRoomsCreated || 0;
   }
 } catch (error) {
@@ -60,6 +67,28 @@ try {
 }
 
 const maxAdditionalRooms = 3;
+
+// Track room memberships (who can access which rooms)
+const roomMembersFile = path.join(__dirname, 'room_members.json');
+let roomMembers = {};
+
+try {
+  if (fs.existsSync(roomMembersFile)) {
+    const memberData = fs.readFileSync(roomMembersFile, 'utf8');
+    roomMembers = JSON.parse(memberData);
+  }
+} catch (error) {
+  console.error('Error loading room members:', error);
+  roomMembers = {};
+}
+
+function saveRoomMembers() {
+  try {
+    fs.writeFileSync(roomMembersFile, JSON.stringify(roomMembers, null, 2));
+  } catch (error) {
+    console.error('Error saving room members:', error);
+  }
+}
 
 // Load messages for all default rooms
 let roomMessages = {
@@ -229,7 +258,11 @@ function saveRooms() {
     const customRooms = {};
     Object.keys(rooms).forEach(roomId => {
       if (!defaultRoomIds.includes(roomId)) {
-        customRooms[roomId] = rooms[roomId];
+        const roomData = { ...rooms[roomId] };
+        if (roomMembers[roomId]) {
+          roomData.members = roomMembers[roomId];
+        }
+        customRooms[roomId] = roomData;
       }
     });
 
@@ -383,14 +416,46 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// API to get rooms
+// API to get rooms - filter by user access
 app.get('/api/rooms', (req, res) => {
-  res.json(rooms);
+  const currentUser = req.username;
+  if (!currentUser) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const filteredRooms = {};
+  const defaultRoomIds = ['general', 'suggestions', 'tech-support'];
+  
+  Object.keys(rooms).forEach(roomId => {
+    // Always include default rooms
+    if (defaultRoomIds.includes(roomId)) {
+      filteredRooms[roomId] = rooms[roomId].name || rooms[roomId];
+    } else {
+      // For custom rooms, only include if user is a member
+      const members = roomMembers[roomId] || [];
+      if (members.includes(currentUser)) {
+        filteredRooms[roomId] = rooms[roomId].name || rooms[roomId];
+      }
+    }
+  });
+  
+  res.json(filteredRooms);
 });
 
-// API to get room messages
+// API to get room messages - check access
 app.get('/api/:roomId/messages', (req, res) => {
   const { roomId } = req.params;
+  const currentUser = req.username;
+  const defaultRoomIds = ['general', 'suggestions', 'tech-support'];
+  
+  // Check if user has access to this room
+  const hasAccess = defaultRoomIds.includes(roomId) || 
+                    (roomMembers[roomId] && roomMembers[roomId].includes(currentUser));
+  
+  if (!hasAccess) {
+    return res.status(403).json({ error: 'Access denied to this room' });
+  }
+  
   if (roomMessages[roomId]) {
     res.json(roomMessages[roomId]);
   } else {
@@ -443,6 +508,11 @@ app.get('/api/dm/:targetUser', (req, res) => {
 // API to create a new room
 app.post('/api/rooms', (req, res) => {
   const { roomName, selectedUsers } = req.body;
+  const currentUser = req.username;
+
+  if (!currentUser) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
 
   if (!roomName || roomName.length < 3 || roomName.length > 20) {
     return res.status(400).json({ error: 'Room name must be between 3 and 20 characters' });
@@ -461,8 +531,11 @@ app.post('/api/rooms', (req, res) => {
     return res.status(400).json({ error: 'Room name must contain at least 3 alphanumeric characters' });
   }
 
-  // Store room name (selectedUsers is for future private room feature)
-  rooms[roomId] = roomName;
+  // Store room with members list
+  rooms[roomId] = { name: roomName };
+  roomMembers[roomId] = selectedUsers && Array.isArray(selectedUsers) ? 
+    [...new Set([currentUser, ...selectedUsers])] : [currentUser];
+  
   additionalRoomsCreated++;
   saveRooms();
 
@@ -473,6 +546,7 @@ app.post('/api/rooms', (req, res) => {
 app.put('/api/rooms/:roomId', (req, res) => {
   const { roomId } = req.params;
   const { newName } = req.body;
+  const currentUser = req.username;
 
   if (!newName || newName.length < 3 || newName.length > 20) {
     return res.status(400).json({ error: 'Room name must be between 3 and 20 characters' });
@@ -487,7 +561,14 @@ app.put('/api/rooms/:roomId', (req, res) => {
     return res.status(400).json({ error: 'Cannot rename default rooms' });
   }
 
-  rooms[roomId] = newName;
+  // Check if user has access to this room
+  const members = roomMembers[roomId] || [];
+  if (!members.includes(currentUser)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  const roomData = typeof rooms[roomId] === 'object' ? rooms[roomId] : { name: rooms[roomId] };
+  rooms[roomId] = { ...roomData, name: newName };
   saveRooms();
   res.json({ roomId, roomName: newName, success: true });
 });
@@ -495,6 +576,7 @@ app.put('/api/rooms/:roomId', (req, res) => {
 // API to delete a room
 app.delete('/api/rooms/:roomId', (req, res) => {
   const { roomId } = req.params;
+  const currentUser = req.username;
 
   if (!rooms[roomId]) {
     return res.status(404).json({ error: 'Room not found' });
@@ -505,7 +587,14 @@ app.delete('/api/rooms/:roomId', (req, res) => {
     return res.status(400).json({ error: 'Cannot delete default rooms' });
   }
 
+  // Check if user has access to this room
+  const members = roomMembers[roomId] || [];
+  if (!members.includes(currentUser)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
   delete rooms[roomId];
+  delete roomMembers[roomId];
   additionalRoomsCreated--;
   saveRooms();
 
