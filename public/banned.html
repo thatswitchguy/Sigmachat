@@ -160,14 +160,20 @@
     // Get URL parameters
     const params = new URLSearchParams(window.location.search);
     const banType = params.get('type');
-    const expiresAt = params.get('expiresAt');
+    const expiresAtParam = params.get('expiresAt');
 
     const banStatusEl = document.getElementById('banStatus');
     const durationDisplayEl = document.getElementById('banDurationDisplay');
 
     function updateTimer() {
-      if (banType === 'temporary' && expiresAt) {
-        const expirationTime = parseInt(expiresAt);
+      if (banType === 'temporary' && expiresAtParam && expiresAtParam !== '') {
+        const expirationTime = parseInt(expiresAtParam);
+        
+        if (isNaN(expirationTime)) {
+          banStatusEl.textContent = 'Permanently Banned';
+          return;
+        }
+
         const now = Date.now();
         const remainingMs = expirationTime - now;
 
@@ -185,12 +191,10 @@
         const timeString = `${hours}h ${minutes}m ${seconds}s`;
         durationDisplayEl.textContent = `Your ban will expire in: ${timeString}`;
         durationDisplayEl.style.display = 'block';
-      } else {
-        banStatusEl.textContent = 'Permanently Banned';
       }
     }
 
-    if (banType === 'temporary' && expiresAt) {
+    if (banType === 'temporary' && expiresAtParam && expiresAtParam !== '') {
       banStatusEl.textContent = 'Temporarily Banned';
       updateTimer();
       setInterval(updateTimer, 1000);
