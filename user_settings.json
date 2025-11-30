@@ -1,0 +1,20 @@
+{
+  "thatswitchguy": {
+    "allowDMs": true,
+    "dataUsage": true,
+    "desktopNotifications": true,
+    "messageSounds": true
+  },
+  "other_banana": {
+    "allowDMs": false,
+    "dataUsage": true,
+    "desktopNotifications": true,
+    "messageSounds": true
+  },
+  "test account": {
+    "allowDMs": true,
+    "dataUsage": true,
+    "desktopNotifications": false,
+    "messageSounds": true
+  }
+}
