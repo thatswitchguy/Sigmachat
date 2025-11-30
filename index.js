@@ -436,8 +436,8 @@ app.post('/login', async (req, res) => {
   if (isUserBanned(username)) {
     const banInfo = getBanInfo(username);
     const banType = banInfo?.type === 'permanent' ? 'permanent' : 'temporary';
-    const banDuration = banInfo?.type === 'temporary' ? `${banInfo.hours}h${banInfo.minutes}m` : '';
-    return res.redirect(`/banned.html?type=${banType}&duration=${encodeURIComponent(banDuration)}`);
+    const expiresAt = banInfo?.type === 'temporary' ? banInfo.expiresAt : '';
+    return res.redirect(`/banned.html?type=${banType}&expiresAt=${expiresAt}`);
   }
 
   const user = users[username];

@@ -160,15 +160,40 @@
     // Get URL parameters
     const params = new URLSearchParams(window.location.search);
     const banType = params.get('type');
-    const duration = params.get('duration');
+    const expiresAt = params.get('expiresAt');
 
     const banStatusEl = document.getElementById('banStatus');
     const durationDisplayEl = document.getElementById('banDurationDisplay');
 
-    if (banType === 'temporary' && duration) {
+    function updateTimer() {
+      if (banType === 'temporary' && expiresAt) {
+        const expirationTime = parseInt(expiresAt);
+        const now = Date.now();
+        const remainingMs = expirationTime - now;
+
+        if (remainingMs <= 0) {
+          durationDisplayEl.textContent = 'Ban has expired. Please try logging in again.';
+          durationDisplayEl.style.display = 'block';
+          return;
+        }
+
+        const totalSeconds = Math.floor(remainingMs / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        const timeString = `${hours}h ${minutes}m ${seconds}s`;
+        durationDisplayEl.textContent = `Your ban will expire in: ${timeString}`;
+        durationDisplayEl.style.display = 'block';
+      } else {
+        banStatusEl.textContent = 'Permanently Banned';
+      }
+    }
+
+    if (banType === 'temporary' && expiresAt) {
       banStatusEl.textContent = 'Temporarily Banned';
-      durationDisplayEl.textContent = `Your ban will expire in: ${duration}`;
-      durationDisplayEl.style.display = 'block';
+      updateTimer();
+      setInterval(updateTimer, 1000);
     } else {
       banStatusEl.textContent = 'Permanently Banned';
     }
