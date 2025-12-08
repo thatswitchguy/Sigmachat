@@ -1216,6 +1216,62 @@ function closeImageModal() {
   }
 }
 
+// Image upload functionality
+const imageUploadInput = document.getElementById('image-upload');
+const uploadImageBtn = document.getElementById('upload-image-btn');
+
+if (uploadImageBtn && imageUploadInput) {
+  uploadImageBtn.addEventListener('click', () => {
+    imageUploadInput.click();
+  });
+
+  imageUploadInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Check file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      showNotification('Image must be less than 5MB', 'error');
+      imageUploadInput.value = '';
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      showNotification('Only image files are allowed', 'error');
+      imageUploadInput.value = '';
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Send the image URL as a message
+        const imageUrl = window.location.origin + data.imageUrl;
+        socket.emit('chat message', imageUrl);
+        showNotification('Image uploaded successfully!', 'success');
+      } else {
+        showNotification('Failed to upload image: ' + data.error, 'error');
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      showNotification('Failed to upload image', 'error');
+    }
+
+    // Clear the input
+    imageUploadInput.value = '';
+  });
+}
+
 // Focus input on page load
 window.addEventListener('load', () => {
   if (input) {
