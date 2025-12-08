@@ -39,7 +39,7 @@ function updatePreferences() {
 // Play notification sound for incoming messages
 function playNotificationSound() {
   if (!notificationsEnabled) return;
-  
+
   try {
     const audio = new Audio('/notification.wav');
     audio.volume = 0.5;
@@ -58,9 +58,9 @@ function showNotification(message, type = 'info', title = '') {
 
   const notification = document.createElement('div');
   notification.className = `notification-toast ${type}`;
-  
+
   const titleText = title || (type === 'error' ? 'Error' : type === 'success' ? 'Success' : type === 'warning' ? 'Warning' : 'Notification');
-  
+
   notification.innerHTML = `
     <div class="notification-content">
       <div class="notification-title">${titleText}</div>
@@ -68,15 +68,15 @@ function showNotification(message, type = 'info', title = '') {
     </div>
     <button class="notification-close">&times;</button>
   `;
-  
+
   container.appendChild(notification);
-  
+
   const closeBtn = notification.querySelector('.notification-close');
   closeBtn.addEventListener('click', () => {
     notification.classList.add('closing');
     setTimeout(() => notification.remove(), 300);
   });
-  
+
   // Auto-remove after 5 seconds
   setTimeout(() => {
     if (notification.parentElement) {
@@ -122,7 +122,7 @@ let isScrolledToBottom = true;
 function checkScrollPosition() {
   const threshold = 50; // Allow 50px tolerance
   isScrolledToBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight < threshold;
-  
+
   if (isScrolledToBottom) {
     scrollDownBtn.classList.remove('show');
   } else {
@@ -156,10 +156,10 @@ function openCreateRoom() {
 function loadRooms() {
   const roomList = document.getElementById('room-list');
   const defaultRooms = ['general', 'suggestions', 'tech-support'];
-  
+
   // Always show default rooms first
   roomList.innerHTML = '';
-  
+
   defaultRooms.forEach(roomId => {
     const roomDiv = document.createElement('div');
     roomDiv.className = `room-item ${roomId === currentRoom ? 'active' : ''} default-room`;
@@ -258,15 +258,19 @@ function loadRoomMessages(roomId) {
           if (processedMessage.includes('@')) {
             processedMessage = processedMessage.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
           }
-          
-          // Process links
-          processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="message-link">$1</a>');
-          
-          // Process images (common image extensions)
-          processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
-          
-          // Process image URLs that end with image extensions but might have query parameters
-          processedMessage = processedMessage.replace(/(https?:\/\/[^\s]*\.(jpg|jpeg|png|gif|webp|svg)[^\s]*)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
+
+          // Process images FIRST (before links to prevent double wrapping)
+          // Match image URLs with common extensions (with or without query parameters)
+          processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
+
+          // Process remaining links (that aren't already images)
+          processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, function(match) {
+            // Don't link if it's already an image
+            if (match.match(/\.(jpg|jpeg|png|gif|webp|svg)/i)) {
+              return match;
+            }
+            return '<a href="' + match + '" target="_blank" class="message-link">' + match + '</a>';
+          });
 
           // Get user's profile picture
           fetch(`/api/user-profile/${messageData.username}`)
@@ -408,7 +412,7 @@ function loadOnlineUsers() {
       // Fallback to showing only online users - use Set to avoid duplicates
       const visibleOnlineUsersSet = new Set(onlineUsers.filter(user => !bannedUsers.has(user) && user !== username));
       const visibleOnlineUsers = Array.from(visibleOnlineUsersSet);
-      
+
       if (visibleOnlineUsers.length === 0) {
         const noUsersDiv = document.createElement('div');
         noUsersDiv.className = 'online-user';
@@ -433,7 +437,7 @@ function loadOnlineUsers() {
 function startDM(targetUser) {
   // Update preferences before starting DM
   updatePreferences();
-  
+
   if (!allowDMs) {
     showNotification('The user has disabled direct messages from DMs from other server members', 'warning');
     return;
@@ -459,15 +463,19 @@ function startDM(targetUser) {
         if (processedMessage.includes('@')) {
           processedMessage = processedMessage.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
         }
-        
-        // Process links
-        processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="message-link">$1</a>');
-        
-        // Process images (common image extensions)
-        processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
-        
-        // Process image URLs that end with image extensions but might have query parameters
-        processedMessage = processedMessage.replace(/(https?:\/\/[^\s]*\.(jpg|jpeg|png|gif|webp|svg)[^\s]*)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
+
+        // Process images FIRST (before links to prevent double wrapping)
+        // Match image URLs with common extensions (with or without query parameters)
+        processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
+
+        // Process remaining links (that aren't already images)
+        processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, function(match) {
+          // Don't link if it's already an image
+          if (match.match(/\.(jpg|jpeg|png|gif|webp|svg)/i)) {
+            return match;
+          }
+          return '<a href="' + match + '" target="_blank" class="message-link">' + match + '</a>';
+        });
 
         // Get user's profile picture
         fetch(`/api/user-profile/${messageData.from}`)
@@ -694,7 +702,7 @@ function renameRoom(roomId, newName) {
 function deleteRoom(roomId) {
   // Show confirmation notification
   showNotification(`Deleting room "#${roomId}"...`, 'warning', 'Confirm Delete');
-  
+
   fetch(`/api/rooms/${roomId}`, {
     method: 'DELETE'
   })
@@ -784,7 +792,7 @@ socket.on('chat message', (data) => {
 
   const messageDiv = document.createElement('div');
   messageDiv.className = data.username === 'System' ? 'message system' : 'message';
-  
+
   // Get the current number of messages to set the index
   const messageIndex = messages.children.length;
   messageDiv.dataset.messageIndex = messageIndex;
@@ -798,15 +806,19 @@ socket.on('chat message', (data) => {
     if (processedMessage.includes('@')) {
       processedMessage = processedMessage.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
     }
-    
-    // Process links
-    processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="message-link">$1</a>');
-    
-    // Process images (common image extensions)
-    processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
-    
-    // Process image URLs that end with image extensions but might have query parameters
-    processedMessage = processedMessage.replace(/(https?:\/\/[^\s]*\.(jpg|jpeg|png|gif|webp|svg)[^\s]*)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
+
+    // Process images FIRST (before links to prevent double wrapping)
+    // Match image URLs with common extensions (with or without query parameters)
+    processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
+
+    // Process remaining links (that aren't already images)
+    processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, function(match) {
+      // Don't link if it's already an image
+      if (match.match(/\.(jpg|jpeg|png|gif|webp|svg)/i)) {
+        return match;
+      }
+      return '<a href="' + match + '" target="_blank" class="message-link">' + match + '</a>';
+    });
 
     // Get user's profile picture
     fetch(`/api/user-profile/${data.username}`)
@@ -876,7 +888,7 @@ socket.on('room switched', (room) => {
 
 socket.on('dm message', (data) => {
   const dmUser = data.from === username ? data.to : data.from;
-  
+
   // Play notification sound if user is NOT currently viewing this DM and message is from the other user
   const isCurrentDM = (currentDM === data.from && data.to === username) || (currentDM === data.to && data.from === username);
   if (!isCurrentDM && data.from !== username) {
@@ -893,15 +905,19 @@ socket.on('dm message', (data) => {
     if (processedMessage.includes('@')) {
       processedMessage = processedMessage.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
     }
-    
-    // Process links
-    processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="message-link">$1</a>');
-    
-    // Process images (common image extensions)
-    processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
-    
-    // Process image URLs that end with image extensions but might have query parameters
-    processedMessage = processedMessage.replace(/(https?:\/\/[^\s]*\.(jpg|jpeg|png|gif|webp|svg)[^\s]*)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
+
+    // Process images FIRST (before links to prevent double wrapping)
+    // Match image URLs with common extensions (with or without query parameters)
+    processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
+
+    // Process remaining links (that aren't already images)
+    processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, function(match) {
+      // Don't link if it's already an image
+      if (match.match(/\.(jpg|jpeg|png|gif|webp|svg)/i)) {
+        return match;
+      }
+      return '<a href="' + match + '" target="_blank" class="message-link">' + match + '</a>';
+    });
 
     const dmMsgDate = data.date || '';
     const dmMsgTime = data.time || '';
@@ -929,10 +945,10 @@ socket.on('user online', (users) => {
 
 socket.on('user banned', (data) => {
   bannedUsers.add(data.bannedUser);
-  
+
   // Remove from online users
   onlineUsers = onlineUsers.filter(user => user !== data.bannedUser);
-  
+
   // If currently in DM with banned user, close it
   if (currentDM === data.bannedUser) {
     currentDM = null;
@@ -940,7 +956,7 @@ socket.on('user banned', (data) => {
     document.getElementById('current-room').textContent = '#general';
     document.getElementById('input').placeholder = 'Message #general';
   }
-  
+
   // Clear the user list before reloading to prevent duplicates
   const onlineUserList = document.getElementById('online-user-list');
   if (onlineUserList) {
@@ -994,7 +1010,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
   }
-  
+
   // Create room button - redirect to room creation page
   const createRoomBtn = document.getElementById('create-room-btn');
   if (createRoomBtn) {
@@ -1033,7 +1049,7 @@ function showBanOptions(targetUser) {
     <div class="ban-modal-content">
       <h2>Ban User: ${targetUser}</h2>
       <p>Select an action for this user:</p>
-      
+
       <div class="ban-options">
         <div class="ban-option">
           <label>Temporary Ban (minutes):</label>
@@ -1049,22 +1065,22 @@ function showBanOptions(targetUser) {
             <button class="ban-time-btn custom" id="custom-ban-btn">Apply</button>
           </div>
         </div>
-        
+
         <div class="ban-divider"></div>
-        
+
         <div class="ban-option danger">
           <button class="permanent-ban-btn" id="permanent-ban-btn">Permanent Ban</button>
           <p class="warning-text">User will be banned forever and cannot access the chat.</p>
         </div>
-        
+
         <div class="ban-divider"></div>
-        
+
         <div class="ban-option danger">
           <button class="delete-user-btn" id="delete-user-btn">Delete User Account</button>
           <p class="warning-text">This will permanently delete the user's account and ban them.</p>
         </div>
       </div>
-      
+
       <div class="ban-modal-footer">
         <button class="cancel-btn" id="cancel-ban-btn">Cancel</button>
       </div>
@@ -1353,7 +1369,7 @@ function editMessage(roomOrUser, messageIndex, type) {
           contentSpan.textContent = newMessage;
           contentSpan.style.display = 'inline';
           editContainer.remove();
-          
+
           // Add edited indicator if not already present
           if (!messageDiv.querySelector('.edited')) {
             const editedSpan = document.createElement('span');
@@ -1440,7 +1456,7 @@ socket.on('message edited', (data) => {
     const contentSpan = messageDiv.querySelector('.content');
     if (contentSpan) {
       contentSpan.textContent = data.newMessage;
-      
+
       // Add or update edited indicator
       let editedSpan = messageDiv.querySelector('.edited');
       if (!editedSpan) {
@@ -1469,7 +1485,7 @@ socket.on('dm message edited', (data) => {
     const contentSpan = messageDiv.querySelector('.content');
     if (contentSpan) {
       contentSpan.textContent = data.newMessage;
-      
+
       // Add or update edited indicator
       let editedSpan = messageDiv.querySelector('.edited');
       if (!editedSpan) {
