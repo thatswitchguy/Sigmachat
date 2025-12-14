@@ -1,6 +1,6 @@
 {
-  "name": "discord-style-chat",
-  "version": "1.0.0",
+  "name": "sigma-chat",
+  "version": "1.2.5",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"

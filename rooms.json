@@ -1,16 +1,16 @@
 {
   "rooms": {
-    "testisbest": {
-      "name": "test is best",
-      "members": [
-        "thatswitchguy",
-        "test account"
-      ]
-    },
     "test-is-best": {
       "name": "test-is-best",
       "members": [
         "other_banana",
+        "test account"
+      ]
+    },
+    "test-is-best2": {
+      "name": "test-is-best 2",
+      "members": [
+        "thatswitchguy",
         "test account"
       ]
     }

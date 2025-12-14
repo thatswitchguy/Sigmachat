@@ -3,7 +3,7 @@ modules = ["nodejs-20"]
 expertMode = true
 
 [workflows]
-runButton = "Project"
+runButton = "Start Chat Server"
 
 [[workflows.workflow]]
 name = "Project"

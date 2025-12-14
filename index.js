@@ -1045,7 +1045,15 @@ io.on('connection', (socket) => {
 
   socket.on('join', (data) => {
     user = data.username;
-    currentRoom = data.room || 'general';
+    const requestedRoom = data.room || 'general';
+    const defaultRoomIds = ['general', 'suggestions', 'tech-support'];
+    
+    // Verify user has access to the requested room
+    const hasAccess = defaultRoomIds.includes(requestedRoom) || 
+                      (roomMembers[requestedRoom] && roomMembers[requestedRoom].includes(user));
+    
+    // Use requested room if accessible, otherwise fall back to general
+    currentRoom = hasAccess ? requestedRoom : 'general';
     socket.username = user;
     socket.join(currentRoom);
 
@@ -1063,6 +1071,16 @@ io.on('connection', (socket) => {
 
   socket.on('switch room', (newRoom) => {
     if (rooms[newRoom]) {
+      // Check access: default rooms are always accessible, custom rooms need membership
+      const defaultRoomIds = ['general', 'suggestions', 'tech-support'];
+      const hasAccess = defaultRoomIds.includes(newRoom) || 
+                        (roomMembers[newRoom] && roomMembers[newRoom].includes(user));
+      
+      if (!hasAccess) {
+        socket.emit('error', { message: 'You do not have access to this room' });
+        return;
+      }
+
       socket.leave(currentRoom);
       let ts = formatTimestamp();
       socket.to(currentRoom).emit('chat message', {
