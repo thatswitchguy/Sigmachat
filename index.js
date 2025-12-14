@@ -695,6 +695,66 @@ app.delete('/api/rooms/:roomId', (req, res) => {
   res.json({ success: true });
 });
 
+// API to get room members
+app.get('/api/room/:roomId/members', (req, res) => {
+  const { roomId } = req.params;
+  const currentUser = req.username;
+
+  if (!currentUser) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const members = roomMembers[roomId] || [];
+  
+  // Check if user has access to this room
+  const defaultRoomIds = ['general', 'suggestions', 'tech-support'];
+  if (!defaultRoomIds.includes(roomId) && !members.includes(currentUser)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  res.json({ members: members });
+});
+
+// API to update room members
+app.put('/api/rooms/:roomId/members', (req, res) => {
+  const { roomId } = req.params;
+  const { members } = req.body;
+  const currentUser = req.username;
+
+  if (!currentUser) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  if (!rooms[roomId]) {
+    return res.status(404).json({ error: 'Room not found' });
+  }
+
+  const defaultRoomIds = ['general', 'suggestions', 'tech-support'];
+  if (defaultRoomIds.includes(roomId)) {
+    return res.status(400).json({ error: 'Cannot edit default rooms' });
+  }
+
+  // Check if user has access to this room
+  const currentMembers = roomMembers[roomId] || [];
+  if (!currentMembers.includes(currentUser)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  // Validate members array
+  if (!Array.isArray(members)) {
+    return res.status(400).json({ error: 'Members must be an array' });
+  }
+
+  // Ensure the creator stays in the room
+  const updatedMembers = [...new Set([currentUser, ...members])];
+  
+  roomMembers[roomId] = updatedMembers;
+  saveRoomMembers();
+  saveRooms();
+
+  res.json({ success: true });
+});
+
 // API to get user's profile picture
 app.get('/api/profile-picture', (req, res) => {
   if (!req.username) {

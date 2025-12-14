@@ -1857,3 +1857,153 @@ margin-right: 8px;
 .ban-modal-footer .cancel-btn:hover {
   background-color: #5d6269;
 }
+
+/* Edit Room Modal */
+.edit-room-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.edit-room-modal {
+  background-color: #2f3136;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.edit-room-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #b5bac1;
+  font-size: 32px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-room-close:hover {
+  color: #dcddde;
+}
+
+.edit-room-modal h2 {
+  color: #ffffff;
+  margin-bottom: 20px;
+  font-size: 20px;
+  font-weight: 600;
+  margin-top: 0;
+  padding-right: 40px;
+}
+
+.edit-room-search {
+  width: 100%;
+  padding: 10px;
+  background-color: #40444b;
+  border: 1px solid #202225;
+  border-radius: 4px;
+  color: #dcddde;
+  font-size: 14px;
+  box-sizing: border-box;
+  margin-bottom: 16px;
+}
+
+.edit-room-search:focus {
+  outline: none;
+  border-color: #7289da;
+}
+
+.edit-room-users-list {
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: #40444b;
+  border: 1px solid #202225;
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 16px;
+}
+
+.edit-room-user-item {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  margin-bottom: 4px;
+  background-color: #36393f;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.edit-room-user-item:hover {
+  background-color: #4f545c;
+}
+
+.edit-room-user-item input[type="checkbox"] {
+  margin-right: 8px;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.edit-room-user-item label {
+  flex: 1;
+  color: #dcddde;
+  margin: 0;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.edit-room-button-group {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.edit-room-cancel-btn,
+.edit-room-save-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.edit-room-cancel-btn {
+  background-color: #4f545c;
+  color: white;
+}
+
+.edit-room-cancel-btn:hover {
+  background-color: #5d6269;
+}
+
+.edit-room-save-btn {
+  background-color: #5865f2;
+  color: white;
+}
+
+.edit-room-save-btn:hover {
+  background-color: #4752c4;
+}

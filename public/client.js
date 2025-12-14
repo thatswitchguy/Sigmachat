@@ -590,10 +590,21 @@ function showContextMenu(event, roomId, isDefault) {
 
   // Position the menu, ensuring it stays within viewport
   const x = Math.min(event.clientX, window.innerWidth - 150);
-  const y = Math.min(event.clientY, window.innerHeight - 100);
+  const y = Math.min(event.clientY, window.innerHeight - 150);
 
   contextMenu.style.left = x + 'px';
   contextMenu.style.top = y + 'px';
+
+  const editItem = document.createElement('div');
+  editItem.className = `context-menu-item ${isDefault ? 'disabled' : ''}`;
+  editItem.textContent = 'Edit Room';
+  if (!isDefault) {
+    editItem.addEventListener('click', (e) => {
+      e.stopPropagation();
+      contextMenu.remove();
+      openEditRoom(roomId);
+    });
+  }
 
   const renameItem = document.createElement('div');
   renameItem.className = `context-menu-item ${isDefault ? 'disabled' : ''}`;
@@ -617,6 +628,7 @@ function showContextMenu(event, roomId, isDefault) {
     });
   }
 
+  contextMenu.appendChild(editItem);
   contextMenu.appendChild(renameItem);
   contextMenu.appendChild(deleteItem);
   document.body.appendChild(contextMenu);
@@ -723,6 +735,156 @@ function deleteRoom(roomId) {
     console.error('Error deleting room:', error);
     showNotification('Failed to delete room', 'error');
   });
+}
+
+function openEditRoom(roomId) {
+  // Create modal overlay and content
+  const modalOverlay = document.createElement('div');
+  modalOverlay.className = 'edit-room-modal-overlay';
+  
+  const modalContent = document.createElement('div');
+  modalContent.className = 'edit-room-modal';
+  
+  // Create close button
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'edit-room-close';
+  closeBtn.textContent = '×';
+  closeBtn.onclick = () => modalOverlay.remove();
+  
+  // Title
+  const title = document.createElement('h2');
+  title.textContent = `Edit Room: #${roomId}`;
+  
+  // User search input
+  const searchLabel = document.createElement('label');
+  searchLabel.textContent = 'Search Users';
+  searchLabel.style.display = 'block';
+  searchLabel.style.marginBottom = '8px';
+  searchLabel.style.color = '#b5bac1';
+  searchLabel.style.fontSize = '12px';
+  searchLabel.style.fontWeight = '600';
+  
+  const searchInput = document.createElement('input');
+  searchInput.type = 'text';
+  searchInput.placeholder = 'Search username...';
+  searchInput.className = 'edit-room-search';
+  
+  // Users list
+  const usersListLabel = document.createElement('label');
+  usersListLabel.textContent = 'Room Members';
+  usersListLabel.style.display = 'block';
+  usersListLabel.style.marginTop = '16px';
+  usersListLabel.style.marginBottom = '8px';
+  usersListLabel.style.color = '#b5bac1';
+  usersListLabel.style.fontSize = '12px';
+  usersListLabel.style.fontWeight = '600';
+  
+  const usersList = document.createElement('div');
+  usersList.className = 'edit-room-users-list';
+  
+  let allUsers = [];
+  let currentMembers = new Set();
+  
+  // Fetch room members and all users
+  Promise.all([
+    fetch(`/api/room/${roomId}/members`).then(r => r.json()).catch(() => ({})),
+    fetch('/api/users').then(r => r.json()).catch(() => [])
+  ]).then(([memberData, users]) => {
+    currentMembers = new Set(memberData.members || []);
+    allUsers = users.filter(u => u !== username);
+    
+    function renderUsersList(usersToShow) {
+      usersList.innerHTML = '';
+      usersToShow.forEach(user => {
+        const userDiv = document.createElement('div');
+        userDiv.className = 'edit-room-user-item';
+        const isMember = currentMembers.has(user);
+        
+        userDiv.innerHTML = `
+          <input type="checkbox" id="user-${user}" ${isMember ? 'checked' : ''} class="user-checkbox">
+          <label for="user-${user}">${user}</label>
+        `;
+        
+        const checkbox = userDiv.querySelector('.user-checkbox');
+        checkbox.onchange = () => {
+          if (checkbox.checked) {
+            currentMembers.add(user);
+          } else {
+            currentMembers.delete(user);
+          }
+        };
+        
+        usersList.appendChild(userDiv);
+      });
+    }
+    
+    renderUsersList(allUsers);
+    
+    searchInput.addEventListener('input', (e) => {
+      const search = e.target.value.toLowerCase();
+      const filtered = allUsers.filter(u => u.toLowerCase().includes(search));
+      renderUsersList(filtered);
+    });
+  });
+  
+  // Save button
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'edit-room-save-btn';
+  saveBtn.textContent = 'Save Changes';
+  saveBtn.onclick = () => {
+    const selectedUsers = Array.from(currentMembers);
+    
+    fetch(`/api/rooms/${roomId}/members`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ members: selectedUsers })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        showNotification(`Room "#${roomId}" updated successfully`, 'success');
+        modalOverlay.remove();
+        loadRooms();
+      } else {
+        showNotification(data.error || 'Failed to update room', 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Error updating room:', error);
+      showNotification('Failed to update room', 'error');
+    });
+  };
+  
+  // Cancel button
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'edit-room-cancel-btn';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.onclick = () => modalOverlay.remove();
+  
+  // Add elements to modal
+  modalContent.appendChild(closeBtn);
+  modalContent.appendChild(title);
+  modalContent.appendChild(searchLabel);
+  modalContent.appendChild(searchInput);
+  modalContent.appendChild(usersListLabel);
+  modalContent.appendChild(usersList);
+  
+  const buttonGroup = document.createElement('div');
+  buttonGroup.className = 'edit-room-button-group';
+  buttonGroup.appendChild(cancelBtn);
+  buttonGroup.appendChild(saveBtn);
+  modalContent.appendChild(buttonGroup);
+  
+  modalOverlay.appendChild(modalContent);
+  
+  // Close modal on overlay click
+  modalOverlay.onclick = (e) => {
+    if (e.target === modalOverlay) {
+      modalOverlay.remove();
+    }
+  };
+  
+  document.body.appendChild(modalOverlay);
 }
 
 function switchRoom(roomId) {
