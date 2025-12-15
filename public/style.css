@@ -119,6 +119,107 @@ body {
   background-color: #36393f;
 }
 
+/* Server List (Discord-style left sidebar) */
+#server-list {
+  width: 72px;
+  background-color: #202225;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+#server-list::-webkit-scrollbar {
+  display: none;
+}
+
+#server-list-items {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.server-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #36393f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  position: relative;
+}
+
+.server-icon:hover {
+  border-radius: 16px;
+  background-color: #5865f2;
+}
+
+.server-icon.active {
+  border-radius: 16px;
+  background-color: #5865f2;
+}
+
+.server-icon::before {
+  content: '';
+  position: absolute;
+  left: -16px;
+  width: 8px;
+  height: 0;
+  background-color: #ffffff;
+  border-radius: 0 4px 4px 0;
+  transition: height 0.2s ease;
+}
+
+.server-icon:hover::before {
+  height: 20px;
+}
+
+.server-icon.active::before {
+  height: 40px;
+}
+
+.server-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.server-icon span {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.server-icon.add-server {
+  background-color: #36393f;
+  color: #3ba55c;
+}
+
+.server-icon.add-server:hover {
+  background-color: #3ba55c;
+  color: #ffffff;
+}
+
+.server-icon.add-server span {
+  font-size: 24px;
+  color: inherit;
+}
+
+.server-divider {
+  width: 32px;
+  height: 2px;
+  background-color: #36393f;
+  margin: 8px 0;
+  border-radius: 1px;
+}
+
 #sidebar {
   width: 240px;
   background-color: #2f3136;
@@ -2019,4 +2120,375 @@ margin-right: 8px;
 
 .file-upload:hover {
   color: #707070
+}
+
+/* Channel Section Styles */
+#channel-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.channel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 16px 8px 16px;
+  color: #8e9297;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.channel-header button {
+  background: none;
+  border: none;
+  color: #8e9297;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.channel-header button:hover {
+  color: #dcddde;
+}
+
+#channel-list {
+  padding: 0 8px;
+}
+
+.channel-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  margin: 1px 0;
+  color: #8e9297;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 15px;
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.channel-item:hover {
+  background-color: #34373c;
+  color: #dcddde;
+}
+
+.channel-item.active {
+  background-color: #404449;
+  color: #ffffff;
+}
+
+.channel-item .channel-hash {
+  color: #72767d;
+  margin-right: 6px;
+  font-weight: 400;
+}
+
+.channel-item .channel-delete {
+  margin-left: auto;
+  opacity: 0;
+  color: #72767d;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+}
+
+.channel-item:hover .channel-delete {
+  opacity: 1;
+}
+
+.channel-item .channel-delete:hover {
+  color: #ed4245;
+}
+
+/* User Panel at bottom of sidebar */
+#user-panel {
+  padding: 8px;
+  background-color: #292b2f;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #202225;
+}
+
+#user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+#user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #5865f2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+#user-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+#user-name-display {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#user-controls {
+  display: flex;
+  gap: 4px;
+}
+
+#user-controls button {
+  background: none;
+  border: none;
+  color: #b5bac1;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+#user-controls button:hover {
+  background-color: #36393f;
+  color: #dcddde;
+}
+
+/* Sidebar header with server name */
+#sidebar-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #202225;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 48px;
+  box-shadow: 0 1px 0 rgba(4,4,5,0.2);
+}
+
+#sidebar-header h3 {
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#server-settings-btn {
+  background: none;
+  border: none;
+  color: #b5bac1;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+#server-settings-btn:hover {
+  color: #dcddde;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background-color: #36393f;
+  border-radius: 8px;
+  width: 440px;
+  max-width: 90%;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.36);
+}
+
+.modal-header {
+  padding: 16px;
+  border-bottom: 1px solid #202225;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: #72767d;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  color: #dcddde;
+}
+
+.modal-body {
+  padding: 16px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  padding: 16px;
+  border-top: 1px solid #202225;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  color: #b5bac1;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px 12px;
+  background-color: #202225;
+  border: 1px solid #040405;
+  border-radius: 4px;
+  color: #dcddde;
+  font-size: 16px;
+  outline: none;
+}
+
+.form-group input:focus {
+  border-color: #5865f2;
+}
+
+.btn-primary {
+  padding: 10px 16px;
+  background-color: #5865f2;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: #4752c4;
+}
+
+.btn-secondary {
+  padding: 10px 16px;
+  background-color: transparent;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  text-decoration: underline;
+}
+
+.btn-danger {
+  padding: 10px 16px;
+  background-color: #ed4245;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-danger:hover {
+  background-color: #c73d3f;
+}
+
+.danger-zone {
+  margin-top: 24px;
+  padding: 16px;
+  background-color: rgba(237, 66, 69, 0.1);
+  border: 1px solid #ed4245;
+  border-radius: 4px;
+}
+
+.danger-zone h3 {
+  color: #ed4245;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+}
+
+.danger-zone button {
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+
+/* Upload button fix */
+#upload-image-btn {
+  padding: 12px 16px;
+  background-color: #4f545c;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+#upload-image-btn:hover {
+  background-color: #5865f2;
 }

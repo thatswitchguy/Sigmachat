@@ -57,6 +57,98 @@ const usersFile = path.join(__dirname, 'users.json');
 const roomsFile = path.join(__dirname, 'rooms.json');
 const generalMessagesFile = path.join(__dirname, 'general_messages.json');
 const bannedUsersFile = path.join(__dirname, 'banned_users.json');
+const serversFile = path.join(__dirname, 'servers.json');
+
+// ============== SERVER SYSTEM ==============
+// Servers structure: { serverId: { name, icon, owner, admins: [], members: [], channels: { channelId: { name, type } } } }
+let servers = {};
+
+// Load servers from file
+try {
+  if (fs.existsSync(serversFile)) {
+    const serverData = fs.readFileSync(serversFile, 'utf8');
+    servers = JSON.parse(serverData);
+  } else {
+    // Create default server
+    servers = {
+      'sigmachat': {
+        id: 'sigmachat',
+        name: 'SigmaChat',
+        icon: null,
+        owner: 'system',
+        admins: ['ikhan', 'thatswitchguy'],
+        members: [],
+        channels: {
+          'general': { name: 'general', type: 'text' },
+          'suggestions': { name: 'suggestions', type: 'text' },
+          'tech-support': { name: 'tech-support', type: 'text' }
+        },
+        createdAt: new Date().toISOString()
+      }
+    };
+    saveServers();
+  }
+} catch (error) {
+  console.error('Error loading servers:', error);
+  servers = {};
+}
+
+// Server messages: { serverId: { channelId: [] } }
+let serverMessages = {};
+
+function saveServers() {
+  try {
+    fs.writeFileSync(serversFile, JSON.stringify(servers, null, 2));
+  } catch (error) {
+    console.error('Error saving servers:', error);
+  }
+}
+
+function getServerMessagesFile(serverId, channelId) {
+  return path.join(__dirname, `server_${serverId}_${channelId}_messages.json`);
+}
+
+function loadServerMessages(serverId, channelId) {
+  const file = getServerMessagesFile(serverId, channelId);
+  try {
+    if (fs.existsSync(file)) {
+      return JSON.parse(fs.readFileSync(file, 'utf8'));
+    }
+  } catch (error) {
+    console.error(`Error loading messages for ${serverId}/${channelId}:`, error);
+  }
+  return [];
+}
+
+function saveServerMessages(serverId, channelId, messages) {
+  const file = getServerMessagesFile(serverId, channelId);
+  try {
+    const messagesToSave = messages.slice(-100);
+    fs.writeFileSync(file, JSON.stringify(messagesToSave, null, 2));
+  } catch (error) {
+    console.error(`Error saving messages for ${serverId}/${channelId}:`, error);
+  }
+}
+
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+}
+
+function isServerAdmin(serverId, username) {
+  const server = servers[serverId];
+  if (!server) return false;
+  return server.owner === username || (server.admins && server.admins.includes(username));
+}
+
+function isServerMember(serverId, username) {
+  const server = servers[serverId];
+  if (!server) return false;
+  // Default server is accessible to everyone
+  if (serverId === 'sigmachat') return true;
+  return server.owner === username || 
+         (server.admins && server.admins.includes(username)) || 
+         (server.members && server.members.includes(username));
+}
 
 // Load users from file or use empty object
 let users = {};
@@ -555,6 +647,361 @@ app.get('/api/:roomId/messages', (req, res) => {
   } else {
     res.json([]);
   }
+});
+
+// ============== SERVER API ENDPOINTS ==============
+
+// Get all servers the user has access to
+app.get('/api/servers', (req, res) => {
+  const currentUser = req.username;
+  if (!currentUser) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const userServers = {};
+  Object.keys(servers).forEach(serverId => {
+    const server = servers[serverId];
+    if (isServerMember(serverId, currentUser)) {
+      userServers[serverId] = {
+        id: serverId,
+        name: server.name,
+        icon: server.icon,
+        isAdmin: isServerAdmin(serverId, currentUser),
+        isOwner: server.owner === currentUser,
+        channelCount: Object.keys(server.channels || {}).length
+      };
+    }
+  });
+
+  res.json(userServers);
+});
+
+// Get a specific server's details
+app.get('/api/servers/:serverId', (req, res) => {
+  const { serverId } = req.params;
+  const currentUser = req.username;
+
+  if (!currentUser) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const server = servers[serverId];
+  if (!server) {
+    return res.status(404).json({ error: 'Server not found' });
+  }
+
+  if (!isServerMember(serverId, currentUser)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  res.json({
+    id: serverId,
+    name: server.name,
+    icon: server.icon,
+    channels: server.channels || {},
+    isAdmin: isServerAdmin(serverId, currentUser),
+    isOwner: server.owner === currentUser,
+    memberCount: (server.members || []).length + (server.admins || []).length + 1
+  });
+});
+
+// Create a new server
+app.post('/api/servers', (req, res) => {
+  const { name, icon } = req.body;
+  const currentUser = req.username;
+
+  if (!currentUser) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  if (!name || name.length < 2 || name.length > 50) {
+    return res.status(400).json({ error: 'Server name must be between 2 and 50 characters' });
+  }
+
+  const serverId = generateId();
+  servers[serverId] = {
+    id: serverId,
+    name: name,
+    icon: icon || null,
+    owner: currentUser,
+    admins: [],
+    members: [],
+    channels: {
+      'general': { name: 'general', type: 'text' },
+      'welcome': { name: 'welcome', type: 'text' }
+    },
+    createdAt: new Date().toISOString()
+  };
+
+  saveServers();
+  res.json({ success: true, serverId, server: servers[serverId] });
+});
+
+// Update server settings
+app.put('/api/servers/:serverId', (req, res) => {
+  const { serverId } = req.params;
+  const { name, icon } = req.body;
+  const currentUser = req.username;
+
+  if (!currentUser) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const server = servers[serverId];
+  if (!server) {
+    return res.status(404).json({ error: 'Server not found' });
+  }
+
+  if (!isServerAdmin(serverId, currentUser)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  if (name) server.name = name;
+  if (icon !== undefined) server.icon = icon;
+
+  saveServers();
+  res.json({ success: true });
+});
+
+// Delete a server
+app.delete('/api/servers/:serverId', (req, res) => {
+  const { serverId } = req.params;
+  const currentUser = req.username;
+
+  if (!currentUser) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const server = servers[serverId];
+  if (!server) {
+    return res.status(404).json({ error: 'Server not found' });
+  }
+
+  if (server.owner !== currentUser) {
+    return res.status(403).json({ error: 'Only the owner can delete the server' });
+  }
+
+  if (serverId === 'sigmachat') {
+    return res.status(400).json({ error: 'Cannot delete the default server' });
+  }
+
+  delete servers[serverId];
+  saveServers();
+  res.json({ success: true });
+});
+
+// Get server channels
+app.get('/api/servers/:serverId/channels', (req, res) => {
+  const { serverId } = req.params;
+  const currentUser = req.username;
+
+  if (!currentUser) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const server = servers[serverId];
+  if (!server) {
+    return res.status(404).json({ error: 'Server not found' });
+  }
+
+  if (!isServerMember(serverId, currentUser)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  res.json(server.channels || {});
+});
+
+// Create a channel in a server
+app.post('/api/servers/:serverId/channels', (req, res) => {
+  const { serverId } = req.params;
+  const { name, type } = req.body;
+  const currentUser = req.username;
+
+  if (!currentUser) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const server = servers[serverId];
+  if (!server) {
+    return res.status(404).json({ error: 'Server not found' });
+  }
+
+  if (!isServerAdmin(serverId, currentUser)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  if (!name || name.length < 1 || name.length > 30) {
+    return res.status(400).json({ error: 'Channel name must be between 1 and 30 characters' });
+  }
+
+  const channelId = name.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+  
+  if (!server.channels) server.channels = {};
+  
+  if (server.channels[channelId]) {
+    return res.status(400).json({ error: 'Channel already exists' });
+  }
+
+  server.channels[channelId] = {
+    name: name.toLowerCase(),
+    type: type || 'text'
+  };
+
+  saveServers();
+  res.json({ success: true, channelId });
+});
+
+// Delete a channel
+app.delete('/api/servers/:serverId/channels/:channelId', (req, res) => {
+  const { serverId, channelId } = req.params;
+  const currentUser = req.username;
+
+  if (!currentUser) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const server = servers[serverId];
+  if (!server) {
+    return res.status(404).json({ error: 'Server not found' });
+  }
+
+  if (!isServerAdmin(serverId, currentUser)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  if (!server.channels || !server.channels[channelId]) {
+    return res.status(404).json({ error: 'Channel not found' });
+  }
+
+  if (channelId === 'general') {
+    return res.status(400).json({ error: 'Cannot delete the general channel' });
+  }
+
+  delete server.channels[channelId];
+  saveServers();
+  res.json({ success: true });
+});
+
+// Get channel messages
+app.get('/api/servers/:serverId/channels/:channelId/messages', (req, res) => {
+  const { serverId, channelId } = req.params;
+  const currentUser = req.username;
+
+  if (!currentUser) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  if (!isServerMember(serverId, currentUser)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  const messages = loadServerMessages(serverId, channelId);
+  res.json(messages);
+});
+
+// Join a server (via invite or public)
+app.post('/api/servers/:serverId/join', (req, res) => {
+  const { serverId } = req.params;
+  const currentUser = req.username;
+
+  if (!currentUser) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const server = servers[serverId];
+  if (!server) {
+    return res.status(404).json({ error: 'Server not found' });
+  }
+
+  if (isServerMember(serverId, currentUser)) {
+    return res.status(400).json({ error: 'Already a member' });
+  }
+
+  if (!server.members) server.members = [];
+  server.members.push(currentUser);
+  saveServers();
+
+  res.json({ success: true });
+});
+
+// Leave a server
+app.post('/api/servers/:serverId/leave', (req, res) => {
+  const { serverId } = req.params;
+  const currentUser = req.username;
+
+  if (!currentUser) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const server = servers[serverId];
+  if (!server) {
+    return res.status(404).json({ error: 'Server not found' });
+  }
+
+  if (server.owner === currentUser) {
+    return res.status(400).json({ error: 'Owner cannot leave. Transfer ownership or delete the server.' });
+  }
+
+  if (serverId === 'sigmachat') {
+    return res.status(400).json({ error: 'Cannot leave the default server' });
+  }
+
+  server.members = (server.members || []).filter(m => m !== currentUser);
+  server.admins = (server.admins || []).filter(a => a !== currentUser);
+  saveServers();
+
+  res.json({ success: true });
+});
+
+// Manage server members (add admin, remove member, etc.)
+app.put('/api/servers/:serverId/members/:targetUser', (req, res) => {
+  const { serverId, targetUser } = req.params;
+  const { action } = req.body;
+  const currentUser = req.username;
+
+  if (!currentUser) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const server = servers[serverId];
+  if (!server) {
+    return res.status(404).json({ error: 'Server not found' });
+  }
+
+  if (!isServerAdmin(serverId, currentUser)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  if (!server.members) server.members = [];
+  if (!server.admins) server.admins = [];
+
+  switch (action) {
+    case 'promote':
+      if (!server.admins.includes(targetUser)) {
+        server.admins.push(targetUser);
+        server.members = server.members.filter(m => m !== targetUser);
+      }
+      break;
+    case 'demote':
+      if (server.owner === currentUser) {
+        server.admins = server.admins.filter(a => a !== targetUser);
+        if (!server.members.includes(targetUser)) {
+          server.members.push(targetUser);
+        }
+      } else {
+        return res.status(403).json({ error: 'Only owner can demote admins' });
+      }
+      break;
+    case 'kick':
+      server.members = server.members.filter(m => m !== targetUser);
+      server.admins = server.admins.filter(a => a !== targetUser);
+      break;
+    default:
+      return res.status(400).json({ error: 'Invalid action' });
+  }
+
+  saveServers();
+  res.json({ success: true });
 });
 
 // Account page
@@ -1101,19 +1548,36 @@ function formatTimestamp() {
 // Socket.io connection handling
 io.on('connection', (socket) => {
   let user;
-  let currentRoom = 'general';
+  let currentRoom = 'sigmachat:general';
+  let currentServerId = 'sigmachat';
+  let currentChannelId = 'general';
+
+  // Parse room format: "serverId:channelId" or plain "channelId" (legacy)
+  function parseRoom(roomStr) {
+    if (!roomStr) return { serverId: 'sigmachat', channelId: 'general' };
+    if (roomStr.includes(':')) {
+      const [serverId, channelId] = roomStr.split(':');
+      return { serverId, channelId };
+    }
+    // Legacy format - treat as default server channel
+    return { serverId: 'sigmachat', channelId: roomStr };
+  }
 
   socket.on('join', (data) => {
     user = data.username;
-    const requestedRoom = data.room || 'general';
-    const defaultRoomIds = ['general', 'suggestions', 'tech-support'];
+    const requestedRoom = data.room || 'sigmachat:general';
+    const { serverId, channelId } = parseRoom(requestedRoom);
     
-    // Verify user has access to the requested room
-    const hasAccess = defaultRoomIds.includes(requestedRoom) || 
-                      (roomMembers[requestedRoom] && roomMembers[requestedRoom].includes(user));
+    // Verify user has access to the server
+    if (!isServerMember(serverId, user)) {
+      currentServerId = 'sigmachat';
+      currentChannelId = 'general';
+    } else {
+      currentServerId = serverId;
+      currentChannelId = channelId;
+    }
     
-    // Use requested room if accessible, otherwise fall back to general
-    currentRoom = hasAccess ? requestedRoom : 'general';
+    currentRoom = `${currentServerId}:${currentChannelId}`;
     socket.username = user;
     socket.join(currentRoom);
 
@@ -1123,46 +1587,52 @@ io.on('connection', (socket) => {
     const ts = formatTimestamp();
     socket.to(currentRoom).emit('chat message', {
       username: 'System',
-      message: `${user} joined #${currentRoom}.`,
+      message: `${user} joined #${currentChannelId}.`,
       date: ts.date,
       time: ts.time
     });
   });
 
-  socket.on('switch room', (newRoom) => {
-    if (rooms[newRoom]) {
-      // Check access: default rooms are always accessible, custom rooms need membership
-      const defaultRoomIds = ['general', 'suggestions', 'tech-support'];
-      const hasAccess = defaultRoomIds.includes(newRoom) || 
-                        (roomMembers[newRoom] && roomMembers[newRoom].includes(user));
-      
-      if (!hasAccess) {
-        socket.emit('error', { message: 'You do not have access to this room' });
-        return;
-      }
-
-      socket.leave(currentRoom);
-      let ts = formatTimestamp();
-      socket.to(currentRoom).emit('chat message', {
-        username: 'System',
-        message: `${user} left #${currentRoom}.`,
-        date: ts.date,
-        time: ts.time
-      });
-
-      currentRoom = newRoom;
-      socket.join(currentRoom);
-
-      ts = formatTimestamp();
-      socket.to(currentRoom).emit('chat message', {
-        username: 'System',
-        message: `${user} joined #${currentRoom}.`,
-        date: ts.date,
-        time: ts.time
-      });
-
-      socket.emit('room switched', currentRoom);
+  socket.on('switch room', (data) => {
+    const newRoomStr = typeof data === 'string' ? data : data.room;
+    const { serverId, channelId } = parseRoom(newRoomStr);
+    
+    // Verify user has access to the server
+    if (!isServerMember(serverId, user)) {
+      socket.emit('error', { message: 'You do not have access to this server' });
+      return;
     }
+    
+    // Verify channel exists in server
+    const server = servers[serverId];
+    if (!server || !server.channels || !server.channels[channelId]) {
+      socket.emit('error', { message: 'Channel not found' });
+      return;
+    }
+
+    socket.leave(currentRoom);
+    let ts = formatTimestamp();
+    socket.to(currentRoom).emit('chat message', {
+      username: 'System',
+      message: `${user} left #${currentChannelId}.`,
+      date: ts.date,
+      time: ts.time
+    });
+
+    currentServerId = serverId;
+    currentChannelId = channelId;
+    currentRoom = `${serverId}:${channelId}`;
+    socket.join(currentRoom);
+
+    ts = formatTimestamp();
+    socket.to(currentRoom).emit('chat message', {
+      username: 'System',
+      message: `${user} joined #${channelId}.`,
+      date: ts.date,
+      time: ts.time
+    });
+
+    socket.emit('room switched', currentRoom);
   });
 
   socket.on('chat message', (msg) => {
@@ -1174,10 +1644,10 @@ io.on('connection', (socket) => {
       time: ts.time
     };
 
-    if (roomMessages[currentRoom]) {
-      roomMessages[currentRoom].push(messageData);
-      saveRoomMessages(currentRoom);
-    }
+    // Save to server channel messages
+    const messages = loadServerMessages(currentServerId, currentChannelId);
+    messages.push(messageData);
+    saveServerMessages(currentServerId, currentChannelId, messages);
 
     io.to(currentRoom).emit('chat message', messageData);
   });

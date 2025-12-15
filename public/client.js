@@ -1,19 +1,20 @@
-// Context menu for room items
+// SigmaChat Client - Discord-like chat application
 const socket = io();
 
 let username = null;
-let currentRoom = 'general';
+let currentServer = 'sigmachat';
+let currentChannel = 'general';
 let currentDM = null;
-let additionalRoomsCreated = 0;
-const maxAdditionalRooms = 3;
 let onlineUsers = [];
 let dmHistories = {};
 let isAdmin = false;
+let isServerAdmin = false;
 let bannedUsers = new Set();
 let notificationsEnabled = true;
 let allowDMs = true;
 let desktopNotifications = true;
 let dataUsage = true;
+let servers = {};
 
 // Load user preferences from server
 function loadUserPreferences() {
@@ -27,38 +28,28 @@ function loadUserPreferences() {
     })
     .catch(error => {
       console.error('Error loading user preferences:', error);
-      // Use defaults on error
     });
 }
 
-// Update preferences when they change
 function updatePreferences() {
   loadUserPreferences();
 }
 
-// Play notification sound for incoming messages
 function playNotificationSound() {
   if (!notificationsEnabled) return;
-
   try {
     const audio = new Audio('/notification.wav');
     audio.volume = 0.5;
-    audio.play().catch(() => {
-      // Silently fail if audio can't be played
-    });
-  } catch (e) {
-    // Silently fail - notification is optional
-  }
+    audio.play().catch(() => {});
+  } catch (e) {}
 }
 
-// Notification system
 function showNotification(message, type = 'info', title = '') {
   const container = document.getElementById('notification-container');
   if (!container) return;
 
   const notification = document.createElement('div');
   notification.className = `notification-toast ${type}`;
-
   const titleText = title || (type === 'error' ? 'Error' : type === 'success' ? 'Success' : type === 'warning' ? 'Warning' : 'Notification');
 
   notification.innerHTML = `
@@ -70,14 +61,12 @@ function showNotification(message, type = 'info', title = '') {
   `;
 
   container.appendChild(notification);
-
   const closeBtn = notification.querySelector('.notification-close');
   closeBtn.addEventListener('click', () => {
     notification.classList.add('closing');
     setTimeout(() => notification.remove(), 300);
   });
 
-  // Auto-remove after 5 seconds
   setTimeout(() => {
     if (notification.parentElement) {
       notification.classList.add('closing');
@@ -86,23 +75,15 @@ function showNotification(message, type = 'info', title = '') {
   }, 5000);
 }
 
-// Check if user is logged in
+// Initialize application
 fetch('/api/user')
   .then(response => response.json())
   .then(data => {
     if (data.username) {
       username = data.username;
-      // Check if user is admin
       isAdmin = data.username === 'thatswitchguy' || data.username === 'ikhan';
-      // Load user preferences from server
       loadUserPreferences();
-      socket.emit('join', { username: username, room: currentRoom });
-      loadRooms();
-      loadOnlineUsers();
-      // Load messages for default rooms
-      if (['general', 'suggestions', 'tech-support'].includes(currentRoom)) {
-        loadRoomMessages(currentRoom);
-      }
+      initializeApp();
     } else {
       window.location.href = '/login';
     }
@@ -110,6 +91,427 @@ fetch('/api/user')
   .catch(() => {
     window.location.href = '/login';
   });
+
+function initializeApp() {
+  updateUserPanel();
+  loadServers();
+  loadOnlineUsers();
+  setupEventListeners();
+  socket.emit('join', { username: username, room: `${currentServer}:${currentChannel}` });
+}
+
+function updateUserPanel() {
+  const userAvatar = document.getElementById('user-avatar');
+  const userNameDisplay = document.getElementById('user-name-display');
+  
+  if (userNameDisplay) userNameDisplay.textContent = username;
+  if (userAvatar) {
+    fetch('/api/profile-picture')
+      .then(r => r.json())
+      .then(data => {
+        if (data.profilePicture) {
+          userAvatar.innerHTML = `<img src="${data.profilePicture}" alt="${username}">`;
+        } else {
+          userAvatar.textContent = username.charAt(0).toUpperCase();
+        }
+      })
+      .catch(() => {
+        userAvatar.textContent = username.charAt(0).toUpperCase();
+      });
+  }
+}
+
+// Server management
+function loadServers() {
+  fetch('/api/servers')
+    .then(response => response.json())
+    .then(data => {
+      servers = data;
+      renderServerList();
+      if (servers[currentServer]) {
+        selectServer(currentServer);
+      } else {
+        const firstServer = Object.keys(servers)[0];
+        if (firstServer) selectServer(firstServer);
+      }
+    })
+    .catch(error => {
+      console.error('Error loading servers:', error);
+    });
+}
+
+function renderServerList() {
+  const serverListItems = document.getElementById('server-list-items');
+  if (!serverListItems) return;
+  
+  serverListItems.innerHTML = '';
+  
+  Object.values(servers).forEach(server => {
+    const serverIcon = document.createElement('div');
+    serverIcon.className = `server-icon ${server.id === currentServer ? 'active' : ''}`;
+    serverIcon.title = server.name;
+    serverIcon.dataset.serverId = server.id;
+    
+    if (server.icon) {
+      serverIcon.innerHTML = `<img src="${server.icon}" alt="${server.name}">`;
+    } else {
+      serverIcon.innerHTML = `<span>${server.name.charAt(0).toUpperCase()}</span>`;
+    }
+    
+    serverIcon.onclick = () => selectServer(server.id);
+    serverListItems.appendChild(serverIcon);
+  });
+}
+
+function selectServer(serverId) {
+  currentServer = serverId;
+  currentDM = null;
+  
+  document.querySelectorAll('.server-icon').forEach(icon => {
+    icon.classList.toggle('active', icon.dataset.serverId === serverId);
+  });
+  
+  fetch(`/api/servers/${serverId}`)
+    .then(response => response.json())
+    .then(server => {
+      isServerAdmin = server.isAdmin || server.isOwner;
+      document.getElementById('server-name').textContent = server.name;
+      
+      const settingsBtn = document.getElementById('server-settings-btn');
+      const addChannelBtn = document.getElementById('add-channel-btn');
+      
+      if (settingsBtn) settingsBtn.style.display = isServerAdmin ? 'block' : 'none';
+      if (addChannelBtn) addChannelBtn.style.display = isServerAdmin ? 'block' : 'none';
+      
+      renderChannelList(server.channels);
+      
+      const firstChannel = Object.keys(server.channels)[0] || 'general';
+      selectChannel(firstChannel);
+    })
+    .catch(error => {
+      console.error('Error loading server:', error);
+    });
+}
+
+function renderChannelList(channels) {
+  const channelList = document.getElementById('channel-list');
+  if (!channelList) return;
+  
+  channelList.innerHTML = '';
+  
+  Object.entries(channels || {}).forEach(([channelId, channel]) => {
+    const channelItem = document.createElement('div');
+    channelItem.className = `channel-item ${channelId === currentChannel ? 'active' : ''}`;
+    channelItem.dataset.channelId = channelId;
+    
+    let deleteBtn = '';
+    if (isServerAdmin && channelId !== 'general') {
+      deleteBtn = `<button class="channel-delete" onclick="event.stopPropagation(); deleteChannel('${channelId}')" title="Delete Channel">x</button>`;
+    }
+    
+    channelItem.innerHTML = `<span class="channel-hash">#</span>${channel.name || channelId}${deleteBtn}`;
+    channelItem.onclick = () => selectChannel(channelId);
+    channelList.appendChild(channelItem);
+  });
+}
+
+function selectChannel(channelId) {
+  currentChannel = channelId;
+  currentDM = null;
+  
+  document.querySelectorAll('.channel-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.channelId === channelId);
+  });
+  
+  document.getElementById('current-room').textContent = `#${channelId}`;
+  document.getElementById('input').placeholder = `Message #${channelId}`;
+  
+  const messages = document.getElementById('messages');
+  messages.innerHTML = '';
+  
+  socket.emit('switch room', { room: `${currentServer}:${channelId}` });
+  
+  loadChannelMessages(currentServer, channelId);
+}
+
+function loadChannelMessages(serverId, channelId) {
+  fetch(`/api/servers/${serverId}/channels/${channelId}/messages`)
+    .then(response => response.json())
+    .then(messageList => {
+      const messagesContainer = document.getElementById('messages');
+      messagesContainer.innerHTML = '';
+      
+      messageList.forEach((msg, index) => {
+        appendMessage(msg, index, 'channel');
+      });
+      
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    })
+    .catch(error => {
+      console.error('Error loading messages:', error);
+    });
+}
+
+function appendMessage(messageData, index, type) {
+  const messagesContainer = document.getElementById('messages');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = messageData.username === 'System' ? 'message system' : 'message';
+  messageDiv.dataset.messageIndex = index;
+
+  if (messageData.username === 'System' || !messageData.username) {
+    messageDiv.innerHTML = `<span class="content">${messageData.message}</span>`;
+    messagesContainer.appendChild(messageDiv);
+    return;
+  }
+
+  let processedMessage = messageData.message || '';
+  if (processedMessage.includes('@')) {
+    processedMessage = processedMessage.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
+  }
+  processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
+  processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, function(match) {
+    if (match.match(/\.(jpg|jpeg|png|gif|webp|svg)/i)) return match;
+    return '<a href="' + match + '" target="_blank" class="message-link">' + match + '</a>';
+  });
+
+  const date = messageData.date || '';
+  const time = messageData.time || '';
+  const editedIndicator = messageData.edited ? ` <span class="edited">(edited)</span>` : '';
+
+  fetch(`/api/user-profile/${messageData.username}`)
+    .then(r => r.json())
+    .then(profile => {
+      let avatar;
+      if (profile.profilePicture) {
+        avatar = `<img src="${profile.profilePicture}" alt="${messageData.username}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px;">`;
+      } else {
+        avatar = `<div style="width: 32px; height: 32px; border-radius: 50%; background-color: #5865f2; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 8px;">${messageData.username.charAt(0).toUpperCase()}</div>`;
+      }
+
+      messageDiv.innerHTML = `
+        <div style="display: flex; align-items: flex-start;">
+          ${avatar}
+          <div style="flex: 1;">
+            ${date ? `<div class="message-date">${date}</div>` : ''}
+            <span class="timestamp">[${time}]</span>
+            <span class="username">${messageData.username}:</span>
+            <span class="content">${processedMessage}</span>
+            ${editedIndicator}
+          </div>
+        </div>
+      `;
+    })
+    .catch(() => {
+      messageDiv.innerHTML = `
+        <div style="display: flex; align-items: flex-start;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background-color: #5865f2; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 8px;">${messageData.username.charAt(0).toUpperCase()}</div>
+          <div style="flex: 1;">
+            ${date ? `<div class="message-date">${date}</div>` : ''}
+            <span class="timestamp">[${time}]</span>
+            <span class="username">${messageData.username}:</span>
+            <span class="content">${processedMessage}</span>
+            ${editedIndicator}
+          </div>
+        </div>
+      `;
+    });
+
+  messagesContainer.appendChild(messageDiv);
+}
+
+function deleteChannel(channelId) {
+  if (!confirm(`Delete channel #${channelId}?`)) return;
+  
+  fetch(`/api/servers/${currentServer}/channels/${channelId}`, { method: 'DELETE' })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showNotification('Channel deleted', 'success');
+        selectServer(currentServer);
+      } else {
+        showNotification(data.error || 'Failed to delete channel', 'error');
+      }
+    })
+    .catch(error => {
+      showNotification('Failed to delete channel', 'error');
+    });
+}
+
+function setupEventListeners() {
+  // Add server button
+  document.getElementById('add-server-btn')?.addEventListener('click', () => {
+    openModal('create-server-modal');
+  });
+
+  // Add channel button
+  document.getElementById('add-channel-btn')?.addEventListener('click', () => {
+    openModal('create-channel-modal');
+  });
+
+  // Server settings button
+  document.getElementById('server-settings-btn')?.addEventListener('click', () => {
+    const server = servers[currentServer];
+    if (server) {
+      document.getElementById('edit-server-name').value = server.name;
+      document.getElementById('edit-server-icon').value = server.icon || '';
+      openModal('server-settings-modal');
+    }
+  });
+
+  // Create server submit
+  document.getElementById('create-server-submit')?.addEventListener('click', () => {
+    const name = document.getElementById('new-server-name').value.trim();
+    const icon = document.getElementById('new-server-icon').value.trim();
+    
+    if (!name) {
+      showNotification('Please enter a server name', 'warning');
+      return;
+    }
+    
+    fetch('/api/servers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, icon: icon || null })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        closeModal();
+        document.getElementById('new-server-name').value = '';
+        document.getElementById('new-server-icon').value = '';
+        loadServers();
+        setTimeout(() => selectServer(data.serverId), 300);
+        showNotification('Server created!', 'success');
+      } else {
+        showNotification(data.error || 'Failed to create server', 'error');
+      }
+    })
+    .catch(() => showNotification('Failed to create server', 'error'));
+  });
+
+  // Create channel submit
+  document.getElementById('create-channel-submit')?.addEventListener('click', () => {
+    const name = document.getElementById('new-channel-name').value.trim();
+    
+    if (!name) {
+      showNotification('Please enter a channel name', 'warning');
+      return;
+    }
+    
+    fetch(`/api/servers/${currentServer}/channels`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        closeModal();
+        document.getElementById('new-channel-name').value = '';
+        selectServer(currentServer);
+        showNotification('Channel created!', 'success');
+      } else {
+        showNotification(data.error || 'Failed to create channel', 'error');
+      }
+    })
+    .catch(() => showNotification('Failed to create channel', 'error'));
+  });
+
+  // Save server settings
+  document.getElementById('save-server-settings')?.addEventListener('click', () => {
+    const name = document.getElementById('edit-server-name').value.trim();
+    const icon = document.getElementById('edit-server-icon').value.trim();
+    
+    fetch(`/api/servers/${currentServer}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, icon: icon || null })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        closeModal();
+        loadServers();
+        showNotification('Server updated!', 'success');
+      } else {
+        showNotification(data.error || 'Failed to update server', 'error');
+      }
+    })
+    .catch(() => showNotification('Failed to update server', 'error'));
+  });
+
+  // Delete server
+  document.getElementById('delete-server-btn')?.addEventListener('click', () => {
+    if (!confirm('Are you sure you want to delete this server? This cannot be undone.')) return;
+    
+    fetch(`/api/servers/${currentServer}`, { method: 'DELETE' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          closeModal();
+          loadServers();
+          showNotification('Server deleted', 'success');
+        } else {
+          showNotification(data.error || 'Failed to delete server', 'error');
+        }
+      })
+      .catch(() => showNotification('Failed to delete server', 'error'));
+  });
+
+  // Leave server
+  document.getElementById('leave-server-btn')?.addEventListener('click', () => {
+    if (!confirm('Are you sure you want to leave this server?')) return;
+    
+    fetch(`/api/servers/${currentServer}/leave`, { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          closeModal();
+          loadServers();
+          showNotification('Left server', 'success');
+        } else {
+          showNotification(data.error || 'Failed to leave server', 'error');
+        }
+      })
+      .catch(() => showNotification('Failed to leave server', 'error'));
+  });
+
+  // Modal close buttons
+  document.querySelectorAll('.modal-close, .modal-cancel').forEach(btn => {
+    btn.addEventListener('click', closeModal);
+  });
+
+  // Modal overlay click to close
+  document.getElementById('modal-overlay')?.addEventListener('click', (e) => {
+    if (e.target.id === 'modal-overlay') closeModal();
+  });
+
+  // Account button
+  document.getElementById('account-btn')?.addEventListener('click', () => {
+    window.location.href = '/account';
+  });
+
+  // Logout button
+  document.getElementById('logout-btn')?.addEventListener('click', () => {
+    fetch('/logout', { method: 'POST' })
+      .then(() => window.location.href = '/login')
+      .catch(() => window.location.href = '/login');
+  });
+}
+
+function openModal(modalId) {
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+  document.getElementById(modalId).style.display = 'block';
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').style.display = 'none';
+  document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+}
+
+// Keep legacy variable for compatibility
+let currentRoom = 'general';
 
 const input = document.getElementById('input');
 const messages = document.getElementById('messages');
