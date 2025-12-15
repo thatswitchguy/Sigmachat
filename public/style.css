@@ -598,7 +598,7 @@ body {
 
 #create-room-btn {
   padding: 6px 8px;
-  background-color: #3ba55c;
+  background-color: #5865f2;
   color: white;
   border: none;
   border-radius: 4px;
@@ -609,7 +609,7 @@ body {
 }
 
 #create-room-btn:hover {
-  background-color: #2d7d32;
+  background-color: #4752c4;
 }
 
 #create-room-btn:disabled {

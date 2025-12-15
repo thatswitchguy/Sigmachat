@@ -1,12 +1,5 @@
 {
   "rooms": {
-    "test-is-best": {
-      "name": "test-is-best",
-      "members": [
-        "other_banana",
-        "test account"
-      ]
-    },
     "test-is-best2": {
       "name": "test-is-best 2",
       "members": [
@@ -15,5 +8,5 @@
       ]
     }
   },
-  "additionalRoomsCreated": 2
+  "additionalRoomsCreated": 1
 }
