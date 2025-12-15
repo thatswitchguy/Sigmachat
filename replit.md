@@ -2,13 +2,24 @@
 
 ## Overview
 
-Sigma Chat is a Discord-style real-time chat application built with Node.js, Express, and Socket.IO. It provides multi-room chat functionality, direct messaging, user authentication, and administrative controls. The application uses JSON files for persistent data storage and implements real-time communication through WebSocket connections.
+Sigma Chat is a Discord-style real-time chat application built with Node.js, Express, and Socket.IO. It provides a multi-server architecture where each server contains unlimited channels, direct messaging, user authentication, and administrative controls. The application uses JSON files for persistent data storage and implements real-time communication through WebSocket connections.
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
+
+**December 2025**
+- Major update: Implemented Discord-like multi-server architecture
+- Servers contain unlimited channels with full CRUD operations
+- Server icons with customizable images or text fallback
+- Server owner and admin roles with permissions for server/channel management
+- Updated UI with server sidebar (left), channel list (middle), and chat area (right)
+- Socket handlers now use "serverId:channelId" format for room identification
+- Message persistence per server/channel in JSON files
+- Enhanced image editor with Discord-style theming and interactive canvas controls (zoom, pan, rotate, resize)
+- All server API endpoints protected with authentication checks
 
 **November 2025**
 - Fixed duplicate variable declaration in server code causing startup errors
