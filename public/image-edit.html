@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Edit Profile Picture</title>
+  <link rel="stylesheet" href="/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    #image-editor-container {
+      display: flex;
+      height: 100vh;
+      background-color: #36393f;
+      color: #dcddde;
+    }
+
+    #editor-sidebar {
+      width: 300px;
+      background-color: #2f3136;
+      border-right: 1px solid #202225;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    #editor-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    #editor-canvas-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #40444b;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #editor-canvas {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .editor-section {
+      margin-bottom: 20px;
+    }
+
+    .editor-section h3 {
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .editor-section label {
+      display: block;
+      color: #b5bac1;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .editor-section input[type="range"] {
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .editor-section input[type="file"] {
+      width: 100%;
+      padding: 8px;
+      background-color: #40444b;
+      border: 1px solid #202225;
+      border-radius: 4px;
+      color: #dcddde;
+      cursor: pointer;
+    }
+
+    .editor-button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .editor-button-group button {
+      padding: 10px;
+      background-color: #5865f2;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+
+    .editor-button-group button:hover {
+      background-color: #4752c4;
+    }
+
+    .editor-button-group button.danger {
+      background-color: #ed4245;
+    }
+
+    .editor-button-group button.danger:hover {
+      background-color: #c73d3f;
+    }
+
+    #editor-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    #editor-actions button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+
+    #editor-save-btn {
+      background-color: #3ba55c;
+      color: white;
+    }
+
+    #editor-save-btn:hover {
+      background-color: #2a7e4a;
+    }
+
+    #editor-back-btn {
+      background-color: #4f545c;
+      color: white;
+    }
+
+    #editor-back-btn:hover {
+      background-color: #5d6269;
+    }
+
+    .control-value {
+      color: #dcddde;
+      font-size: 12px;
+      text-align: right;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div id="image-editor-container">
+    <div id="editor-sidebar">
+      <div class="editor-section">
+        <h3>Upload Image</h3>
+        <input type="file" id="file-upload" accept="image/*">
+      </div>
+
+      <div class="editor-section">
+        <h3>Crop</h3>
+        <label>Aspect Ratio</label>
+        <select id="crop-ratio" style="width: 100%; padding: 8px; background-color: #40444b; border: 1px solid #202225; color: #dcddde; border-radius: 4px;">
+          <option value="free">Free</option>
+          <option value="1/1">1:1 (Square)</option>
+          <option value="4/3">4:3</option>
+          <option value="16/9">16:9</option>
+        </select>
+        <button id="crop-btn" style="width: 100%; padding: 10px; margin-top: 10px; background-color: #5865f2; color: white; border: none; border-radius: 4px; cursor: pointer;">Crop</button>
+      </div>
+
+      <div class="editor-section">
+        <h3>Resize</h3>
+        <label>Width: <span id="width-value">500</span>px</label>
+        <input type="range" id="width-slider" min="50" max="1000" value="500">
+        <label style="margin-top: 12px;">Height: <span id="height-value">500</span>px</label>
+        <input type="range" id="height-slider" min="50" max="1000" value="500">
+        <label style="display: flex; align-items: center; margin-top: 12px;">
+          <input type="checkbox" id="lock-ratio" checked style="margin-right: 6px;">
+          Lock ratio
+        </label>
+      </div>
+
+      <div class="editor-section">
+        <h3>Rotate</h3>
+        <label>Rotation: <span id="rotation-value">0</span>°</label>
+        <input type="range" id="rotation-slider" min="0" max="360" value="0">
+        <div class="editor-button-group">
+          <button id="rotate-left-btn">Rotate Left 90°</button>
+          <button id="rotate-right-btn">Rotate Right 90°</button>
+          <button id="flip-h-btn">Flip Horizontal</button>
+          <button id="flip-v-btn">Flip Vertical</button>
+        </div>
+      </div>
+
+      <div class="editor-section">
+        <h3>Brightness & Contrast</h3>
+        <label>Brightness: <span id="brightness-value">100</span>%</label>
+        <input type="range" id="brightness-slider" min="0" max="200" value="100">
+        <label style="margin-top: 12px;">Contrast: <span id="contrast-value">100</span>%</label>
+        <input type="range" id="contrast-slider" min="0" max="200" value="100">
+      </div>
+
+      <div class="editor-section">
+        <button id="reset-btn" class="danger" style="width: 100%; padding: 10px; background-color: #ed4245; color: white; border: none; border-radius: 4px; cursor: pointer;">Reset All</button>
+      </div>
+    </div>
+
+    <div id="editor-main">
+      <h2 style="margin: 0 0 15px 0;">Edit Profile Picture</h2>
+      <div id="editor-canvas-container">
+        <canvas id="editor-canvas" style="display: none;"></canvas>
+        <img id="editor-preview" src="" alt="Preview" style="display: none;">
+        <div style="color: #72767d; text-align: center;">Load an image to begin</div>
+      </div>
+      <div id="editor-actions">
+        <button id="editor-back-btn">Back</button>
+        <button id="editor-save-btn">Save Picture</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let originalImage = null;
+    let currentImage = null;
+    let canvas = document.getElementById('editor-canvas');
+    let ctx = canvas.getContext('2d');
+    let editState = {
+      width: 500,
+      height: 500,
+      rotation: 0,
+      scaleX: 1,
+      scaleY: 1,
+      brightness: 100,
+      contrast: 100,
+      cropBox: null
+    };
+
+    document.getElementById('file-upload').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => {
+            originalImage = img;
+            currentImage = img;
+            editState.width = img.width;
+            editState.height = img.height;
+            document.getElementById('width-slider').value = img.width;
+            document.getElementById('height-slider').value = img.height;
+            document.getElementById('width-value').textContent = img.width;
+            document.getElementById('height-value').textContent = img.height;
+            renderPreview();
+          };
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    function renderPreview() {
+      if (!originalImage) return;
+      
+      canvas.width = editState.width;
+      canvas.height = editState.height;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.save();
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((editState.rotation * Math.PI) / 180);
+      ctx.scale(editState.scaleX, editState.scaleY);
+      ctx.filter = `brightness(${editState.brightness}%) contrast(${editState.contrast}%)`;
+      ctx.drawImage(originalImage, -editState.width / 2, -editState.height / 2, editState.width, editState.height);
+      ctx.restore();
+      
+      document.getElementById('editor-preview').src = canvas.toDataURL();
+      document.getElementById('editor-preview').style.display = 'block';
+      document.getElementById('editor-canvas').style.display = 'none';
+    }
+
+    document.getElementById('width-slider').addEventListener('input', (e) => {
+      editState.width = parseInt(e.target.value);
+      document.getElementById('width-value').textContent = editState.width;
+      if (document.getElementById('lock-ratio').checked && originalImage) {
+        editState.height = Math.round((editState.width * originalImage.height) / originalImage.width);
+        document.getElementById('height-slider').value = editState.height;
+        document.getElementById('height-value').textContent = editState.height;
+      }
+      renderPreview();
+    });
+
+    document.getElementById('height-slider').addEventListener('input', (e) => {
+      editState.height = parseInt(e.target.value);
+      document.getElementById('height-value').textContent = editState.height;
+      renderPreview();
+    });
+
+    document.getElementById('rotation-slider').addEventListener('input', (e) => {
+      editState.rotation = parseInt(e.target.value);
+      document.getElementById('rotation-value').textContent = editState.rotation;
+      renderPreview();
+    });
+
+    document.getElementById('brightness-slider').addEventListener('input', (e) => {
+      editState.brightness = parseInt(e.target.value);
+      document.getElementById('brightness-value').textContent = editState.brightness;
+      renderPreview();
+    });
+
+    document.getElementById('contrast-slider').addEventListener('input', (e) => {
+      editState.contrast = parseInt(e.target.value);
+      document.getElementById('contrast-value').textContent = editState.contrast;
+      renderPreview();
+    });
+
+    document.getElementById('rotate-left-btn').addEventListener('click', () => {
+      editState.rotation = (editState.rotation - 90) % 360;
+      document.getElementById('rotation-slider').value = editState.rotation;
+      document.getElementById('rotation-value').textContent = editState.rotation;
+      renderPreview();
+    });
+
+    document.getElementById('rotate-right-btn').addEventListener('click', () => {
+      editState.rotation = (editState.rotation + 90) % 360;
+      document.getElementById('rotation-slider').value = editState.rotation;
+      document.getElementById('rotation-value').textContent = editState.rotation;
+      renderPreview();
+    });
+
+    document.getElementById('flip-h-btn').addEventListener('click', () => {
+      editState.scaleX *= -1;
+      renderPreview();
+    });
+
+    document.getElementById('flip-v-btn').addEventListener('click', () => {
+      editState.scaleY *= -1;
+      renderPreview();
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      editState = { width: originalImage?.width || 500, height: originalImage?.height || 500, rotation: 0, scaleX: 1, scaleY: 1, brightness: 100, contrast: 100 };
+      document.getElementById('rotation-slider').value = 0;
+      document.getElementById('brightness-slider').value = 100;
+      document.getElementById('contrast-slider').value = 100;
+      document.getElementById('width-slider').value = editState.width;
+      document.getElementById('height-slider').value = editState.height;
+      document.getElementById('width-value').textContent = editState.width;
+      document.getElementById('height-value').textContent = editState.height;
+      document.getElementById('rotation-value').textContent = 0;
+      document.getElementById('brightness-value').textContent = 100;
+      document.getElementById('contrast-value').textContent = 100;
+      renderPreview();
+    });
+
+    document.getElementById('editor-save-btn').addEventListener('click', () => {
+      if (!canvas.toDataURL()) {
+        alert('Please load and edit an image first');
+        return;
+      }
+      const imageUrl = canvas.toDataURL();
+      fetch('/api/profile-picture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profilePicture: imageUrl })
+      }).then(() => {
+        window.location.href = '/account';
+      });
+    });
+
+    document.getElementById('editor-back-btn').addEventListener('click', () => {
+      window.location.href = '/account';
+    });
+  </script>
+</body>
+</html>

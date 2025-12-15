@@ -25,9 +25,12 @@
       <div id="profile-section" class="account-section active">
         <h2>My Account</h2>
         <div class="profile-card">
-          <div class="profile-avatar">
-            <img id="user-profile-pic" src="" alt="Profile Picture" style="display: none;">
-            <div id="user-initial" style="display: block;"></div>
+          <div class="profile-avatar" id="profile-avatar-container" style="cursor: pointer; position: relative;">
+            <img id="user-profile-pic" src="" alt="Profile Picture" style="display: none; width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">
+            <div id="user-initial" style="display: flex; align-items: center; justify-content: center; width: 80px; height: 80px; border-radius: 50%; background-color: #5865f2; color: white; font-size: 32px; font-weight: 600;"></div>
+            <div id="profile-edit-overlay" style="position: absolute; top: 0; left: 0; width: 80px; height: 80px; border-radius: 50%; background-color: rgba(0, 0, 0, 0.6); display: none; align-items: center; justify-content: center; cursor: pointer; opacity: 0; transition: opacity 0.2s;">
+              <span style="font-size: 32px;">✏️</span>
+            </div>
           </div>
           <div class="profile-info">
             <h3 id="profile-username"></h3>
@@ -211,15 +214,31 @@
       });
     });
 
-    // General button
-    document.getElementById('general-btn').addEventListener('click', () => {
-      window.location.href = '/chat';
-    });
-
     // Back to chat
-    document.getElementById('back-to-chat').addEventListener('click', () => {
-      window.location.href = '/chat';
-    });
+    const backBtn = document.getElementById('back-to-chat');
+    if (backBtn) {
+      backBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = '/chat';
+      });
+    }
+
+    // Profile avatar edit overlay
+    const avatarContainer = document.getElementById('profile-avatar-container');
+    const editOverlay = document.getElementById('profile-edit-overlay');
+    if (avatarContainer && editOverlay) {
+      avatarContainer.addEventListener('mouseenter', () => {
+        editOverlay.style.display = 'flex';
+        setTimeout(() => { editOverlay.style.opacity = '1'; }, 10);
+      });
+      avatarContainer.addEventListener('mouseleave', () => {
+        editOverlay.style.opacity = '0';
+        setTimeout(() => { editOverlay.style.display = 'none'; }, 200);
+      });
+      avatarContainer.addEventListener('click', () => {
+        window.location.href = '/image-edit.html';
+      });
+    }
 
     // Logout
     document.getElementById('logout-account').addEventListener('click', () => {
