@@ -20,6 +20,13 @@ Preferred communication style: Simple, everyday language.
 - Message persistence per server/channel in JSON files
 - Enhanced image editor with Discord-style theming and interactive canvas controls (zoom, pan, rotate, resize)
 - All server API endpoints protected with authentication checks
+- Added comprehensive admin role system with super admin (thatswitchguy) and co-admin management
+- Created admin-control.html page accessible only to super admin for managing co-admins
+- Created server-create.html page for server creation with user invitations
+- Collapsible sidebar with bidirectional toggle functionality
+- Protected default channels (general, suggestions, tech-support) from deletion
+- Custom confirmation modals replacing browser confirm() dialogs
+- Session-based authentication for admin endpoints (prevents spoofing)
 
 **November 2025**
 - Fixed duplicate variable declaration in server code causing startup errors
