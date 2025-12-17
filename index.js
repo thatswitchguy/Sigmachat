@@ -58,6 +58,36 @@ const roomsFile = path.join(__dirname, 'rooms.json');
 const generalMessagesFile = path.join(__dirname, 'general_messages.json');
 const bannedUsersFile = path.join(__dirname, 'banned_users.json');
 const serversFile = path.join(__dirname, 'servers.json');
+const adminRolesFile = path.join(__dirname, 'admin_roles.json');
+
+// ============== ADMIN ROLES SYSTEM ==============
+let adminRoles = { superAdmin: 'thatswitchguy', coAdmins: [] };
+
+try {
+  if (fs.existsSync(adminRolesFile)) {
+    adminRoles = JSON.parse(fs.readFileSync(adminRolesFile, 'utf8'));
+  } else {
+    fs.writeFileSync(adminRolesFile, JSON.stringify(adminRoles, null, 2));
+  }
+} catch (error) {
+  console.error('Error loading admin roles:', error);
+}
+
+function saveAdminRoles() {
+  try {
+    fs.writeFileSync(adminRolesFile, JSON.stringify(adminRoles, null, 2));
+  } catch (error) {
+    console.error('Error saving admin roles:', error);
+  }
+}
+
+function isSuperAdmin(username) {
+  return username === adminRoles.superAdmin;
+}
+
+function isGlobalAdmin(username) {
+  return username === adminRoles.superAdmin || adminRoles.coAdmins.includes(username);
+}
 
 // ============== SERVER SYSTEM ==============
 // Servers structure: { serverId: { name, icon, owner, admins: [], members: [], channels: { channelId: { name, type } } } }
@@ -508,6 +538,97 @@ app.get('/iframe', (req, res) => {
   res.sendFile(__dirname + '/public/iframe.html');
 });
 
+// Server create page
+app.get('/server-create.html', (req, res) => {
+  if (req.username) {
+    res.sendFile(__dirname + '/public/server-create.html');
+  } else {
+    res.redirect('/login');
+  }
+});
+
+// Admin control page (super admin only)
+app.get('/admin-control.html', (req, res) => {
+  if (req.username && isSuperAdmin(req.username)) {
+    res.sendFile(__dirname + '/public/admin-control.html');
+  } else {
+    res.status(403).send('Access denied. Only the super admin can access this page. <a href="/chat">Back to chat</a>');
+  }
+});
+
+// API: Get co-admins list
+app.get('/api/admin/co-admins', (req, res) => {
+  if (!req.username || !isSuperAdmin(req.username)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+  res.json({ coAdmins: adminRoles.coAdmins });
+});
+
+// API: Add co-admin
+app.post('/api/admin/co-admins', (req, res) => {
+  // Use session username for authentication, not request body
+  if (!req.username || !isSuperAdmin(req.username)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+  
+  const targetUsername = req.body.username;
+  
+  if (!targetUsername || typeof targetUsername !== 'string') {
+    return res.status(400).json({ error: 'Username is required' });
+  }
+  
+  const sanitizedUsername = targetUsername.trim();
+  
+  if (!users[sanitizedUsername]) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  
+  if (sanitizedUsername === adminRoles.superAdmin) {
+    return res.status(400).json({ error: 'Cannot add super admin as co-admin' });
+  }
+  
+  if (adminRoles.coAdmins.includes(sanitizedUsername)) {
+    return res.status(400).json({ error: 'User is already a co-admin' });
+  }
+  
+  adminRoles.coAdmins.push(sanitizedUsername);
+  saveAdminRoles();
+  
+  res.json({ success: true });
+});
+
+// API: Remove co-admin
+app.delete('/api/admin/co-admins', (req, res) => {
+  // Use session username for authentication, not request body
+  if (!req.username || !isSuperAdmin(req.username)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+  
+  const targetUsername = req.body.username;
+  
+  if (!targetUsername || typeof targetUsername !== 'string') {
+    return res.status(400).json({ error: 'Username is required' });
+  }
+  
+  const sanitizedUsername = targetUsername.trim();
+  
+  adminRoles.coAdmins = adminRoles.coAdmins.filter(admin => admin !== sanitizedUsername);
+  saveAdminRoles();
+  
+  res.json({ success: true });
+});
+
+// API: Check if user is global admin
+app.get('/api/admin/status', (req, res) => {
+  if (!req.username) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  res.json({ 
+    isSuperAdmin: isSuperAdmin(req.username),
+    isGlobalAdmin: isGlobalAdmin(req.username)
+  });
+});
+
 // Registration endpoint
 app.post('/register', async (req, res) => {
   const { username, password, confirmPassword } = req.body;
@@ -707,7 +828,7 @@ app.get('/api/servers/:serverId', (req, res) => {
 
 // Create a new server
 app.post('/api/servers', (req, res) => {
-  const { name, icon } = req.body;
+  const { name, icon, invitedUsers } = req.body;
   const currentUser = req.username;
 
   if (!currentUser) {
@@ -719,13 +840,20 @@ app.post('/api/servers', (req, res) => {
   }
 
   const serverId = generateId();
+  
+  // Process invited users - only include valid users
+  let members = [];
+  if (invitedUsers && Array.isArray(invitedUsers)) {
+    members = invitedUsers.filter(u => typeof u === 'string' && users[u.trim()] && u.trim() !== currentUser);
+  }
+  
   servers[serverId] = {
     id: serverId,
     name: name,
     icon: icon || null,
     owner: currentUser,
     admins: [],
-    members: [],
+    members: members,
     channels: {
       'general': { name: 'general', type: 'text' },
       'welcome': { name: 'welcome', type: 'text' }

@@ -101,6 +101,9 @@ function closeConfirmNotification() {
   modal.style.display = 'none';
 }
 
+let isSuperAdmin = false;
+let isGlobalAdmin = false;
+
 // Initialize application
 fetch('/api/user')
   .then(response => response.json())
@@ -109,7 +112,18 @@ fetch('/api/user')
       username = data.username;
       isAdmin = data.username === 'thatswitchguy' || data.username === 'ikhan';
       loadUserPreferences();
-      initializeApp();
+      // Fetch global admin status
+      fetch('/api/admin/status')
+        .then(r => r.json())
+        .then(adminData => {
+          isSuperAdmin = adminData.isSuperAdmin;
+          isGlobalAdmin = adminData.isGlobalAdmin;
+          if (isGlobalAdmin) isAdmin = true;
+          initializeApp();
+        })
+        .catch(() => {
+          initializeApp();
+        });
     } else {
       window.location.href = '/login';
     }
@@ -124,6 +138,12 @@ function initializeApp() {
   loadOnlineUsers();
   setupEventListeners();
   socket.emit('join', { username: username, room: `${currentServer}:${currentChannel}` });
+  
+  // Show admin control button for super admin
+  if (isSuperAdmin) {
+    const adminBtn = document.getElementById('admin-control-btn');
+    if (adminBtn) adminBtn.style.display = 'block';
+  }
 }
 
 function updateUserPanel() {
@@ -366,17 +386,37 @@ function deleteChannel(channelId) {
 }
 
 function setupEventListeners() {
-  // Collapse sidebar button
+  // Collapse sidebar button - toggles both ways
   document.getElementById('collapse-sidebar-btn')?.addEventListener('click', () => {
     const sidebar = document.getElementById('sidebar');
     const mainChat = document.getElementById('main-chat');
-    sidebar.classList.toggle('collapsed');
-    mainChat.classList.toggle('expanded');
+    const expandBtn = document.getElementById('expand-sidebar-btn');
+    const isCollapsed = sidebar.classList.contains('collapsed');
+    
+    if (isCollapsed) {
+      sidebar.classList.remove('collapsed');
+      mainChat.classList.remove('expanded');
+      if (expandBtn) expandBtn.style.display = 'none';
+    } else {
+      sidebar.classList.add('collapsed');
+      mainChat.classList.add('expanded');
+      if (expandBtn) expandBtn.style.display = 'block';
+    }
   });
 
-  // Add server button
+  // Expand sidebar button (alternative way to expand)
+  document.getElementById('expand-sidebar-btn')?.addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar');
+    const mainChat = document.getElementById('main-chat');
+    const expandBtn = document.getElementById('expand-sidebar-btn');
+    sidebar.classList.remove('collapsed');
+    mainChat.classList.remove('expanded');
+    if (expandBtn) expandBtn.style.display = 'none';
+  });
+
+  // Add server button - redirect to server creation page
   document.getElementById('add-server-btn')?.addEventListener('click', () => {
-    openModal('create-server-modal');
+    window.location.href = '/server-create.html';
   });
 
   // Add channel button
@@ -520,6 +560,11 @@ function setupEventListeners() {
   // Modal overlay click to close
   document.getElementById('modal-overlay')?.addEventListener('click', (e) => {
     if (e.target.id === 'modal-overlay') closeModal();
+  });
+
+  // Admin control button (super admin only)
+  document.getElementById('admin-control-btn')?.addEventListener('click', () => {
+    window.location.href = '/admin-control.html';
   });
 
   // Account button
@@ -1023,6 +1068,12 @@ function showContextMenu(event, roomId, isDefault) {
     existingMenu.remove();
   }
 
+  // Don't show context menu for default/protected rooms
+  const protectedRooms = ['general', 'suggestions', 'tech-support'];
+  if (protectedRooms.includes(roomId)) {
+    return;
+  }
+
   const contextMenu = document.createElement('div');
   contextMenu.className = 'context-menu';
 
@@ -1032,39 +1083,37 @@ function showContextMenu(event, roomId, isDefault) {
 
   contextMenu.style.left = x + 'px';
   contextMenu.style.top = y + 'px';
+  contextMenu.style.position = 'fixed';
+  contextMenu.style.zIndex = '9999';
 
   const editItem = document.createElement('div');
-  editItem.className = `context-menu-item ${isDefault ? 'disabled' : ''}`;
+  editItem.className = 'context-menu-item';
   editItem.textContent = 'Edit Room';
-  if (!isDefault) {
-    editItem.addEventListener('click', (e) => {
-      e.stopPropagation();
-      contextMenu.remove();
-      openEditRoom(roomId);
-    });
-  }
+  editItem.addEventListener('click', (e) => {
+    e.stopPropagation();
+    contextMenu.remove();
+    openEditRoom(roomId);
+  });
 
   const renameItem = document.createElement('div');
-  renameItem.className = `context-menu-item ${isDefault ? 'disabled' : ''}`;
+  renameItem.className = 'context-menu-item';
   renameItem.textContent = 'Rename Room';
-  if (!isDefault) {
-    renameItem.addEventListener('click', (e) => {
-      e.stopPropagation();
-      contextMenu.remove();
-      startRename(roomId);
-    });
-  }
+  renameItem.addEventListener('click', (e) => {
+    e.stopPropagation();
+    contextMenu.remove();
+    startRename(roomId);
+  });
 
   const deleteItem = document.createElement('div');
-  deleteItem.className = `context-menu-item danger ${isDefault ? 'disabled' : ''}`;
+  deleteItem.className = 'context-menu-item danger';
   deleteItem.textContent = 'Delete Room';
-  if (!isDefault) {
-    deleteItem.addEventListener('click', (e) => {
-      e.stopPropagation();
-      contextMenu.remove();
+  deleteItem.addEventListener('click', (e) => {
+    e.stopPropagation();
+    contextMenu.remove();
+    showConfirmNotification(`Are you sure you want to delete room #${roomId}?`, () => {
       deleteRoom(roomId);
-    });
-  }
+    }, 'Delete Room');
+  });
 
   contextMenu.appendChild(editItem);
   contextMenu.appendChild(renameItem);

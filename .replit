@@ -32,3 +32,7 @@ externalPort = 80
 
 [nix]
 channel = "stable-25_05"
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["node", "index.js"]

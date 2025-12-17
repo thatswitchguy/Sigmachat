@@ -16,11 +16,12 @@
       </div>
     </div>
 
+    <button id="expand-sidebar-btn" title="Expand Sidebar" style="display: none; position: absolute; left: 80px; top: 50%; transform: translateY(-50%); background: #2f3136; border: 1px solid #202225; color: #b5bac1; cursor: pointer; font-size: 16px; padding: 8px 4px; border-radius: 0 4px 4px 0; z-index: 100;">▶</button>
     <div id="sidebar">
       <div id="sidebar-header">
         <h3 id="server-name">SigmaChat</h3>
         <div style="display: flex; gap: 8px;">
-          <button id="collapse-sidebar-btn" title="Collapse Sidebar" style="background: none; border: none; color: #b5bac1; cursor: pointer; font-size: 18px; padding: 4px 8px;">☰</button>
+          <button id="collapse-sidebar-btn" title="Collapse Sidebar" style="background: none; border: none; color: #b5bac1; cursor: pointer; font-size: 18px; padding: 4px 8px;">◀</button>
           <button id="server-settings-btn" title="Server Settings" style="display: none;"><img src="https://cdn-icons-png.freepik.com/512/1827/1827849.png" style="width: 20px; height: 20px;"></button>
         </div>
       </div>
@@ -47,6 +48,7 @@
           <span id="user-name-display"></span>
         </div>
         <div id="user-controls">
+          <button id="admin-control-btn" title="Admin Control" style="display: none;"><img src="https://cdn-icons-png.flaticon.com/512/2099/2099058.png" style="width: 20px; height: 20px;"></button>
           <button id="account-btn" title="Account Settings"><img src="https://cdn-icons-png.freepik.com/512/1827/1827849.png" style="width: 20px; height: 20px;"></button>
         </div>
       </div>
