@@ -19,7 +19,10 @@
     <div id="sidebar">
       <div id="sidebar-header">
         <h3 id="server-name">SigmaChat</h3>
-        <button id="server-settings-btn" title="Server Settings" style="display: none;">⚙️</button>
+        <div style="display: flex; gap: 8px;">
+          <button id="collapse-sidebar-btn" title="Collapse Sidebar" style="background: none; border: none; color: #b5bac1; cursor: pointer; font-size: 18px; padding: 4px 8px;">☰</button>
+          <button id="server-settings-btn" title="Server Settings" style="display: none;"><img src="https://cdn-icons-png.freepik.com/512/1827/1827849.png" style="width: 20px; height: 20px;"></button>
+        </div>
       </div>
       <div id="channel-section">
         <div class="channel-header">
@@ -44,7 +47,7 @@
           <span id="user-name-display"></span>
         </div>
         <div id="user-controls">
-          <button id="account-btn" title="Account Settings">⚙️</button>
+          <button id="account-btn" title="Account Settings"><img src="https://cdn-icons-png.freepik.com/512/1827/1827849.png" style="width: 20px; height: 20px;"></button>
         </div>
       </div>
     </div>
@@ -61,10 +64,26 @@
       <div id="form">
         <form>
           <input type="file" id="image-upload" accept="image/*" style="display: none;">
-          <button type="button" id="upload-image-btn" title="Upload image">+</button>
+          <button type="button" id="upload-image-btn" title="Upload image">Upload</button>
           <input id="input" autocomplete="off" placeholder="Message #general" maxlength="2000" />
           <button type="submit">Send</button>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="confirm-notification-overlay" class="modal-overlay" style="display: none;">
+    <div id="confirm-notification" class="modal" style="display: none; max-width: 400px;">
+      <div class="modal-header">
+        <h2 id="confirm-title">Confirm Action</h2>
+        <button class="modal-close" onclick="closeConfirmNotification()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-cancel" onclick="closeConfirmNotification()">Cancel</button>
+        <button class="btn-danger" id="confirm-ok-btn">OK</button>
       </div>
     </div>
   </div>
@@ -123,7 +142,8 @@
           <input type="url" id="edit-server-icon" placeholder="https://example.com/icon.png">
         </div>
         <div class="danger-zone">
-          <h3>Danger Zone</h3>
+          <!-- Remember to change image-->
+          <h3>Really look at this stuff </h3>
           <button class="btn-danger" id="delete-server-btn">Delete Server</button>
           <button class="btn-secondary" id="leave-server-btn">Leave Server</button>
         </div>

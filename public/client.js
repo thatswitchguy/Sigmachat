@@ -75,6 +75,32 @@ function showNotification(message, type = 'info', title = '') {
   }, 5000);
 }
 
+function showConfirmNotification(message, onConfirm, title = 'Confirm') {
+  const overlay = document.getElementById('confirm-notification-overlay');
+  const modal = document.getElementById('confirm-notification');
+  const titleEl = document.getElementById('confirm-title');
+  const messageEl = document.getElementById('confirm-message');
+  const okBtn = document.getElementById('confirm-ok-btn');
+
+  titleEl.textContent = title;
+  messageEl.textContent = message;
+  
+  overlay.style.display = 'flex';
+  modal.style.display = 'block';
+
+  okBtn.onclick = () => {
+    closeConfirmNotification();
+    onConfirm();
+  };
+}
+
+function closeConfirmNotification() {
+  const overlay = document.getElementById('confirm-notification-overlay');
+  const modal = document.getElementById('confirm-notification');
+  overlay.style.display = 'none';
+  modal.style.display = 'none';
+}
+
 // Initialize application
 fetch('/api/user')
   .then(response => response.json())
@@ -199,13 +225,15 @@ function renderChannelList(channels) {
   
   channelList.innerHTML = '';
   
+  const protectedChannels = ['general', 'suggestions', 'tech-support'];
+  
   Object.entries(channels || {}).forEach(([channelId, channel]) => {
     const channelItem = document.createElement('div');
     channelItem.className = `channel-item ${channelId === currentChannel ? 'active' : ''}`;
     channelItem.dataset.channelId = channelId;
     
     let deleteBtn = '';
-    if (isServerAdmin && channelId !== 'general') {
+    if (isServerAdmin && !protectedChannels.includes(channelId)) {
       deleteBtn = `<button class="channel-delete" onclick="event.stopPropagation(); deleteChannel('${channelId}')" title="Delete Channel">x</button>`;
     }
     
@@ -320,24 +348,32 @@ function appendMessage(messageData, index, type) {
 }
 
 function deleteChannel(channelId) {
-  if (!confirm(`Delete channel #${channelId}?`)) return;
-  
-  fetch(`/api/servers/${currentServer}/channels/${channelId}`, { method: 'DELETE' })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        showNotification('Channel deleted', 'success');
-        selectServer(currentServer);
-      } else {
-        showNotification(data.error || 'Failed to delete channel', 'error');
-      }
-    })
-    .catch(error => {
-      showNotification('Failed to delete channel', 'error');
-    });
+  showConfirmNotification(`Delete channel #${channelId}?`, () => {
+    fetch(`/api/servers/${currentServer}/channels/${channelId}`, { method: 'DELETE' })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showNotification('Channel deleted', 'success');
+          selectServer(currentServer);
+        } else {
+          showNotification(data.error || 'Failed to delete channel', 'error');
+        }
+      })
+      .catch(error => {
+        showNotification('Failed to delete channel', 'error');
+      });
+  }, 'Delete Channel');
 }
 
 function setupEventListeners() {
+  // Collapse sidebar button
+  document.getElementById('collapse-sidebar-btn')?.addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar');
+    const mainChat = document.getElementById('main-chat');
+    sidebar.classList.toggle('collapsed');
+    mainChat.classList.toggle('expanded');
+  });
+
   // Add server button
   document.getElementById('add-server-btn')?.addEventListener('click', () => {
     openModal('create-server-modal');
@@ -442,38 +478,38 @@ function setupEventListeners() {
 
   // Delete server
   document.getElementById('delete-server-btn')?.addEventListener('click', () => {
-    if (!confirm('Are you sure you want to delete this server? This cannot be undone.')) return;
-    
-    fetch(`/api/servers/${currentServer}`, { method: 'DELETE' })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) {
-          closeModal();
-          loadServers();
-          showNotification('Server deleted', 'success');
-        } else {
-          showNotification(data.error || 'Failed to delete server', 'error');
-        }
-      })
-      .catch(() => showNotification('Failed to delete server', 'error'));
+    showConfirmNotification('Are you sure you want to delete this server? This cannot be undone.', () => {
+      fetch(`/api/servers/${currentServer}`, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            closeModal();
+            loadServers();
+            showNotification('Server deleted', 'success');
+          } else {
+            showNotification(data.error || 'Failed to delete server', 'error');
+          }
+        })
+        .catch(() => showNotification('Failed to delete server', 'error'));
+    }, 'Delete Server');
   });
 
   // Leave server
   document.getElementById('leave-server-btn')?.addEventListener('click', () => {
-    if (!confirm('Are you sure you want to leave this server?')) return;
-    
-    fetch(`/api/servers/${currentServer}/leave`, { method: 'POST' })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) {
-          closeModal();
-          loadServers();
-          showNotification('Left server', 'success');
-        } else {
-          showNotification(data.error || 'Failed to leave server', 'error');
-        }
-      })
-      .catch(() => showNotification('Failed to leave server', 'error'));
+    showConfirmNotification('Are you sure you want to leave this server?', () => {
+      fetch(`/api/servers/${currentServer}/leave`, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            closeModal();
+            loadServers();
+            showNotification('Left server', 'success');
+          } else {
+            showNotification(data.error || 'Failed to leave server', 'error');
+          }
+        })
+        .catch(() => showNotification('Failed to leave server', 'error'));
+    }, 'Leave Server');
   });
 
   // Modal close buttons
@@ -1674,17 +1710,17 @@ function showBanOptions(targetUser) {
   });
 
   document.getElementById('permanent-ban-btn').addEventListener('click', () => {
-    if (confirm(`Are you sure you want to PERMANENTLY ban ${targetUser}? This cannot be undone.`)) {
+    showConfirmNotification(`Are you sure you want to PERMANENTLY ban ${targetUser}? This cannot be undone.`, () => {
       banUser(targetUser, 0);
       modal.remove();
-    }
+    }, 'Permanent Ban');
   });
 
   document.getElementById('delete-user-btn').addEventListener('click', () => {
-    if (confirm(`Are you sure you want to DELETE ${targetUser}'s account? This will permanently remove them.`)) {
+    showConfirmNotification(`Are you sure you want to DELETE ${targetUser}'s account? This will permanently remove them.`, () => {
       banUser(targetUser, 0);
       modal.remove();
-    }
+    }, 'Delete User');
   });
 
   document.getElementById('cancel-ban-btn').addEventListener('click', () => {

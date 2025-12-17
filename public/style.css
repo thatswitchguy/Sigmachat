@@ -2492,3 +2492,21 @@ margin-right: 8px;
 #upload-image-btn:hover {
   background-color: #5865f2;
 }
+
+/* Sidebar collapse */
+#sidebar.collapsed {
+  width: 0;
+  overflow: hidden;
+  transition: width 0.3s ease;
+}
+
+#main-chat.expanded {
+  flex: 1;
+  width: 100%;
+}
+
+#collapse-sidebar-btn:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
