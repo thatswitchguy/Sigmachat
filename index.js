@@ -7,7 +7,12 @@ const path = require('path');
 const multer = require('multer');
 const app = express();
 const http = require('http').createServer(app);
-const io = require('socket.io')(http);
+const io = require('socket.io')(http, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
 const PORT = process.env.PORT || 5000;
 
 // Configure multer for image uploads
@@ -513,6 +518,19 @@ app.get('/chat', (req, res) => {
       return res.send('You have been banned. <a href="/login">Return to login</a>');
     }
     res.sendFile(__dirname + '/public/index.html');
+  } else {
+    res.redirect('/login');
+  }
+});
+
+// Embedded chat route (simplified version for embedding)
+app.get('/embed', (req, res) => {
+  if (req.username) {
+    if (isUserBanned(req.username)) {
+      req.session.destroy();
+      return res.send('You have been banned. <a href="/login">Return to login</a>');
+    }
+    res.sendFile(__dirname + '/public/embed.html');
   } else {
     res.redirect('/login');
   }
