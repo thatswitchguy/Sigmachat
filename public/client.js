@@ -403,6 +403,7 @@ function deleteMessage(serverId, channelId, index, type) {
     .then(data => {
       if (data.success) {
         showNotification('Message deleted', 'success');
+        // If DM, the roomId (serverId) is actually the target username
         if (type === 'dm') openDM(serverId);
         else loadChannelMessages(serverId, channelId);
       } else {

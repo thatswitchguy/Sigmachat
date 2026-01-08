@@ -1417,11 +1417,8 @@ app.put('/api/servers/:serverId/channels/:channelId/messages/:messageIndex', (re
 
   let messages = loadServerMessages(serverId, channelId);
 
-  // Debug log
-  console.log(`Editing message in ${serverId}/${channelId} at index ${index}. Total messages: ${messages.length}`);
-
   if (!messages || index < 0 || index >= messages.length) {
-    return res.status(404).json({ error: `Message not found at index ${index}. Total: ${messages.length}` });
+    return res.status(404).json({ error: 'Message not found' });
   }
 
   const message = messages[index];
@@ -1462,11 +1459,8 @@ app.delete('/api/servers/:serverId/channels/:channelId/messages/:messageIndex', 
 
   let messages = loadServerMessages(serverId, channelId);
 
-  // Debug log
-  console.log(`Deleting message in ${serverId}/${channelId} at index ${index}. Total messages: ${messages.length}`);
-
   if (!messages || index < 0 || index >= messages.length) {
-    return res.status(404).json({ error: `Message not found at index ${index}. Total: ${messages.length}` });
+    return res.status(404).json({ error: 'Message not found' });
   }
 
   const message = messages[index];
