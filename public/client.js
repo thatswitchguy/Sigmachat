@@ -294,6 +294,9 @@ function loadChannelMessages(serverId, channelId) {
       });
       
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      // Mark as scrolled to bottom since we just scrolled
+      isScrolledToBottom = true;
+      checkScrollPosition();
     })
     .catch(error => {
       console.error('Error loading messages:', error);
