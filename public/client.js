@@ -2170,7 +2170,7 @@ function updateMessageIndices() {
 
 // Socket handlers for message editing and deletion
 socket.on('message edited', (data) => {
-  const messageDiv = document.querySelector(`[data-message-index="${data.messageIndex}"][data-room-id="${data.roomId}"]`);
+  const messageDiv = document.querySelector(`[data-message-id="${data.messageId}"]`);
   if (messageDiv) {
     const contentSpan = messageDiv.querySelector('.content');
     if (contentSpan) {
@@ -2191,15 +2191,14 @@ socket.on('message edited', (data) => {
 });
 
 socket.on('message deleted', (data) => {
-  const messageDiv = document.querySelector(`[data-message-index="${data.messageIndex}"][data-room-id="${data.roomId}"]`);
+  const messageDiv = document.querySelector(`[data-message-id="${data.messageId}"]`);
   if (messageDiv) {
     messageDiv.remove();
-    updateMessageIndices();
   }
 });
 
 socket.on('dm message edited', (data) => {
-  const messageDiv = document.querySelector(`[data-message-index="${data.messageIndex}"][data-target-user="${data.targetUser}"]`);
+  const messageDiv = document.querySelector(`[data-message-id="${data.messageId}"]`);
   if (messageDiv) {
     const contentSpan = messageDiv.querySelector('.content');
     if (contentSpan) {
@@ -2220,9 +2219,8 @@ socket.on('dm message edited', (data) => {
 });
 
 socket.on('dm message deleted', (data) => {
-  const messageDiv = document.querySelector(`[data-message-index="${data.messageIndex}"][data-target-user="${data.targetUser}"]`);
+  const messageDiv = document.querySelector(`[data-message-id="${data.messageId}"]`);
   if (messageDiv) {
     messageDiv.remove();
-    updateMessageIndices();
   }
 });
