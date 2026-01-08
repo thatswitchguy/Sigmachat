@@ -3,7 +3,7 @@ modules = ["nodejs-20"]
 expertMode = true
 
 [workflows]
-runButton = "Start Chat Server"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
@@ -23,7 +23,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "node index.js"
+args = "npm start"
 waitForPort = 5000
 
 [[ports]]

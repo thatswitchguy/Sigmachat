@@ -429,6 +429,7 @@ function editMessage(roomId, index, type) {
       }
     })
     .catch(() => showNotification('Failed to edit message', 'error'));
+  }
 }
 
 function deleteChannel(channelId) {
