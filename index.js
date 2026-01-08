@@ -1406,18 +1406,18 @@ app.get('/api/user-profile/:username', (req, res) => {
 });
 
 // API to edit a room message
-app.put('/api/servers/:serverId/channels/:channelId/messages/:messageIndex', (req, res) => {
+app.put('/api/servers/:serverId/channels/:channelId/messages/:messageId', (req, res) => {
   if (!req.username) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
-  const { serverId, channelId, messageIndex } = req.params;
+  const { serverId, channelId, messageId } = req.params;
   const { newMessage } = req.body;
-  const index = parseInt(messageIndex);
 
   let messages = loadServerMessages(serverId, channelId);
+  const index = messages.findIndex(m => m.id === messageId);
 
-  if (!messages || index < 0 || index >= messages.length) {
+  if (index === -1) {
     return res.status(404).json({ error: 'Message not found' });
   }
 
@@ -1439,7 +1439,7 @@ app.put('/api/servers/:serverId/channels/:channelId/messages/:messageIndex', (re
   io.to(`${serverId}:${channelId}`).emit('message edited', {
     serverId,
     channelId,
-    messageIndex: index,
+    messageId,
     newMessage: newMessage.trim(),
     edited: true,
     editedAt: messages[index].editedAt
@@ -1449,17 +1449,17 @@ app.put('/api/servers/:serverId/channels/:channelId/messages/:messageIndex', (re
 });
 
 // API to delete a room message
-app.delete('/api/servers/:serverId/channels/:channelId/messages/:messageIndex', (req, res) => {
+app.delete('/api/servers/:serverId/channels/:channelId/messages/:messageId', (req, res) => {
   if (!req.username) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
-  const { serverId, channelId, messageIndex } = req.params;
-  const index = parseInt(messageIndex);
+  const { serverId, channelId, messageId } = req.params;
 
   let messages = loadServerMessages(serverId, channelId);
+  const index = messages.findIndex(m => m.id === messageId);
 
-  if (!messages || index < 0 || index >= messages.length) {
+  if (index === -1) {
     return res.status(404).json({ error: 'Message not found' });
   }
 
@@ -1474,21 +1474,20 @@ app.delete('/api/servers/:serverId/channels/:channelId/messages/:messageIndex', 
   io.to(`${serverId}:${channelId}`).emit('message deleted', {
     serverId,
     channelId,
-    messageIndex: index
+    messageId
   });
 
   res.json({ success: true });
 });
 
 // API to edit a DM message
-app.put('/api/dm/:targetUser/messages/:messageIndex', (req, res) => {
+app.put('/api/dm/:targetUser/messages/:messageId', (req, res) => {
   if (!req.username) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
-  const { targetUser, messageIndex } = req.params;
+  const { targetUser, messageId } = req.params;
   const { newMessage } = req.body;
-  const index = parseInt(messageIndex);
 
   const dmKey = [req.username, targetUser].sort().join('_');
   const dmFile = path.join(__dirname, `dm_${dmKey}.json`);
@@ -1504,7 +1503,8 @@ app.put('/api/dm/:targetUser/messages/:messageIndex', (req, res) => {
     return res.status(500).json({ error: 'Error loading DM history' });
   }
 
-  if (!dmHistory[index]) {
+  const index = dmHistory.findIndex(m => m.id === messageId);
+  if (index === -1) {
     return res.status(404).json({ error: 'Message not found' });
   }
 
@@ -1530,7 +1530,7 @@ app.put('/api/dm/:targetUser/messages/:messageIndex', (req, res) => {
 
   const editData = {
     targetUser,
-    messageIndex: index,
+    messageId,
     newMessage: newMessage.trim(),
     edited: true,
     editedAt: dmHistory[index].editedAt
@@ -1547,13 +1547,12 @@ app.put('/api/dm/:targetUser/messages/:messageIndex', (req, res) => {
 });
 
 // API to delete a DM message
-app.delete('/api/dm/:targetUser/messages/:messageIndex', (req, res) => {
+app.delete('/api/dm/:targetUser/messages/:messageId', (req, res) => {
   if (!req.username) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
-  const { targetUser, messageIndex } = req.params;
-  const index = parseInt(messageIndex);
+  const { targetUser, messageId } = req.params;
 
   const dmKey = [req.username, targetUser].sort().join('_');
   const dmFile = path.join(__dirname, `dm_${dmKey}.json`);
@@ -1569,7 +1568,8 @@ app.delete('/api/dm/:targetUser/messages/:messageIndex', (req, res) => {
     return res.status(500).json({ error: 'Error loading DM history' });
   }
 
-  if (!dmHistory[index]) {
+  const index = dmHistory.findIndex(m => m.id === messageId);
+  if (index === -1) {
     return res.status(404).json({ error: 'Message not found' });
   }
 
@@ -1588,7 +1588,7 @@ app.delete('/api/dm/:targetUser/messages/:messageIndex', (req, res) => {
 
   const deleteData = {
     targetUser,
-    messageIndex: index
+    messageId
   };
 
   if (targetSocket) {
@@ -1694,7 +1694,7 @@ function formatTimestamp() {
   const now = new Date();
   const date = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-  return { date, time };
+  return { date, time, id: generateId() };
 }
 
 // Socket.io connection handling

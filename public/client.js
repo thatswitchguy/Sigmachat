@@ -317,7 +317,7 @@ function appendMessage(messageData, index, type) {
   const messagesContainer = document.getElementById('messages');
   const messageDiv = document.createElement('div');
   messageDiv.className = messageData.username === 'System' ? 'message system' : 'message';
-  messageDiv.dataset.messageIndex = index;
+  messageDiv.dataset.messageId = messageData.id;
 
   if (messageData.username === 'System' || !messageData.username) {
     messageDiv.innerHTML = `<span class="content">${messageData.message}</span>`;
@@ -337,6 +337,7 @@ function appendMessage(messageData, index, type) {
 
   const date = messageData.date || '';
   const time = messageData.time || '';
+  const messageId = messageData.id;
   const editedIndicator = messageData.edited ? ` <span class="edited">(edited)</span>` : '';
 
   fetch(`/api/user-profile/${messageData.username}`)
@@ -351,8 +352,8 @@ function appendMessage(messageData, index, type) {
 
       const messageActions = messageData.username === username ? `
         <div class="message-actions" style="display: none; margin-left: 8px;">
-          <button class="edit-btn" onclick="editMessage('${currentServer}', '${currentChannel}', ${index}, 'room')">Edit</button>
-          <button class="delete-btn" onclick="deleteMessage('${currentServer}', '${currentChannel}', ${index}, 'room')">Delete</button>
+          <button class="edit-btn" onclick="editMessage('${currentServer}', '${currentChannel}', '${messageId}', 'room')">Edit</button>
+          <button class="delete-btn" onclick="deleteMessage('${currentServer}', '${currentChannel}', '${messageId}', 'room')">Delete</button>
         </div>
       ` : '';
 
@@ -373,8 +374,8 @@ function appendMessage(messageData, index, type) {
     .catch(() => {
       const messageActions = messageData.username === username ? `
         <div class="message-actions" style="display: none; margin-left: 8px;">
-          <button class="edit-btn" onclick="editMessage('${currentServer}', '${currentChannel}', ${index}, 'room')">Edit</button>
-          <button class="delete-btn" onclick="deleteMessage('${currentServer}', '${currentChannel}', ${index}, 'room')">Delete</button>
+          <button class="edit-btn" onclick="editMessage('${currentServer}', '${currentChannel}', '${messageId}', 'room')">Edit</button>
+          <button class="delete-btn" onclick="deleteMessage('${currentServer}', '${currentChannel}', '${messageId}', 'room')">Delete</button>
         </div>
       ` : '';
 
@@ -396,8 +397,8 @@ function appendMessage(messageData, index, type) {
   messagesContainer.appendChild(messageDiv);
 }
 
-function deleteMessage(serverId, channelId, index, type) {
-  const url = type === 'dm' ? `/api/dm/${serverId}/messages/${index}` : `/api/servers/${serverId}/channels/${channelId}/messages/${index}`;
+function deleteMessage(serverId, channelId, messageId, type) {
+  const url = type === 'dm' ? `/api/dm/${serverId}/messages/${messageId}` : `/api/servers/${serverId}/channels/${channelId}/messages/${messageId}`;
   fetch(url, { method: 'DELETE' })
     .then(r => r.json())
     .then(data => {
@@ -413,10 +414,10 @@ function deleteMessage(serverId, channelId, index, type) {
     .catch(() => showNotification('Failed to delete message', 'error'));
 }
 
-function editMessage(serverId, channelId, index, type) {
+function editMessage(serverId, channelId, messageId, type) {
   const newMessage = prompt('Edit your message:');
   if (newMessage !== null && newMessage.trim() !== '') {
-    const url = type === 'dm' ? `/api/dm/${serverId}/messages/${index}` : `/api/servers/${serverId}/channels/${channelId}/messages/${index}`;
+    const url = type === 'dm' ? `/api/dm/${serverId}/messages/${messageId}` : `/api/servers/${serverId}/channels/${channelId}/messages/${messageId}`;
     fetch(url, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
