@@ -2,11 +2,7 @@
 
 ## Overview
 
-Sigma Chat is a Discord-style real-time chat application built with Node.js, Express, and Socket.IO. It provides a multi-server architecture where each server contains unlimited channels, direct messaging, user authentication, and administrative controls. The application uses JSON files for persistent data storage and implements real-time communication through WebSocket connections.
-
-## User Preferences
-
-Preferred communication style: Simple, everyday language.
+Sigma Chat is a Discord-style real-time chat application built with Node.js, Express, and Socket.IO. It provides a multi-server architecture where each server contains unlimited channels, direct messaging, user authentication, and administrative controls. The app uses JSON files for persistent data storage and implements real-time communication through WebSocket connections.
 
 ## Recent Changes
 
@@ -16,11 +12,10 @@ Preferred communication style: Simple, everyday language.
 - Server icons with customizable images or text fallback
 - Server owner and admin roles with permissions for server/channel management
 - Updated UI with server sidebar (left), channel list (middle), and chat area (right)
-- Socket handlers now use "serverId:channelId" format for room identification
 - Message persistence per server/channel in JSON files
-- Enhanced image editor with Discord-style theming and interactive canvas controls (zoom, pan, rotate, resize)
+- Enhanced image editor with nicer theming and interactive canvas controls (zoom, pan, rotate, resize)
 - All server API endpoints protected with authentication checks
-- Added comprehensive admin role system with super admin (thatswitchguy) and co-admin management
+- Added comprehensive admin role system with super admin and co-admin management
 - Created admin-control.html page accessible only to super admin for managing co-admins
 - Created server-create.html page for server creation with user invitations
 - Collapsible sidebar with bidirectional toggle functionality
@@ -122,7 +117,7 @@ Client-side state includes:
 ### Direct Messaging System
 
 **DM Structure**
-- One-to-one conversations stored in files named `dm_[user1]_[user2].json`
+- Direct messaging between users stored in files named `dm_[user1]_[user2].json`
 - Alphabetical sorting of usernames ensures consistent file naming
 - Message format includes: sender, recipient, message content, timestamp/date
 - Online user list displays available DM recipients
@@ -169,4 +164,4 @@ The application relies on Node.js native `fs` module for:
 - External image hosting (example: Pinterest CDN URLs in `profile_pictures.json`)
 - No integrated image upload; users provide external URLs
 
-**Note**: The application currently has no database integration. If migrating to a production environment, consider integrating PostgreSQL or MongoDB for improved scalability, query capabilities, and concurrent access handling.
+**Note**: The application currently has no database integration. If migrating to a production environment, consider integrating PostgreSQL or MongoDB for improved scalability, query capabilities, and concurrent access handling. 

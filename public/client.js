@@ -300,6 +300,16 @@ function loadChannelMessages(serverId, channelId) {
     });
 }
 
+function showMessageActions(element) {
+  const actions = element.querySelector('.message-actions');
+  if (actions) actions.style.display = 'flex';
+}
+
+function hideMessageActions(element) {
+  const actions = element.querySelector('.message-actions');
+  if (actions) actions.style.display = 'none';
+}
+
 function appendMessage(messageData, index, type) {
   const messagesContainer = document.getElementById('messages');
   const messageDiv = document.createElement('div');
@@ -336,8 +346,15 @@ function appendMessage(messageData, index, type) {
         avatar = `<div style="width: 32px; height: 32px; border-radius: 50%; background-color: #5865f2; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 8px;">${messageData.username.charAt(0).toUpperCase()}</div>`;
       }
 
+      const messageActions = messageData.username === username ? `
+        <div class="message-actions" style="display: none; margin-left: 8px;">
+          <button class="edit-btn" onclick="editMessage('${currentServer}:${currentChannel}', ${index}, 'room')">Edit</button>
+          <button class="delete-btn" onclick="deleteMessage('${currentServer}:${currentChannel}', ${index}, 'room')">Delete</button>
+        </div>
+      ` : '';
+
       messageDiv.innerHTML = `
-        <div style="display: flex; align-items: flex-start;">
+        <div style="display: flex; align-items: flex-start;" onmouseenter="showMessageActions(this)" onmouseleave="hideMessageActions(this)">
           ${avatar}
           <div style="flex: 1;">
             ${date ? `<div class="message-date">${date}</div>` : ''}
@@ -346,12 +363,20 @@ function appendMessage(messageData, index, type) {
             <span class="content">${processedMessage}</span>
             ${editedIndicator}
           </div>
+          ${messageActions}
         </div>
       `;
     })
     .catch(() => {
+      const messageActions = messageData.username === username ? `
+        <div class="message-actions" style="display: none; margin-left: 8px;">
+          <button class="edit-btn" onclick="editMessage('${currentServer}:${currentChannel}', ${index}, 'room')">Edit</button>
+          <button class="delete-btn" onclick="deleteMessage('${currentServer}:${currentChannel}', ${index}, 'room')">Delete</button>
+        </div>
+      ` : '';
+
       messageDiv.innerHTML = `
-        <div style="display: flex; align-items: flex-start;">
+        <div style="display: flex; align-items: flex-start;" onmouseenter="showMessageActions(this)" onmouseleave="hideMessageActions(this)">
           <div style="width: 32px; height: 32px; border-radius: 50%; background-color: #5865f2; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 8px;">${messageData.username.charAt(0).toUpperCase()}</div>
           <div style="flex: 1;">
             ${date ? `<div class="message-date">${date}</div>` : ''}
@@ -360,11 +385,50 @@ function appendMessage(messageData, index, type) {
             <span class="content">${processedMessage}</span>
             ${editedIndicator}
           </div>
+          ${messageActions}
         </div>
       `;
     });
 
   messagesContainer.appendChild(messageDiv);
+}
+
+function deleteMessage(roomId, index, type) {
+  const url = type === 'dm' ? `/api/dm/${roomId}/messages/${index}` : `/api/servers/${currentServer}/channels/${currentChannel}/messages/${index}`;
+  fetch(url, { method: 'DELETE' })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        showNotification('Message deleted', 'success');
+        if (type === 'dm') openDM(roomId);
+        else loadChannelMessages(currentServer, currentChannel);
+      } else {
+        showNotification(data.error || 'Failed to delete message', 'error');
+      }
+    })
+    .catch(() => showNotification('Failed to delete message', 'error'));
+}
+
+function editMessage(roomId, index, type) {
+  const newMessage = prompt('Edit your message:');
+  if (newMessage !== null && newMessage.trim() !== '') {
+    const url = type === 'dm' ? `/api/dm/${roomId}/messages/${index}` : `/api/servers/${currentServer}/channels/${currentChannel}/messages/${index}`;
+    fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newMessage })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        showNotification('Message updated', 'success');
+        if (type === 'dm') openDM(roomId);
+        else loadChannelMessages(currentServer, currentChannel);
+      } else {
+        showNotification(data.error || 'Failed to edit message', 'error');
+      }
+    })
+    .catch(() => showNotification('Failed to edit message', 'error'));
 }
 
 function deleteChannel(channelId) {

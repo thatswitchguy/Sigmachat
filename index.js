@@ -1406,20 +1406,22 @@ app.get('/api/user-profile/:username', (req, res) => {
 });
 
 // API to edit a room message
-app.put('/api/:roomId/messages/:messageIndex', (req, res) => {
+app.put('/api/servers/:serverId/channels/:channelId/messages/:messageIndex', (req, res) => {
   if (!req.username) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
-  const { roomId, messageIndex } = req.params;
+  const { serverId, channelId, messageIndex } = req.params;
   const { newMessage } = req.body;
   const index = parseInt(messageIndex);
 
-  if (!roomMessages[roomId] || !roomMessages[roomId][index]) {
+  let messages = loadServerMessages(serverId, channelId);
+
+  if (!messages || !messages[index]) {
     return res.status(404).json({ error: 'Message not found' });
   }
 
-  const message = roomMessages[roomId][index];
+  const message = messages[index];
   if (message.username !== req.username) {
     return res.status(403).json({ error: 'Can only edit your own messages' });
   }
@@ -1428,46 +1430,50 @@ app.put('/api/:roomId/messages/:messageIndex', (req, res) => {
     return res.status(400).json({ error: 'Message cannot be empty' });
   }
 
-  roomMessages[roomId][index].message = newMessage.trim();
-  roomMessages[roomId][index].edited = true;
-  roomMessages[roomId][index].editedAt = new Date().toLocaleTimeString();
+  messages[index].message = newMessage.trim();
+  messages[index].edited = true;
+  messages[index].editedAt = new Date().toLocaleTimeString();
 
-  saveRoomMessages(roomId);
+  saveServerMessages(serverId, channelId, messages);
 
-  io.to(roomId).emit('message edited', {
-    roomId,
+  io.to(`${serverId}:${channelId}`).emit('message edited', {
+    serverId,
+    channelId,
     messageIndex: index,
     newMessage: newMessage.trim(),
     edited: true,
-    editedAt: roomMessages[roomId][index].editedAt
+    editedAt: messages[index].editedAt
   });
 
   res.json({ success: true });
 });
 
 // API to delete a room message
-app.delete('/api/:roomId/messages/:messageIndex', (req, res) => {
+app.delete('/api/servers/:serverId/channels/:channelId/messages/:messageIndex', (req, res) => {
   if (!req.username) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
-  const { roomId, messageIndex } = req.params;
+  const { serverId, channelId, messageIndex } = req.params;
   const index = parseInt(messageIndex);
 
-  if (!roomMessages[roomId] || !roomMessages[roomId][index]) {
+  let messages = loadServerMessages(serverId, channelId);
+
+  if (!messages || !messages[index]) {
     return res.status(404).json({ error: 'Message not found' });
   }
 
-  const message = roomMessages[roomId][index];
+  const message = messages[index];
   if (message.username !== req.username) {
     return res.status(403).json({ error: 'Can only delete your own messages' });
   }
 
-  roomMessages[roomId].splice(index, 1);
-  saveRoomMessages(roomId);
+  messages.splice(index, 1);
+  saveServerMessages(serverId, channelId, messages);
 
-  io.to(roomId).emit('message deleted', {
-    roomId,
+  io.to(`${serverId}:${channelId}`).emit('message deleted', {
+    serverId,
+    channelId,
     messageIndex: index
   });
 

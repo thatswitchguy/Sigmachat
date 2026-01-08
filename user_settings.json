@@ -6,7 +6,7 @@
     "messageSounds": true
   },
   "other_banana": {
-    "allowDMs": false,
+    "allowDMs": true,
     "dataUsage": true,
     "desktopNotifications": true,
     "messageSounds": true
