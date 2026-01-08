@@ -1790,6 +1790,7 @@ io.on('connection', (socket) => {
   socket.on('chat message', (msg) => {
     const ts = formatTimestamp();
     const messageData = {
+      id: ts.id,
       username: user,
       message: msg,
       date: ts.date,
@@ -1808,6 +1809,7 @@ io.on('connection', (socket) => {
     const { targetUser, message } = data;
     const ts = formatTimestamp();
     const messageData = {
+      id: ts.id,
       from: user,
       to: targetUser,
       message: message,
