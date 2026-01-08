@@ -348,8 +348,8 @@ function appendMessage(messageData, index, type) {
 
       const messageActions = messageData.username === username ? `
         <div class="message-actions" style="display: none; margin-left: 8px;">
-          <button class="edit-btn" onclick="editMessage('${currentServer}:${currentChannel}', ${index}, 'room')">Edit</button>
-          <button class="delete-btn" onclick="deleteMessage('${currentServer}:${currentChannel}', ${index}, 'room')">Delete</button>
+          <button class="edit-btn" onclick="editMessage('${currentServer}', '${currentChannel}', ${index}, 'room')">Edit</button>
+          <button class="delete-btn" onclick="deleteMessage('${currentServer}', '${currentChannel}', ${index}, 'room')">Delete</button>
         </div>
       ` : '';
 
@@ -370,8 +370,8 @@ function appendMessage(messageData, index, type) {
     .catch(() => {
       const messageActions = messageData.username === username ? `
         <div class="message-actions" style="display: none; margin-left: 8px;">
-          <button class="edit-btn" onclick="editMessage('${currentServer}:${currentChannel}', ${index}, 'room')">Edit</button>
-          <button class="delete-btn" onclick="deleteMessage('${currentServer}:${currentChannel}', ${index}, 'room')">Delete</button>
+          <button class="edit-btn" onclick="editMessage('${currentServer}', '${currentChannel}', ${index}, 'room')">Edit</button>
+          <button class="delete-btn" onclick="deleteMessage('${currentServer}', '${currentChannel}', ${index}, 'room')">Delete</button>
         </div>
       ` : '';
 
@@ -393,15 +393,15 @@ function appendMessage(messageData, index, type) {
   messagesContainer.appendChild(messageDiv);
 }
 
-function deleteMessage(roomId, index, type) {
-  const url = type === 'dm' ? `/api/dm/${roomId}/messages/${index}` : `/api/servers/${currentServer}/channels/${currentChannel}/messages/${index}`;
+function deleteMessage(serverId, channelId, index, type) {
+  const url = type === 'dm' ? `/api/dm/${serverId}/messages/${index}` : `/api/servers/${serverId}/channels/${channelId}/messages/${index}`;
   fetch(url, { method: 'DELETE' })
     .then(r => r.json())
     .then(data => {
       if (data.success) {
         showNotification('Message deleted', 'success');
-        if (type === 'dm') openDM(roomId);
-        else loadChannelMessages(currentServer, currentChannel);
+        if (type === 'dm') openDM(serverId);
+        else loadChannelMessages(serverId, channelId);
       } else {
         showNotification(data.error || 'Failed to delete message', 'error');
       }
@@ -409,10 +409,10 @@ function deleteMessage(roomId, index, type) {
     .catch(() => showNotification('Failed to delete message', 'error'));
 }
 
-function editMessage(roomId, index, type) {
+function editMessage(serverId, channelId, index, type) {
   const newMessage = prompt('Edit your message:');
   if (newMessage !== null && newMessage.trim() !== '') {
-    const url = type === 'dm' ? `/api/dm/${roomId}/messages/${index}` : `/api/servers/${currentServer}/channels/${currentChannel}/messages/${index}`;
+    const url = type === 'dm' ? `/api/dm/${serverId}/messages/${index}` : `/api/servers/${serverId}/channels/${channelId}/messages/${index}`;
     fetch(url, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -422,8 +422,8 @@ function editMessage(roomId, index, type) {
     .then(data => {
       if (data.success) {
         showNotification('Message updated', 'success');
-        if (type === 'dm') openDM(roomId);
-        else loadChannelMessages(currentServer, currentChannel);
+        if (type === 'dm') openDM(serverId);
+        else loadChannelMessages(serverId, channelId);
       } else {
         showNotification(data.error || 'Failed to edit message', 'error');
       }
@@ -1547,8 +1547,8 @@ socket.on('chat message', (data) => {
 
         const messageActions = data.username === username ? `
           <div class="message-actions" style="display: none; margin-left: 8px;">
-            <button class="edit-btn" onclick="editMessage('${currentRoom}', ${messageIndex}, 'room')">Edit</button>
-            <button class="delete-btn" onclick="deleteMessage('${currentRoom}', ${messageIndex}, 'room')">Delete</button>
+            <button class="edit-btn" onclick="editMessage('${currentServer}', '${currentChannel}', ${messageIndex}, 'room')">Edit</button>
+            <button class="delete-btn" onclick="deleteMessage('${currentServer}', '${currentChannel}', ${messageIndex}, 'room')">Delete</button>
           </div>
         ` : '';
 
@@ -1571,8 +1571,8 @@ socket.on('chat message', (data) => {
         // Fallback without profile picture
         const messageActions = data.username === username ? `
           <div class="message-actions" style="display: none; margin-left: 8px;">
-            <button class="edit-btn" onclick="editMessage('${currentRoom}', ${messageIndex}, 'room')">Edit</button>
-            <button class="delete-btn" onclick="deleteMessage('${currentRoom}', ${messageIndex}, 'room')">Delete</button>
+            <button class="edit-btn" onclick="editMessage('${currentServer}', '${currentChannel}', ${messageIndex}, 'room')">Edit</button>
+            <button class="delete-btn" onclick="deleteMessage('${currentServer}', '${currentChannel}', ${messageIndex}, 'room')">Delete</button>
           </div>
         ` : '';
 
