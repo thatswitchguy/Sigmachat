@@ -313,6 +313,26 @@ function hideMessageActions(element) {
   if (actions) actions.style.display = 'none';
 }
 
+function loadOnlineUsers() {
+  const onlineUserList = document.getElementById('online-user-list');
+  if (!onlineUserList) return;
+  
+  onlineUserList.innerHTML = '';
+  const uniqueUsers = [...new Set(onlineUsers)];
+  
+  uniqueUsers.forEach(user => {
+    if (user === username) return;
+    const userDiv = document.createElement('div');
+    userDiv.className = 'online-user-item';
+    userDiv.innerHTML = `
+      <span class="status-indicator online"></span>
+      <span class="online-user-name">${user}</span>
+    `;
+    userDiv.onclick = () => openDM(user);
+    onlineUserList.appendChild(userDiv);
+  });
+}
+
 function appendMessage(messageData, index, type) {
   const messagesContainer = document.getElementById('messages');
   const messageDiv = document.createElement('div');
@@ -1507,6 +1527,16 @@ socket.on('chat message', (data) => {
     playNotificationSound();
   }
 
+  // Check if message already exists to avoid duplicates
+  const existingMessages = Array.from(messages.querySelectorAll('.message:not(.system)'));
+  const isDuplicate = existingMessages.some(m => 
+    m.querySelector('.content').textContent === data.message && 
+    m.querySelector('.timestamp').textContent.includes(data.time) &&
+    m.querySelector('.username').textContent.includes(data.username)
+  );
+
+  if (isDuplicate) return;
+
   const messageDiv = document.createElement('div');
   messageDiv.className = data.username === 'System' ? 'message system' : 'message';
 
@@ -1525,12 +1555,10 @@ socket.on('chat message', (data) => {
     }
 
     // Process images FIRST (before links to prevent double wrapping)
-    // Match image URLs with common extensions (with or without query parameters)
     processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
 
     // Process remaining links (that aren't already images)
     processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, function(match) {
-      // Don't link if it's already an image
       if (match.match(/\.(jpg|jpeg|png|gif|webp|svg)/i)) {
         return match;
       }
@@ -1614,45 +1642,58 @@ socket.on('dm message', (data) => {
 
   // Only show if we're in the DM with this user
   if (isCurrentDM) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = 'message dm-message';
+    // Check if message already exists to avoid duplicates on real-time arrival vs load
+    const existingMessages = Array.from(messages.querySelectorAll('.message.dm-message'));
+    const isDuplicate = existingMessages.some(m => 
+      m.querySelector('.content').textContent === data.message && 
+      m.querySelector('.timestamp').textContent.includes(data.time)
+    );
+    
+    if (!isDuplicate) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message dm-message';
 
-    // Process mentions, links, and images in DM messages
-    let processedMessage = data.message;
-    if (processedMessage.includes('@')) {
-      processedMessage = processedMessage.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
-    }
-
-    // Process images FIRST (before links to prevent double wrapping)
-    // Match image URLs with common extensions (with or without query parameters)
-    processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
-
-    // Process remaining links (that aren't already images)
-    processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, function(match) {
-      // Don't link if it's already an image
-      if (match.match(/\.(jpg|jpeg|png|gif|webp|svg)/i)) {
-        return match;
+      // Process mentions, links, and images in DM messages
+      let processedMessage = data.message;
+      if (processedMessage.includes('@')) {
+        processedMessage = processedMessage.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
       }
-      return '<a href="' + match + '" target="_blank" class="message-link">' + match + '</a>';
-    });
 
-    const dmMsgDate = data.date || '';
-    const dmMsgTime = data.time || '';
-    messageDiv.innerHTML = `
-      ${dmMsgDate ? `<div class="message-date">${dmMsgDate}</div>` : ''}
-      <span class="timestamp">[${dmMsgTime}]</span>
-      <span class="username">${data.from}:</span>
-      <span class="content">${processedMessage}</span>
-    `;
-    messages.appendChild(messageDiv);
-    autoScrollIfAtBottom();
+      // Process images FIRST (before links to prevent double wrapping)
+      processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
+
+      // Process remaining links (that aren't already images)
+      processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, function(match) {
+        if (match.match(/\.(jpg|jpeg|png|gif|webp|svg)/i)) {
+          return match;
+        }
+        return '<a href="' + match + '" target="_blank" class="message-link">' + match + '</a>';
+      });
+
+      const dmMsgDate = data.date || '';
+      const dmMsgTime = data.time || '';
+      messageDiv.innerHTML = `
+        ${dmMsgDate ? `<div class="message-date">${dmMsgDate}</div>` : ''}
+        <span class="timestamp">[${dmMsgTime}]</span>
+        <span class="username">${data.from}:</span>
+        <span class="content">${processedMessage}</span>
+      `;
+      messages.appendChild(messageDiv);
+      autoScrollIfAtBottom();
+    }
   }
 
   // Update DM history
   if (!dmHistories[dmUser]) {
     dmHistories[dmUser] = [];
   }
-  dmHistories[dmUser].push(data);
+  // Check if this specific message is already in history
+  const historyDuplicate = dmHistories[dmUser].some(m => 
+    m.message === data.message && m.time === data.time && m.from === data.from
+  );
+  if (!historyDuplicate) {
+    dmHistories[dmUser].push(data);
+  }
 });
 
 socket.on('user online', (users) => {
