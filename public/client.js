@@ -792,15 +792,30 @@ function updateRoomCount() {
   }
 }
 
+function renderMessages(messagesToRender, container) {
+  container.innerHTML = '';
+  messagesToRender.forEach((msg, index) => {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = msg.username === 'System' ? 'message system' : 'message';
+    const messageId = msg.id || `legacy-${index}`;
+    messageDiv.dataset.messageId = messageId;
+    
+    // ... rest of rendering logic ...
+  });
+}
+
 function loadRoomMessages(roomId) {
-  fetch(`/api/${roomId}/messages`)
+  fetch(`/api/servers/${currentServer}/channels/${roomId}/messages`)
     .then(response => response.json())
     .then(roomMessages => {
+      messages.innerHTML = '';
       roomMessages.forEach((messageData, index) => {
         const messageDiv = document.createElement('div');
         messageDiv.className = messageData.username === 'System' ? 'message system' : 'message';
-        messageDiv.dataset.messageIndex = index;
-        messageDiv.dataset.roomId = roomId;
+        const messageId = messageData.id || `legacy-${index}`;
+        messageDiv.dataset.messageId = messageId;
+        messageDiv.dataset.serverId = currentServer;
+        messageDiv.dataset.channelId = roomId;
 
         if (messageData.username === 'System' || !messageData.username) {
           messageDiv.innerHTML = `<span class="content">${messageData.message}</span>`;
@@ -812,13 +827,9 @@ function loadRoomMessages(roomId) {
             processedMessage = processedMessage.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
           }
 
-          // Process images FIRST (before links to prevent double wrapping)
-          // Match image URLs with common extensions (with or without query parameters)
           processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
 
-          // Process remaining links (that aren't already images)
           processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, function(match) {
-            // Don't link if it's already an image
             if (match.match(/\.(jpg|jpeg|png|gif|webp|svg)/i)) {
               return match;
             }
@@ -839,8 +850,8 @@ function loadRoomMessages(roomId) {
               const editedIndicator = messageData.edited ? ` <span class="edited">(edited at ${messageData.editedAt})</span>` : '';
               const messageActions = messageData.username === username ? `
                 <div class="message-actions" style="display: none; margin-left: 8px;">
-                  <button class="edit-btn" onclick="editMessage('${roomId}', ${index}, 'room')">Edit</button>
-                  <button class="delete-btn" onclick="deleteMessage('${roomId}', ${index}, 'room')">Delete</button>
+                  <button class="edit-btn" onclick="editMessage('${currentServer}', '${roomId}', '${messageId}', 'room')">Edit</button>
+                  <button class="delete-btn" onclick="deleteMessage('${currentServer}', '${roomId}', '${messageId}', 'room')">Delete</button>
                 </div>
               ` : '';
 
@@ -861,12 +872,11 @@ function loadRoomMessages(roomId) {
               `;
             })
             .catch(() => {
-              // Fallback without profile picture
               const editedIndicator = messageData.edited ? ` <span class="edited">(edited at ${messageData.editedAt})</span>` : '';
               const messageActions = messageData.username === username ? `
                 <div class="message-actions" style="display: none; margin-left: 8px;">
-                  <button class="edit-btn" onclick="editMessage('${roomId}', ${index}, 'room')">Edit</button>
-                  <button class="delete-btn" onclick="deleteMessage('${roomId}', ${index}, 'room')">Delete</button>
+                  <button class="edit-btn" onclick="editMessage('${currentServer}', '${roomId}', '${messageId}', 'room')">Edit</button>
+                  <button class="delete-btn" onclick="deleteMessage('${currentServer}', '${roomId}', '${messageId}', 'room')">Delete</button>
                 </div>
               ` : '';
 
@@ -891,7 +901,7 @@ function loadRoomMessages(roomId) {
       autoScrollIfAtBottom();
     })
     .catch(error => {
-      console.error('Error loading general messages:', error);
+      console.error('Error loading channel messages:', error);
     });
 }
 
@@ -1008,7 +1018,8 @@ function startDM(targetUser) {
       dmMessages.forEach((messageData, index) => {
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message dm-message';
-        messageDiv.dataset.messageIndex = index;
+        const messageId = messageData.id || `legacy-${index}`;
+        messageDiv.dataset.messageId = messageId;
         messageDiv.dataset.targetUser = targetUser;
 
         // Process mentions, links, and images in DM messages
@@ -1044,8 +1055,8 @@ function startDM(targetUser) {
             const editedIndicator = messageData.edited ? ` <span class="edited">(edited at ${messageData.editedAt})</span>` : '';
             const messageActions = messageData.from === username ? `
               <div class="message-actions" style="display: none; margin-left: 8px;">
-                <button class="edit-btn" onclick="editMessage('${targetUser}', ${index}, 'dm')">Edit</button>
-                <button class="delete-btn" onclick="deleteMessage('${targetUser}', ${index}, 'dm')">Delete</button>
+                <button class="edit-btn" onclick="editMessage('${targetUser}', null, '${messageId}', 'dm')">Edit</button>
+                <button class="delete-btn" onclick="deleteMessage('${targetUser}', null, '${messageId}', 'dm')">Delete</button>
               </div>
             ` : '';
 
@@ -2029,8 +2040,8 @@ function hideMessageActions(messageElement) {
   }
 }
 
-function editMessage(roomOrUser, messageIndex, type) {
-  const messageDiv = document.querySelector(`[data-message-index="${messageIndex}"]`);
+function editMessage(serverId, channelId, messageId, type) {
+  const messageDiv = document.querySelector(`[data-message-id="${messageId}"]`);
   if (!messageDiv) return;
 
   const contentSpan = messageDiv.querySelector('.content');
@@ -2070,9 +2081,9 @@ function editMessage(roomOrUser, messageIndex, type) {
     if (newMessage && newMessage !== currentText) {
       let url;
       if (type === 'room') {
-        url = `/api/${roomOrUser}/messages/${messageIndex}`;
+        url = `/api/servers/${serverId}/channels/${channelId}/messages/${messageId}`;
       } else {
-        url = `/api/dm/${roomOrUser}/messages/${messageIndex}`;
+        url = `/api/dm/${serverId}/messages/${messageId}`;
       }
 
       fetch(url, {
@@ -2130,12 +2141,13 @@ function editMessage(roomOrUser, messageIndex, type) {
   };
 }
 
-function deleteMessage(roomOrUser, messageIndex, type) {
+function deleteMessage(serverId, channelId, messageId, type) {
   let url;
   if (type === 'room') {
-    url = `/api/${roomOrUser}/messages/${messageIndex}`;
+    url = `/api/servers/${serverId}/channels/${channelId}/messages/${messageId}`;
   } else {
-    url = `/api/dm/${roomOrUser}/messages/${messageIndex}`;
+    // For DMs, roomOrUser is the targetUser
+    url = `/api/dm/${serverId}/messages/${messageId}`;
   }
 
   fetch(url, {
@@ -2144,11 +2156,9 @@ function deleteMessage(roomOrUser, messageIndex, type) {
   .then(response => response.json())
   .then(data => {
     if (data.success) {
-      const messageDiv = document.querySelector(`[data-message-index="${messageIndex}"]`);
+      const messageDiv = document.querySelector(`[data-message-id="${messageId}"]`);
       if (messageDiv) {
         messageDiv.remove();
-        // Update message indices for remaining messages
-        updateMessageIndices();
         showNotification('Message deleted', 'success');
       }
     } else {
