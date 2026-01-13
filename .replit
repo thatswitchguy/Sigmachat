@@ -37,3 +37,4 @@ channel = "stable-25_05"
 deploymentTarget = "autoscale"
 run = ["node", "index.js"]
 build = ["sh", "-c", "."]
+

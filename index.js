@@ -1464,6 +1464,10 @@ app.delete('/api/servers/:serverId/channels/:channelId/messages/:messageId', (re
   }
 
   const message = messages[index];
+  
+  // Messages can't be deleted as per user request
+  return res.status(403).json({ error: 'Message deletion is disabled' });
+
   if (message.username !== req.username) {
     return res.status(403).json({ error: 'Can only delete your own messages' });
   }

@@ -1,8 +1,8 @@
-# Sigma Chat
+# Sigmachat
 
 ## Overview
 
-Sigma Chat is a Discord-style real-time chat application built with Node.js, Express, and Socket.IO. It provides a multi-server architecture where each server contains unlimited channels, direct messaging, user authentication, and administrative controls. The app uses JSON files for persistent data storage and implements real-time communication through WebSocket connections.
+Sigmachat is a Discord-style real-time chat application built with Node.js, Express, and Socket.IO. It provides a multi-server architecture where each server contains unlimited channels, direct messaging, user authentication, and administrative controls. The app uses JSON files for persistent data storage and implements real-time communication through WebSocket connections.
 
 ## Recent Changes
 
