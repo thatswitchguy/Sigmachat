@@ -751,6 +751,13 @@ app.get('/api/rooms', (req, res) => {
   const filteredRooms = {};
   const defaultRoomIds = ['general', 'suggestions', 'tech-support'];
   
+  // Always ensure default rooms exist in the rooms object
+  defaultRoomIds.forEach(id => {
+    if (!rooms[id]) {
+      rooms[id] = { name: id.charAt(0).toUpperCase() + id.slice(1).replace('-', ' ') };
+    }
+  });
+
   Object.keys(rooms).forEach(roomId => {
     // Always include default rooms
     if (defaultRoomIds.includes(roomId)) {
@@ -763,7 +770,7 @@ app.get('/api/rooms', (req, res) => {
       }
     }
   });
-  
+
   res.json(filteredRooms);
 });
 
@@ -798,7 +805,22 @@ app.get('/api/servers', (req, res) => {
   }
 
   const userServers = {};
+  
+  // Always include default server
+  if (servers['sigmachat']) {
+    userServers['sigmachat'] = {
+      id: 'sigmachat',
+      name: servers['sigmachat'].name,
+      icon: servers['sigmachat'].icon,
+      isAdmin: isServerAdmin('sigmachat', currentUser),
+      isOwner: servers['sigmachat'].owner === currentUser,
+      channelCount: Object.keys(servers['sigmachat'].channels || {}).length
+    };
+  }
+
   Object.keys(servers).forEach(serverId => {
+    if (serverId === 'sigmachat') return;
+    
     const server = servers[serverId];
     if (isServerMember(serverId, currentUser)) {
       userServers[serverId] = {
@@ -1415,7 +1437,7 @@ app.put('/api/servers/:serverId/channels/:channelId/messages/:messageId', (req, 
   const { newMessage } = req.body;
 
   let messages = loadServerMessages(serverId, channelId);
-  const index = messages.findIndex(m => m.id === messageId);
+  const index = messages.findIndex(m => m.id === messageId || m.timestamp === messageId);
 
   if (index === -1) {
     return res.status(404).json({ error: 'Message not found' });
@@ -1439,7 +1461,7 @@ app.put('/api/servers/:serverId/channels/:channelId/messages/:messageId', (req, 
   io.to(`${serverId}:${channelId}`).emit('message edited', {
     serverId,
     channelId,
-    messageId,
+    messageId: message.id || message.timestamp,
     newMessage: newMessage.trim(),
     edited: true,
     editedAt: messages[index].editedAt
@@ -1457,7 +1479,7 @@ app.delete('/api/servers/:serverId/channels/:channelId/messages/:messageId', (re
   const { serverId, channelId, messageId } = req.params;
 
   let messages = loadServerMessages(serverId, channelId);
-  const index = messages.findIndex(m => m.id === messageId);
+  const index = messages.findIndex(m => m.id === messageId || m.timestamp === messageId);
 
   if (index === -1) {
     return res.status(404).json({ error: 'Message not found' });
@@ -1465,11 +1487,8 @@ app.delete('/api/servers/:serverId/channels/:channelId/messages/:messageId', (re
 
   const message = messages[index];
   
-  // Messages can't be deleted as per user request
-  return res.status(403).json({ error: 'Message deletion is disabled' });
-
-  if (message.username !== req.username) {
-    return res.status(403).json({ error: 'Can only delete your own messages' });
+  if (message.username !== req.username && !isServerAdmin(serverId, req.username)) {
+    return res.status(403).json({ error: 'Can only delete your own messages or be an admin' });
   }
 
   messages.splice(index, 1);
@@ -1478,7 +1497,7 @@ app.delete('/api/servers/:serverId/channels/:channelId/messages/:messageId', (re
   io.to(`${serverId}:${channelId}`).emit('message deleted', {
     serverId,
     channelId,
-    messageId
+    messageId: message.id || message.timestamp
   });
 
   res.json({ success: true });
@@ -1507,7 +1526,7 @@ app.put('/api/dm/:targetUser/messages/:messageId', (req, res) => {
     return res.status(500).json({ error: 'Error loading DM history' });
   }
 
-  const index = dmHistory.findIndex(m => m.id === messageId);
+  const index = dmHistory.findIndex(m => m.id === messageId || m.timestamp === messageId);
   if (index === -1) {
     return res.status(404).json({ error: 'Message not found' });
   }
@@ -1534,7 +1553,7 @@ app.put('/api/dm/:targetUser/messages/:messageId', (req, res) => {
 
   const editData = {
     targetUser,
-    messageId,
+    messageId: message.id || message.timestamp,
     newMessage: newMessage.trim(),
     edited: true,
     editedAt: dmHistory[index].editedAt
@@ -1572,7 +1591,7 @@ app.delete('/api/dm/:targetUser/messages/:messageId', (req, res) => {
     return res.status(500).json({ error: 'Error loading DM history' });
   }
 
-  const index = dmHistory.findIndex(m => m.id === messageId);
+  const index = dmHistory.findIndex(m => m.id === messageId || m.timestamp === messageId);
   if (index === -1) {
     return res.status(404).json({ error: 'Message not found' });
   }
@@ -1592,7 +1611,7 @@ app.delete('/api/dm/:targetUser/messages/:messageId', (req, res) => {
 
   const deleteData = {
     targetUser,
-    messageId
+    messageId: message.id || message.timestamp
   };
 
   if (targetSocket) {
