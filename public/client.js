@@ -907,7 +907,7 @@ function loadRoomMessages(roomId) {
 
 function loadOnlineUsers() {
   const onlineUserList = document.getElementById('online-user-list');
-  onlineUserList.innerHTML = '';
+  // NO clearing here yet, we will clear once we have the data to avoid flickering or partial states
 
   // Load all users for DM capability
   fetch('/api/users')
@@ -918,6 +918,9 @@ function loadOnlineUsers() {
       return response.json();
     })
     .then(allUsers => {
+      // Clear the list only right before rendering to prevent duplicates if called multiple times rapidly
+      onlineUserList.innerHTML = '';
+
       // Filter out banned users and current user - use Set to avoid duplicates
       const visibleUsersSet = new Set(allUsers.filter(user => !bannedUsers.has(user) && user !== username));
       const visibleUsers = Array.from(visibleUsersSet);

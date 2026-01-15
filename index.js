@@ -1757,6 +1757,7 @@ io.on('connection', (socket) => {
     socket.join(currentRoom);
 
     onlineUsers.add(user);
+    // Send only unique usernames
     io.emit('user online', Array.from(onlineUsers));
 
     const ts = formatTimestamp();
