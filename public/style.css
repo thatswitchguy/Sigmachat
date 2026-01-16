@@ -493,15 +493,86 @@ body {
   background-color: #4752c4;
 }
 
-.context-menu {
-  position: fixed;
-  background-color: #18191c;
-  border: 1px solid #202225;
-  border-radius: 6px;
-  padding: 6px 0;
-  z-index: 1000;
-  min-width: 140px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.24);
+.channel-actions {
+  display: none;
+  gap: 4px;
+}
+
+.channel-item:hover .channel-actions {
+  display: flex;
+}
+
+.channel-edit, .channel-delete {
+  background: none;
+  border: none;
+  color: #b5bac1;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.channel-edit:hover {
+  color: #ffffff;
+  background-color: #4f545c;
+}
+
+.channel-delete:hover {
+  color: #ed4245;
+  background-color: #4f545c;
+}
+
+.channel-edit img {
+  width: 14px;
+  height: 14px;
+  filter: invert(85%) sepia(8%) saturate(181%) hue-rotate(182deg) brightness(88%) contrast(89%);
+}
+
+.channel-item:hover .channel-edit img {
+  filter: invert(100%);
+}
+
+#online-user-list .user-item img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+#online-user-list .user-item {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  gap: 12px;
+}
+
+#online-user-list .user-avatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.modal-body .form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #b9bbbe;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.modal-body .form-group input {
+  width: 100%;
+  padding: 10px;
+  background-color: #202225;
+  border: none;
+  border-radius: 3px;
+  color: #dcddde;
+  font-size: 16px;
 }
 
 .context-menu-item {

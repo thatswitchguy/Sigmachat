@@ -137,6 +137,7 @@ function initializeApp() {
   loadServers();
   loadOnlineUsers();
   setupEventListeners();
+  setupChannelEditHandler();
   socket.emit('join', { username: username, room: `${currentServer}:${currentChannel}` });
   
   // Show admin control button for super admin
@@ -256,12 +257,15 @@ function renderChannelList(channels) {
     channelItem.dataset.channelId = channelId;
     
     let actions = '';
-    if (canManage) {
-      const isProtected = protectedChannels.includes(channelId) && currentServer === 'sigmachat';
+    const isProtected = protectedChannels.includes(channelId) && currentServer === 'sigmachat';
+    
+    if (canManage && !isProtected) {
       actions = `
         <div class="channel-actions">
-          <button class="channel-edit" onclick="event.stopPropagation(); editChannel('${channelId}', '${channel.name}')" title="Edit Channel">✎</button>
-          ${!isProtected ? `<button class="channel-delete" onclick="event.stopPropagation(); deleteChannel('${channelId}')" title="Delete Channel">×</button>` : ''}
+          <button class="channel-edit" onclick="event.stopPropagation(); openEditChannelModal('${channelId}', '${channel.name}')" title="Edit Channel">
+            <img src="https://cdn-icons-png.freepik.com/512/10337/10337031.png" alt="Edit">
+          </button>
+          <button class="channel-delete" onclick="event.stopPropagation(); deleteChannel('${channelId}')" title="Delete Channel">×</button>
         </div>
       `;
     }
@@ -272,17 +276,33 @@ function renderChannelList(channels) {
   });
 }
 
-function editChannel(channelId, currentName) {
-  const newName = prompt('Enter new channel name:', currentName);
-  if (newName && newName.trim() !== '' && newName.trim() !== currentName) {
-    fetch(`/api/servers/${currentServer}/channels/${channelId}`, {
+let editingChannelId = null;
+
+function openEditChannelModal(channelId, currentName) {
+  editingChannelId = channelId;
+  const input = document.getElementById('edit-channel-name-input');
+  if (input) input.value = currentName;
+  openModal('edit-channel-modal');
+}
+
+// Update the submit handler in setupEventListeners or add it here
+function setupChannelEditHandler() {
+  document.getElementById('edit-channel-submit')?.addEventListener('click', () => {
+    const newName = document.getElementById('edit-channel-name-input').value.trim();
+    if (!newName) {
+      showNotification('Please enter a channel name', 'warning');
+      return;
+    }
+
+    fetch(`/api/servers/${currentServer}/channels/${editingChannelId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newName.trim() })
+      body: JSON.stringify({ name: newName })
     })
     .then(r => r.json())
     .then(data => {
       if (data.success) {
+        closeModal();
         showNotification('Channel updated', 'success');
         selectServer(currentServer);
       } else {
@@ -290,7 +310,7 @@ function editChannel(channelId, currentName) {
       }
     })
     .catch(() => showNotification('Failed to update channel', 'error'));
-  }
+  });
 }
 
 function selectChannel(channelId) {

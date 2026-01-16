@@ -1034,12 +1034,9 @@ app.put('/api/servers/:serverId/channels/:channelId', (req, res) => {
     return res.status(404).json({ error: 'Channel not found' });
   }
 
-  if (!isGlobalAdmin(currentUser) && !isServerAdmin(serverId, currentUser)) {
-    return res.status(403).json({ error: 'Admin access required' });
-  }
-
-  if (!name || name.length < 1 || name.length > 30) {
-    return res.status(400).json({ error: 'Channel name must be between 1 and 30 characters' });
+  const protectedChannels = ['general', 'suggestions', 'tech-support'];
+  if (protectedChannels.includes(channelId) && serverId === 'sigmachat') {
+    return res.status(400).json({ error: 'Cannot edit protected channel' });
   }
 
   server.channels[channelId].name = name.toLowerCase();
