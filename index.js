@@ -158,10 +158,10 @@ function loadServerMessages(serverId, channelId) {
 function saveServerMessages(serverId, channelId, messages) {
   const file = getServerMessagesFile(serverId, channelId);
   try {
-    const messagesToSave = messages.slice(-100);
+    const messagesToSave = messages.slice(-500);
     fs.writeFileSync(file, JSON.stringify(messagesToSave, null, 2));
   } catch (error) {
-    console.error(`Error saving messages for ${serverId}/${channelId}:`, error);
+    console.error(`Error loading messages for ${serverId}/${channelId}:`, error);
   }
 }
 
@@ -383,7 +383,7 @@ function saveRoomMessages(roomId) {
         return;
     }
 
-    const messagesToSave = roomMessages[roomId].slice(-100);
+    const messagesToSave = roomMessages[roomId].slice(-500);
     fs.writeFileSync(fileName, JSON.stringify(messagesToSave, null, 2));
   } catch (error) {
     console.error(`Error saving ${roomId} messages:`, error);
@@ -395,7 +395,7 @@ function saveDMMessages(user1, user2, messages) {
   try {
     const dmKey = [user1, user2].sort().join('_');
     const dmFile = path.join(__dirname, `dm_${dmKey}.json`);
-    const messagesToSave = messages.slice(-100);
+    const messagesToSave = messages.slice(-500);
     fs.writeFileSync(dmFile, JSON.stringify(messagesToSave, null, 2));
   } catch (error) {
     console.error('Error saving DM messages:', error);
@@ -994,7 +994,7 @@ app.post('/api/servers/:serverId/channels', (req, res) => {
     return res.status(404).json({ error: 'Server not found' });
   }
 
-  if (!isServerAdmin(serverId, currentUser)) {
+  if (!isGlobalAdmin(currentUser) && !isServerAdmin(serverId, currentUser)) {
     return res.status(403).json({ error: 'Admin access required' });
   }
 
@@ -1019,6 +1019,34 @@ app.post('/api/servers/:serverId/channels', (req, res) => {
   res.json({ success: true, channelId });
 });
 
+// Update a channel
+app.put('/api/servers/:serverId/channels/:channelId', (req, res) => {
+  const { serverId, channelId } = req.params;
+  const { name } = req.body;
+  const currentUser = req.username;
+
+  if (!currentUser) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const server = servers[serverId];
+  if (!server || !server.channels || !server.channels[channelId]) {
+    return res.status(404).json({ error: 'Channel not found' });
+  }
+
+  if (!isGlobalAdmin(currentUser) && !isServerAdmin(serverId, currentUser)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  if (!name || name.length < 1 || name.length > 30) {
+    return res.status(400).json({ error: 'Channel name must be between 1 and 30 characters' });
+  }
+
+  server.channels[channelId].name = name.toLowerCase();
+  saveServers();
+  res.json({ success: true });
+});
+
 // Delete a channel
 app.delete('/api/servers/:serverId/channels/:channelId', (req, res) => {
   const { serverId, channelId } = req.params;
@@ -1033,7 +1061,7 @@ app.delete('/api/servers/:serverId/channels/:channelId', (req, res) => {
     return res.status(404).json({ error: 'Server not found' });
   }
 
-  if (!isServerAdmin(serverId, currentUser)) {
+  if (!isGlobalAdmin(currentUser) && !isServerAdmin(serverId, currentUser)) {
     return res.status(403).json({ error: 'Admin access required' });
   }
 
@@ -1041,8 +1069,9 @@ app.delete('/api/servers/:serverId/channels/:channelId', (req, res) => {
     return res.status(404).json({ error: 'Channel not found' });
   }
 
-  if (channelId === 'general') {
-    return res.status(400).json({ error: 'Cannot delete the general channel' });
+  const protectedChannels = ['general', 'suggestions', 'tech-support'];
+  if (protectedChannels.includes(channelId) && serverId === 'sigmachat') {
+    return res.status(400).json({ error: 'Cannot delete protected channel' });
   }
 
   delete server.channels[channelId];

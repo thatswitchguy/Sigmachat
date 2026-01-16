@@ -226,8 +226,10 @@ function selectServer(serverId) {
       const settingsBtn = document.getElementById('server-settings-btn');
       const addChannelBtn = document.getElementById('add-channel-btn');
       
-      if (settingsBtn) settingsBtn.style.display = isServerAdmin ? 'block' : 'none';
-      if (addChannelBtn) addChannelBtn.style.display = isServerAdmin ? 'block' : 'none';
+      const canManage = isServerAdmin || isGlobalAdmin;
+      
+      if (settingsBtn) settingsBtn.style.display = canManage ? 'block' : 'none';
+      if (addChannelBtn) addChannelBtn.style.display = canManage ? 'block' : 'none';
       
       renderChannelList(server.channels);
       
@@ -246,21 +248,49 @@ function renderChannelList(channels) {
   channelList.innerHTML = '';
   
   const protectedChannels = ['general', 'suggestions', 'tech-support'];
+  const canManage = isServerAdmin || isGlobalAdmin;
   
   Object.entries(channels || {}).forEach(([channelId, channel]) => {
     const channelItem = document.createElement('div');
     channelItem.className = `channel-item ${channelId === currentChannel ? 'active' : ''}`;
     channelItem.dataset.channelId = channelId;
     
-    let deleteBtn = '';
-    if (isServerAdmin && !protectedChannels.includes(channelId)) {
-      deleteBtn = `<button class="channel-delete" onclick="event.stopPropagation(); deleteChannel('${channelId}')" title="Delete Channel">x</button>`;
+    let actions = '';
+    if (canManage) {
+      const isProtected = protectedChannels.includes(channelId) && currentServer === 'sigmachat';
+      actions = `
+        <div class="channel-actions">
+          <button class="channel-edit" onclick="event.stopPropagation(); editChannel('${channelId}', '${channel.name}')" title="Edit Channel">✎</button>
+          ${!isProtected ? `<button class="channel-delete" onclick="event.stopPropagation(); deleteChannel('${channelId}')" title="Delete Channel">×</button>` : ''}
+        </div>
+      `;
     }
     
-    channelItem.innerHTML = `<span class="channel-hash">#</span>${channel.name || channelId}${deleteBtn}`;
+    channelItem.innerHTML = `<span class="channel-hash">#</span><span class="channel-name">${channel.name || channelId}</span>${actions}`;
     channelItem.onclick = () => selectChannel(channelId);
     channelList.appendChild(channelItem);
   });
+}
+
+function editChannel(channelId, currentName) {
+  const newName = prompt('Enter new channel name:', currentName);
+  if (newName && newName.trim() !== '' && newName.trim() !== currentName) {
+    fetch(`/api/servers/${currentServer}/channels/${channelId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newName.trim() })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        showNotification('Channel updated', 'success');
+        selectServer(currentServer);
+      } else {
+        showNotification(data.error || 'Failed to update channel', 'error');
+      }
+    })
+    .catch(() => showNotification('Failed to update channel', 'error'));
+  }
 }
 
 function selectChannel(channelId) {
