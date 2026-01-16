@@ -920,7 +920,7 @@ app.put('/api/servers/:serverId', (req, res) => {
     return res.status(404).json({ error: 'Server not found' });
   }
 
-  if (!isServerAdmin(serverId, currentUser)) {
+  if (!isGlobalAdmin(currentUser) && !isServerAdmin(serverId, currentUser)) {
     return res.status(403).json({ error: 'Admin access required' });
   }
 
@@ -945,8 +945,8 @@ app.delete('/api/servers/:serverId', (req, res) => {
     return res.status(404).json({ error: 'Server not found' });
   }
 
-  if (server.owner !== currentUser) {
-    return res.status(403).json({ error: 'Only the owner can delete the server' });
+  if (server.owner !== currentUser && !isGlobalAdmin(currentUser)) {
+    return res.status(403).json({ error: 'Only the owner or a global admin can delete the server' });
   }
 
   if (serverId === 'sigmachat') {
