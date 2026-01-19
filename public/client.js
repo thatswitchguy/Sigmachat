@@ -270,7 +270,13 @@ function renderChannelList(channels) {
       `;
     }
     
-    channelItem.innerHTML = `<span class="channel-hash">#</span><span class="channel-name">${channel.name || channelId}</span>${actions}`;
+    channelItem.innerHTML = `
+      <div class="channel-content">
+        <span class="channel-hash">#</span>
+        <span class="channel-name">${channel.name || channelId}</span>
+      </div>
+      ${actions}
+    `;
     channelItem.onclick = () => selectChannel(channelId);
     channelList.appendChild(channelItem);
   });
@@ -380,6 +386,15 @@ function appendMessage(messageData, index, type) {
     processedMessage = processedMessage.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
   }
   processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
+  
+  // YouTube link processing
+  const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/;
+  processedMessage = processedMessage.replace(youtubeRegex, (match, videoId) => {
+    return `<div class="youtube-embed">
+      <iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    </div>`;
+  });
+
   processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, function(match) {
     if (match.match(/\.(jpg|jpeg|png|gif|webp|svg)/i)) return match;
     return '<a href="' + match + '" target="_blank" class="message-link">' + match + '</a>';
@@ -551,6 +566,38 @@ function setupEventListeners() {
       document.getElementById('edit-server-name').value = server.name;
       document.getElementById('edit-server-icon').value = server.icon || '';
       openModal('server-settings-modal');
+    }
+  });
+
+  // Plus button toggle
+  const plusBtn = document.getElementById('plus-btn');
+  const plusOptions = document.getElementById('plus-options');
+  
+  plusBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    plusBtn.classList.toggle('active');
+    plusOptions.classList.toggle('active');
+  });
+
+  document.addEventListener('click', () => {
+    plusBtn?.classList.remove('active');
+    plusOptions?.classList.remove('active');
+  });
+
+  // Option buttons
+  document.getElementById('upload-option')?.addEventListener('click', () => {
+    document.getElementById('image-upload').click();
+  });
+
+  document.getElementById('poll-option')?.addEventListener('click', () => {
+    showNotification('Polls feature coming soon!', 'info');
+  });
+
+  document.getElementById('youtube-option')?.addEventListener('click', () => {
+    const link = prompt('Enter YouTube link:');
+    if (link) {
+      document.getElementById('input').value = link;
+      document.querySelector('#form form').dispatchEvent(new Event('submit'));
     }
   });
 

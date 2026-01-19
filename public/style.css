@@ -493,14 +493,133 @@ body {
   background-color: #4752c4;
 }
 
+.channel-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1px 8px;
+  margin: 1px 0;
+  color: #8e9297;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  user-select: none;
+  line-height: 32px;
+  height: 32px;
+}
+
+.channel-content {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  overflow: hidden;
+}
+
+.channel-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .channel-actions {
   display: none;
   gap: 4px;
+  margin-left: 8px;
+  flex-shrink: 0;
 }
 
 .channel-item:hover .channel-actions {
   display: flex;
 }
+
+.plus-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+#plus-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+#plus-btn.active {
+  transform: rotate(45deg);
+}
+
+#plus-btn img {
+  width: 24px;
+  height: 24px;
+  filter: invert(100%);
+}
+
+#plus-options {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  background-color: #18191c;
+  border-radius: 8px;
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  z-index: 1000;
+  margin-bottom: 8px;
+}
+
+#plus-options.active {
+  display: flex;
+}
+
+.option-btn {
+  background: none;
+  border: none;
+  color: #dcddde;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.option-btn:hover {
+  background-color: #4f545c;
+  color: #ffffff;
+}
+
+.option-btn img {
+  width: 20px;
+  height: 20px;
+  filter: invert(100%);
+}
+
+.youtube-embed {
+  margin-top: 8px;
+  border-radius: 8px;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.youtube-embed iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
 
 .channel-edit, .channel-delete {
   background: none;

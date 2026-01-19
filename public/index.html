@@ -66,8 +66,26 @@
       <button id="scroll-down-btn" title="Scroll to latest messages">↓</button>
       <div id="form">
         <form>
-          <input type="file" id="image-upload" accept="image/*" style="display: none;">
-          <button type="button" id="upload-image-btn" title="Upload image">Upload</button>
+          <div class="plus-container">
+            <button type="button" id="plus-btn" title="Expand options">
+              <img src="/assets/151861-removebg-preview_1768843048150.png" alt="Add">
+            </button>
+            <div id="plus-options">
+              <button type="button" class="option-btn" id="upload-option">
+                <img src="/assets/10254377-removebg-preview_1768843041746.png" alt="Upload">
+                Upload Image/Video
+              </button>
+              <button type="button" class="option-btn" id="poll-option">
+                <img src="/assets/bulleted_9357359_1768843161915.png" alt="Poll">
+                Create Poll
+              </button>
+              <button type="button" class="option-btn" id="youtube-option">
+                <img src="/assets/youtube_281783_1768843356809.png" alt="YouTube">
+                YouTube Watch Link
+              </button>
+            </div>
+          </div>
+          <input type="file" id="image-upload" accept="image/*,video/*" style="display: none;">
           <input id="input" autocomplete="off" placeholder="Message #general" maxlength="2000" />
           <button type="submit">Send</button>
         </form>
