@@ -2001,6 +2001,42 @@ app.post('/api/user-settings', (req, res) => {
 });
 
 // Start the server
+// API to vote on a poll
+app.post('/api/servers/:serverId/channels/:channelId/messages/:messageId/poll/vote', (req, res) => {
+  const { serverId, channelId, messageId } = req.params;
+  const { optionIndex } = req.body;
+  const currentUser = req.username;
+
+  if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
+
+  const messages = loadServerMessages(serverId, channelId);
+  const messageIndex = messages.findIndex(m => m.id === messageId);
+
+  if (messageIndex === -1) return res.status(404).json({ error: 'Message not found' });
+
+  try {
+    const pollData = JSON.parse(messages[messageIndex].message);
+    if (pollData.type !== 'poll') return res.status(400).json({ error: 'Not a poll' });
+
+    // Remove vote from other options and toggle on current option
+    pollData.options.forEach((opt, i) => {
+      const voteIdx = opt.votes.indexOf(currentUser);
+      if (voteIdx !== -1) {
+        opt.votes.splice(voteIdx, 1);
+      }
+      if (i === optionIndex && voteIdx === -1) {
+        opt.votes.push(currentUser);
+      }
+    });
+
+    messages[messageIndex].message = JSON.stringify(pollData);
+    saveServerMessages(serverId, channelId, messages);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(400).json({ error: 'Invalid poll data' });
+  }
+});
+
 http.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
   console.log(`Access your app via the Replit webview`);
