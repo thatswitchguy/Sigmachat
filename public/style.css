@@ -601,9 +601,42 @@ body {
   color: #ffffff;
 }
 
+/* Option Button Colors */
+.option-btn#upload-option { color: #5865f2; }
+.option-btn#poll-option { color: #3ba55c; }
+.option-btn#youtube-option { color: #ff0000; }
+
 .option-btn img {
   width: 20px;
   height: 20px;
+}
+
+#plus-options {
+  background-color: #2f3136; /* Dark theme background */
+}
+
+/* Poll Modal Overlay */
+#poll-modal .modal-body .form-group {
+  margin-bottom: 16px;
+}
+
+#poll-options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.poll-option-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.remove-poll-option {
+  background: none;
+  border: none;
+  color: #ed4245;
+  cursor: pointer;
+  font-size: 20px;
 }
 
 /* Toggle Switch Styling */

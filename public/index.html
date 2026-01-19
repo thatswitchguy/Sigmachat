@@ -174,20 +174,32 @@
         <button class="btn-primary" id="save-server-settings">Save Changes</button>
       </div>
     </div>
-    <div id="edit-channel-modal" class="modal" style="display: none;">
+    <div id="poll-modal" class="modal" style="display: none;">
       <div class="modal-header">
-        <h2>Edit Channel</h2>
+        <h2>Create Poll</h2>
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label>Channel Name</label>
-          <input type="text" id="edit-channel-name-input" placeholder="channel-name" maxlength="30">
+          <label>Question</label>
+          <input type="text" id="poll-question-input" placeholder="What's on your mind?" maxlength="100">
+        </div>
+        <div class="form-group">
+          <label>Options</label>
+          <div id="poll-options-container">
+            <div class="poll-option-input-group">
+              <input type="text" class="poll-option-input" placeholder="Option 1" maxlength="50">
+            </div>
+            <div class="poll-option-input-group">
+              <input type="text" class="poll-option-input" placeholder="Option 2" maxlength="50">
+            </div>
+          </div>
+          <button type="button" class="btn-secondary" id="add-poll-option-btn" style="margin-top: 8px;">+ Add Option</button>
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn-secondary modal-cancel">Cancel</button>
-        <button class="btn-primary" id="edit-channel-submit">Save Changes</button>
+        <button class="btn-primary" id="poll-submit">Create Poll</button>
       </div>
     </div>
   </div>

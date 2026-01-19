@@ -667,15 +667,18 @@ function setupEventListeners() {
   const plusBtn = document.getElementById('plus-btn');
   const plusOptions = document.getElementById('plus-options');
   
-  plusBtn?.addEventListener('click', (e) => {
+  document.getElementById('plus-btn')?.addEventListener('click', (e) => {
     e.stopPropagation();
     plusBtn.classList.toggle('active');
     plusOptions.classList.toggle('active');
   });
 
-  document.addEventListener('click', () => {
-    plusBtn?.classList.remove('active');
-    plusOptions?.classList.remove('active');
+  // Handle outside clicks to close the menu
+  document.addEventListener('click', (e) => {
+    if (!plusBtn?.contains(e.target) && !plusOptions?.contains(e.target)) {
+      plusBtn?.classList.remove('active');
+      plusOptions?.classList.remove('active');
+    }
   });
 
   // Option buttons
@@ -684,11 +687,33 @@ function setupEventListeners() {
   });
 
   document.getElementById('poll-option')?.addEventListener('click', () => {
-    const question = prompt('Enter poll question:');
-    if (!question) return;
-    const optionsText = prompt('Enter options separated by commas:');
-    if (!optionsText) return;
-    const options = optionsText.split(',').map(o => o.trim()).filter(o => o !== '');
+    openModal('poll-modal');
+  });
+
+  document.getElementById('add-poll-option-btn')?.addEventListener('click', () => {
+    const container = document.getElementById('poll-options-container');
+    const inputGroup = document.createElement('div');
+    inputGroup.className = 'poll-option-input-group';
+    inputGroup.innerHTML = `
+      <input type="text" class="poll-option-input" placeholder="Option ${container.children.length + 1}" maxlength="50">
+      <button type="button" class="remove-poll-option">×</button>
+    `;
+    container.appendChild(inputGroup);
+    
+    inputGroup.querySelector('.remove-poll-option').addEventListener('click', () => {
+      inputGroup.remove();
+    });
+  });
+
+  document.getElementById('poll-submit')?.addEventListener('click', () => {
+    const question = document.getElementById('poll-question-input').value.trim();
+    const optionInputs = document.querySelectorAll('.poll-option-input');
+    const options = Array.from(optionInputs).map(i => i.value.trim()).filter(o => o !== '');
+
+    if (!question) {
+      showNotification('Please enter a question', 'warning');
+      return;
+    }
     if (options.length < 2) {
       showNotification('At least 2 options are required', 'warning');
       return;
@@ -705,6 +730,19 @@ function setupEventListeners() {
     input.value = message;
     document.querySelector('#form form').dispatchEvent(new Event('submit'));
     input.value = '';
+    closeModal();
+    
+    // Reset modal
+    document.getElementById('poll-question-input').value = '';
+    const container = document.getElementById('poll-options-container');
+    container.innerHTML = `
+      <div class="poll-option-input-group">
+        <input type="text" class="poll-option-input" placeholder="Option 1" maxlength="50">
+      </div>
+      <div class="poll-option-input-group">
+        <input type="text" class="poll-option-input" placeholder="Option 2" maxlength="50">
+      </div>
+    `;
   });
 
   document.getElementById('youtube-option')?.addEventListener('click', () => {
