@@ -16,6 +16,8 @@ let desktopNotifications = true;
 let dataUsage = true;
 let servers = {};
 
+let incognitoMode = false;
+
 // Load user preferences from server
 function loadUserPreferences() {
   fetch('/api/user-settings')
@@ -25,10 +27,24 @@ function loadUserPreferences() {
       desktopNotifications = settings.desktopNotifications !== false;
       dataUsage = settings.dataUsage !== false;
       notificationsEnabled = settings.messageSounds !== false;
+      incognitoMode = settings.incognitoMode === true;
+      updateIncognito();
     })
     .catch(error => {
       console.error('Error loading user preferences:', error);
     });
+}
+
+function updateIncognito() {
+  if (incognitoMode) {
+    document.title = 'Home';
+    const favicon = document.querySelector('link[rel="icon"]');
+    if (favicon) favicon.href = '/incognito_favicon.ico';
+  } else {
+    document.title = 'Sigmachat';
+    const favicon = document.querySelector('link[rel="icon"]');
+    if (favicon) favicon.href = '/favicon.png';
+  }
 }
 
 function updatePreferences() {
@@ -382,6 +398,16 @@ function appendMessage(messageData, index, type) {
   }
 
   let processedMessage = messageData.message || '';
+  
+  // Check for poll
+  if (processedMessage.startsWith('{"type":"poll"')) {
+    try {
+      const pollData = JSON.parse(processedMessage);
+      appendPoll(messageData, pollData);
+      return;
+    } catch (e) {}
+  }
+
   if (processedMessage.includes('@')) {
     processedMessage = processedMessage.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
   }
@@ -460,6 +486,74 @@ function appendMessage(messageData, index, type) {
     });
 
   messagesContainer.appendChild(messageDiv);
+}
+
+function appendPoll(messageData, pollData) {
+  const messagesContainer = document.getElementById('messages');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'message';
+  messageDiv.dataset.messageId = messageData.id;
+
+  const date = messageData.date || '';
+  const time = messageData.time || '';
+  const totalVotes = pollData.options.reduce((sum, opt) => sum + opt.votes.length, 0);
+
+  fetch(`/api/user-profile/${messageData.username}`)
+    .then(r => r.json())
+    .then(profile => {
+      let avatar;
+      if (profile.profilePicture) {
+        avatar = `<img src="${profile.profilePicture}" alt="${messageData.username}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px;">`;
+      } else {
+        avatar = `<div style="width: 32px; height: 32px; border-radius: 50%; background-color: #5865f2; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 8px;">${messageData.username.charAt(0).toUpperCase()}</div>`;
+      }
+
+      let optionsHtml = '';
+      pollData.options.forEach((opt, i) => {
+        const percentage = totalVotes === 0 ? 0 : (opt.votes.length / totalVotes) * 100;
+        const hasVoted = opt.votes.includes(username);
+        optionsHtml += `
+          <div class="poll-option ${hasVoted ? 'voted' : ''}" onclick="votePoll('${messageData.id}', ${i})">
+            <div class="poll-progress" style="width: ${percentage}%"></div>
+            <span class="poll-option-text">${opt.text}</span>
+            <span class="poll-vote-count">${opt.votes.length}</span>
+          </div>
+        `;
+      });
+
+      messageDiv.innerHTML = `
+        <div style="display: flex; align-items: flex-start;">
+          ${avatar}
+          <div style="flex: 1;">
+            ${date ? `<div class="message-date">${date}</div>` : ''}
+            <span class="timestamp">[${time}]</span>
+            <span class="username">${messageData.username}:</span>
+            <div class="poll-container">
+              <div class="poll-question">${pollData.question}</div>
+              ${optionsHtml}
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+  messagesContainer.appendChild(messageDiv);
+}
+
+function votePoll(messageId, optionIndex) {
+  fetch(`/api/servers/${currentServer}/channels/${currentChannel}/messages/${messageId}/poll/vote`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ optionIndex })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      loadChannelMessages(currentServer, currentChannel);
+    } else {
+      showNotification(data.error || 'Failed to vote', 'error');
+    }
+  });
 }
 
 function deleteMessage(serverId, channelId, messageId, type) {
@@ -590,7 +684,27 @@ function setupEventListeners() {
   });
 
   document.getElementById('poll-option')?.addEventListener('click', () => {
-    showNotification('Polls feature coming soon!', 'info');
+    const question = prompt('Enter poll question:');
+    if (!question) return;
+    const optionsText = prompt('Enter options separated by commas:');
+    if (!optionsText) return;
+    const options = optionsText.split(',').map(o => o.trim()).filter(o => o !== '');
+    if (options.length < 2) {
+      showNotification('At least 2 options are required', 'warning');
+      return;
+    }
+
+    const pollData = {
+      type: 'poll',
+      question,
+      options: options.map(o => ({ text: o, votes: [] }))
+    };
+
+    const message = JSON.stringify(pollData);
+    const input = document.getElementById('input');
+    input.value = message;
+    document.querySelector('#form form').dispatchEvent(new Event('submit'));
+    input.value = '';
   });
 
   document.getElementById('youtube-option')?.addEventListener('click', () => {

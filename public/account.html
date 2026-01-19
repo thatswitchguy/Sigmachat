@@ -81,11 +81,27 @@
       <div id="privacy-section" class="account-section">
         <h2>Privacy & Safety</h2>
         <div class="setting-group">
+          <h4>Incognito Mode</h4>
+          <div class="setting-item">
+            <label>
+              <span>Enable Incognito Mode (Favicon + Title change)</span>
+              <div class="switch">
+                <input type="checkbox" id="incognito-mode">
+                <span class="slider"></span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="setting-group">
           <h4>Direct Messages</h4>
           <div class="setting-item">
             <label>
-              <input type="checkbox" id="allow-dms" checked>
-              Allow direct messages from server members
+              <span>Allow direct messages from server members</span>
+              <div class="switch">
+                <input type="checkbox" id="allow-dms" checked>
+                <span class="slider"></span>
+              </div>
             </label>
           </div>
         </div>
@@ -94,8 +110,11 @@
           <h4>Data & Privacy</h4>
           <div class="setting-item">
             <label>
-              <input type="checkbox" id="data-usage" checked>
-              Use data to improve Sigmachat (these are fake, dont worry)
+              <span>Use data to improve Sigmachat (these are fake, dont worry)</span>
+              <div class="switch">
+                <input type="checkbox" id="data-usage" checked>
+                <span class="slider"></span>
+              </div>
             </label>
           </div>
         </div>
@@ -107,8 +126,11 @@
           <h4>Desktop Notifications</h4>
           <div class="setting-item">
             <label>
-              <input type="checkbox" id="desktop-notifications" checked>
-              Enable desktop notifications
+              <span>Enable desktop notifications</span>
+              <div class="switch">
+                <input type="checkbox" id="desktop-notifications" checked>
+                <span class="slider"></span>
+              </div>
             </label>
           </div>
         </div>
@@ -117,8 +139,11 @@
           <h4>Sounds</h4>
           <div class="setting-item">
             <label>
-              <input type="checkbox" id="message-sounds" checked>
-              Message notification sounds
+              <span>Message notification sounds</span>
+              <div class="switch">
+                <input type="checkbox" id="message-sounds" checked>
+                <span class="slider"></span>
+              </div>
             </label>
           </div>
         </div>
@@ -134,6 +159,7 @@
     const dataUsageCheckbox = document.getElementById('data-usage');
     const desktopNotificationsCheckbox = document.getElementById('desktop-notifications');
     const messageSoundsCheckbox = document.getElementById('message-sounds');
+    const incognitoCheckbox = document.getElementById('incognito-mode');
 
     // Load saved preferences from server
     function loadUserSettings() {
@@ -144,6 +170,8 @@
           dataUsageCheckbox.checked = settings.dataUsage !== false;
           desktopNotificationsCheckbox.checked = settings.desktopNotifications !== false;
           messageSoundsCheckbox.checked = settings.messageSounds !== false;
+          incognitoCheckbox.checked = settings.incognitoMode === true;
+          updateIncognito();
         })
         .catch(error => {
           console.error('Error loading settings:', error);
@@ -152,10 +180,23 @@
           dataUsageCheckbox.checked = true;
           desktopNotificationsCheckbox.checked = true;
           messageSoundsCheckbox.checked = true;
+          incognitoCheckbox.checked = false;
         });
     }
 
     loadUserSettings();
+
+    function updateIncognito() {
+      if (incognitoCheckbox.checked) {
+        document.title = 'Home';
+        const favicon = document.querySelector('link[rel="icon"]');
+        if (favicon) favicon.href = '/incognito_favicon.ico';
+      } else {
+        document.title = 'Account';
+        const favicon = document.querySelector('link[rel="icon"]');
+        if (favicon) favicon.href = '/favicon.png';
+      }
+    }
 
     // Save preferences to server when toggled
     function saveUserSettings() {
@@ -163,8 +204,11 @@
         allowDMs: allowDMsCheckbox.checked,
         dataUsage: dataUsageCheckbox.checked,
         desktopNotifications: desktopNotificationsCheckbox.checked,
-        messageSounds: messageSoundsCheckbox.checked
+        messageSounds: messageSoundsCheckbox.checked,
+        incognitoMode: incognitoCheckbox.checked
       };
+
+      updateIncognito();
 
       fetch('/api/user-settings', {
         method: 'POST',
@@ -182,6 +226,7 @@
     dataUsageCheckbox.addEventListener('change', saveUserSettings);
     desktopNotificationsCheckbox.addEventListener('change', saveUserSettings);
     messageSoundsCheckbox.addEventListener('change', saveUserSettings);
+    incognitoCheckbox.addEventListener('change', saveUserSettings);
 
     // Load user info
     fetch('/api/user')
