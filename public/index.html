@@ -204,6 +204,24 @@
     </div>
   </div>
 
+    <div id="youtube-modal" class="modal" style="display: none;">
+      <div class="modal-header">
+        <h2>Watch YouTube</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>YouTube Link</label>
+          <input type="url" id="youtube-link-input" placeholder="https://www.youtube.com/watch?v=..." maxlength="200">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-cancel">Cancel</button>
+        <button class="btn-primary" id="youtube-submit">Add Video</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="/client.js"></script>
 </body>

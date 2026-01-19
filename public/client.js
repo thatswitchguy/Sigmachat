@@ -498,6 +498,9 @@ function appendPoll(messageData, pollData) {
   const time = messageData.time || '';
   const totalVotes = pollData.options.reduce((sum, opt) => sum + opt.votes.length, 0);
 
+  // Get current username from the user panel
+  const currentUser = document.getElementById('user-name-display')?.textContent || '';
+
   fetch(`/api/user-profile/${messageData.username}`)
     .then(r => r.json())
     .then(profile => {
@@ -511,7 +514,7 @@ function appendPoll(messageData, pollData) {
       let optionsHtml = '';
       pollData.options.forEach((opt, i) => {
         const percentage = totalVotes === 0 ? 0 : (opt.votes.length / totalVotes) * 100;
-        const hasVoted = opt.votes.includes(username);
+        const hasVoted = opt.votes.includes(currentUser);
         optionsHtml += `
           <div class="poll-option ${hasVoted ? 'voted' : ''}" onclick="votePoll('${messageData.id}', ${i})">
             <div class="poll-progress" style="width: ${percentage}%"></div>
@@ -746,10 +749,17 @@ function setupEventListeners() {
   });
 
   document.getElementById('youtube-option')?.addEventListener('click', () => {
-    const link = prompt('Enter YouTube link:');
+    openModal('youtube-modal');
+  });
+
+  document.getElementById('youtube-submit')?.addEventListener('click', () => {
+    const input = document.getElementById('youtube-link-input');
+    const link = input.value.trim();
     if (link) {
       document.getElementById('input').value = link;
       document.querySelector('#form form').dispatchEvent(new Event('submit'));
+      input.value = '';
+      closeModal();
     }
   });
 

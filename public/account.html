@@ -52,16 +52,16 @@
 
         <div class="account-management">
           <div class="username-change-section">
-            <h4>Change Username</h4>
-            <div class="input-group">
+            <h4 class="collapsible-header">Change Username</h4>
+            <div class="input-group collapsible-content">
               <input type="text" id="new-username" placeholder="Enter new username" minlength="3" maxlength="20">
               <button id="change-username-btn">Change Username</button>
             </div>
           </div>
 
           <div class="password-change-section">
-            <h4>Change Password</h4>
-            <div class="input-group">
+            <h4 class="collapsible-header">Change Password</h4>
+            <div class="input-group collapsible-content">
               <input type="password" id="current-password" placeholder="Current password">
               <input type="password" id="new-password" placeholder="New password" minlength="6">
               <input type="password" id="confirm-password" placeholder="Confirm new password" minlength="6">
@@ -69,6 +69,17 @@
             </div>
           </div>
         </div>
+
+        <script>
+          // Collapsible functionality
+          document.querySelectorAll('.collapsible-header').forEach(header => {
+            header.addEventListener('click', () => {
+              const content = header.nextElementSibling;
+              header.classList.toggle('active');
+              content.classList.toggle('active');
+            });
+          });
+        </script>
 
         <div class="profile-picture-section">
           <label for="profile-url">Profile Picture URL:</label>
