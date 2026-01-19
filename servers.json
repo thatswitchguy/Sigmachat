@@ -22,8 +22,8 @@
         "name": "tech-support",
         "type": "text"
       },
-      "information": {
-        "name": "information",
+      "test": {
+        "name": "test",
         "type": "text"
       }
     },

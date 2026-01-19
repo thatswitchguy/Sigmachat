@@ -509,8 +509,8 @@ body {
   cursor: pointer;
   padding: 2px;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: right;
+  justify-content: right;
   border-radius: 4px;
 }
 
