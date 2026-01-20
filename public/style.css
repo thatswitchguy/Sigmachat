@@ -457,18 +457,19 @@ body {
 
 #input {
   flex: 1;
-  padding: 12px 16px;
-  background-color: #40444b;
-  border: 1px solid #202225;
+  background: #40444b;
+  border: none;
   border-radius: 8px;
+  padding: 10px 15px;
   color: #dcddde;
-  font-size: 14px;
-  resize: none;
+  font-size: 1rem;
+  font-family: inherit;
   outline: none;
-  transition: border-color 0.15s ease;
-  height: 44px;
+  resize: none;
+  max-height: 100px;
+  min-height: 40px;
   line-height: 20px;
-  overflow-y: auto;
+  overflow-y: hidden;
 }
 
 .poll-option-header {
@@ -601,21 +602,22 @@ body {
 .option-btn {
   background: none;
   border: none;
-  color: #dcddde;
-  padding: 8px;
+  color: #b5bac1;
+  padding: 6px 12px;
   border-radius: 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 12px;
   font-size: 14px;
-  transition: background-color 0.2s;
+  transition: background-color 0.15s ease, color 0.15s ease;
   white-space: nowrap;
+  width: 100%;
 }
 
 .option-btn:hover {
   background-color: #40444b;
-  color: #ffffff;
+  color: #dcddde;
 }
 
 /* Option Button Colors */
@@ -1281,18 +1283,19 @@ input:checked + .slider:before {
 
 #input {
   flex: 1;
-  padding: 12px 16px;
-  background-color: #40444b;
-  border: 1px solid #202225;
+  background: #40444b;
+  border: none;
   border-radius: 8px;
+  padding: 10px 15px;
   color: #dcddde;
-  font-size: 14px;
-  resize: none;
+  font-size: 1rem;
+  font-family: inherit;
   outline: none;
-  transition: border-color 0.15s ease;
-  height: 44px;
+  resize: none;
+  max-height: 100px;
+  min-height: 40px;
   line-height: 20px;
-  overflow-y: auto;
+  overflow-y: hidden;
 }
 
 .poll-option-header {

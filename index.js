@@ -1134,6 +1134,28 @@ app.post('/api/servers/:serverId/channels/:channelId/messages/:messageId/poll/vo
   }
 });
 
+// Server icon upload endpoint
+app.post('/api/servers/:serverId/icon/upload', upload.single('icon'), (req, res) => {
+  const { serverId } = req.params;
+  const currentUser = req.username;
+
+  if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
+  if (!isServerAdmin(serverId, currentUser) && !isGlobalAdmin(currentUser)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+  const iconUrl = `/uploads/${req.file.filename}`;
+  const server = servers[serverId];
+  if (server) {
+    server.icon = iconUrl;
+    saveServers();
+    res.json({ success: true, icon: iconUrl });
+  } else {
+    res.status(404).json({ error: 'Server not found' });
+  }
+});
+
 // Join a server (via invite or public)
 app.post('/api/servers/:serverId/join', (req, res) => {
   const { serverId } = req.params;

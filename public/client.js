@@ -173,7 +173,7 @@ function updateUserPanel() {
       .then(r => r.json())
       .then(data => {
         if (data.profilePicture) {
-          userAvatar.innerHTML = `<img src="${data.profilePicture}" alt="${username}">`;
+          userAvatar.innerHTML = `<img src="${data.profilePicture}" alt="${username}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'">`;
         } else {
           userAvatar.textContent = username.charAt(0).toUpperCase();
         }
@@ -216,7 +216,7 @@ function renderServerList() {
     serverIcon.dataset.serverId = server.id;
     
     if (server.icon) {
-      serverIcon.innerHTML = `<img src="${server.icon}" alt="${server.name}">`;
+      serverIcon.innerHTML = `<img src="${server.icon}" alt="${server.name}" onerror="this.parentElement.innerHTML='<span>${server.name.charAt(0).toUpperCase()}</span>'">`;
     } else {
       serverIcon.innerHTML = `<span>${server.name.charAt(0).toUpperCase()}</span>`;
     }
@@ -962,6 +962,31 @@ function setupEventListeners() {
         })
         .catch(() => showNotification('Failed to leave server', 'error'));
     }, 'Leave Server');
+  });
+
+  // Handle server icon upload
+  document.getElementById('server-icon-upload')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('icon', file);
+
+    fetch(`/api/servers/${currentServer}/icon/upload`, {
+      method: 'POST',
+      body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('edit-server-icon').value = data.icon;
+        showNotification('Server icon uploaded', 'success');
+        loadServers();
+      } else {
+        showNotification(data.error || 'Upload failed', 'error');
+      }
+    })
+    .catch(() => showNotification('Upload failed', 'error'));
   });
 
   // Modal close buttons

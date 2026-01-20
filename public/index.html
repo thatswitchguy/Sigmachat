@@ -159,8 +159,12 @@
           <input type="text" id="edit-server-name" maxlength="50">
         </div>
         <div class="form-group">
-          <label>Server Icon URL</label>
-          <input type="url" id="edit-server-icon" placeholder="https://example.com/icon.png">
+          <label>Server Icon</label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="url" id="edit-server-icon" placeholder="https://example.com/icon.png" style="flex: 1;">
+            <input type="file" id="server-icon-upload" accept="image/*" style="display: none;">
+            <button type="button" class="btn-secondary" onclick="document.getElementById('server-icon-upload').click()">Upload</button>
+          </div>
         </div>
         <div class="danger-zone">
           <!-- Remember to change image-->
