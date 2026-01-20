@@ -716,7 +716,7 @@ function setupEventListeners() {
     inputEl.addEventListener('input', function() {
       this.style.height = '40px';
       const newHeight = Math.min(this.scrollHeight, 100);
-      this.style.height = newHeight + 'px';
+      this.style.height = (this.value === '' ? 40 : newHeight) + 'px';
       this.style.overflowY = this.scrollHeight > 100 ? 'auto' : 'hidden';
     });
 

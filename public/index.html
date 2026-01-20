@@ -178,6 +178,23 @@
         <button class="btn-primary" id="save-server-settings">Save Changes</button>
       </div>
     </div>
+    <div id="edit-channel-modal" class="modal" style="display: none;">
+      <div class="modal-header">
+        <h2>Edit Channel</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Channel Name</label>
+          <input type="text" id="edit-channel-name-input" placeholder="channel-name" maxlength="30">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-cancel">Cancel</button>
+        <button class="btn-primary" id="edit-channel-submit">Save Changes</button>
+      </div>
+    </div>
+
     <div id="poll-modal" class="modal" style="display: none;">
       <div class="modal-header">
         <h2>Create Poll</h2>

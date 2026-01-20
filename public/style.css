@@ -615,11 +615,23 @@ body {
   white-space: nowrap;
   width: 100%;
   font-weight: 500;
+  height: 32px;
+  line-height: 32px;
 }
 
 .option-btn:hover {
   background-color: #4f545c;
   color: #ffffff;
+}
+
+.option-btn img {
+  width: 18px;
+  height: 18px;
+  filter: invert(85%) sepia(8%) saturate(181%) hue-rotate(182deg) brightness(88%) contrast(89%);
+}
+
+.option-btn:hover img {
+  filter: invert(100%);
 }
 
 /* Option Button Colors */
