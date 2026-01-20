@@ -710,7 +710,7 @@ function setupEventListeners() {
   const inputEl = document.getElementById('input');
   if (inputEl) {
     inputEl.addEventListener('input', function() {
-      this.style.height = 'auto';
+      this.style.height = '1';
       const newHeight = Math.min(this.scrollHeight, 24 * 4); // ~24px per line, max 4 rows
       this.style.height = newHeight + 'px';
       this.style.overflowY = this.scrollHeight > newHeight ? 'auto' : 'hidden';
