@@ -1093,6 +1093,47 @@ app.get('/api/servers/:serverId/channels/:channelId/messages', (req, res) => {
   res.json(messages);
 });
 
+// API to vote on a poll
+app.post('/api/servers/:serverId/channels/:channelId/messages/:messageId/poll/vote', (req, res) => {
+  const { serverId, channelId, messageId } = req.params;
+  const { optionIndex } = req.body;
+  const currentUser = req.username;
+
+  if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
+
+  let messages = loadServerMessages(serverId, channelId);
+  const index = messages.findIndex(m => m.id === messageId);
+
+  if (index === -1) return res.status(404).json({ error: 'Poll not found' });
+
+  try {
+    const pollData = JSON.parse(messages[index].message);
+    if (pollData.type !== 'poll') throw new Error('Not a poll');
+
+    // Remove vote from all options first (single vote system)
+    pollData.options.forEach(opt => {
+      opt.votes = opt.votes.filter(v => v !== currentUser);
+    });
+
+    // Add new vote
+    if (optionIndex >= 0 && optionIndex < pollData.options.length) {
+      pollData.options[optionIndex].votes.push(currentUser);
+    }
+
+    messages[index].message = JSON.stringify(pollData);
+    saveServerMessages(serverId, channelId, messages);
+
+    io.to(`${serverId}:${channelId}`).emit('poll updated', {
+      messageId,
+      pollData
+    });
+
+    res.json({ success: true });
+  } catch (e) {
+    res.status(400).json({ error: 'Invalid poll data' });
+  }
+});
+
 // Join a server (via invite or public)
 app.post('/api/servers/:serverId/join', (req, res) => {
   const { serverId } = req.params;
@@ -1440,6 +1481,17 @@ app.delete('/api/profile-picture', (req, res) => {
   saveProfilePictures();
 
   res.json({ success: true });
+});
+
+// Profile picture upload endpoint
+app.post('/api/profile-picture/upload', upload.single('profilePicture'), (req, res) => {
+  if (!req.username) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+  const profilePicUrl = `/uploads/${req.file.filename}`;
+  profilePictures[req.username] = profilePicUrl;
+  saveProfilePictures();
+  res.json({ success: true, profilePicture: profilePicUrl });
 });
 
 // API to get any user's profile picture

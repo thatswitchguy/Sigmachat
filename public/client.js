@@ -658,6 +658,36 @@ function setupEventListeners() {
     if (expandBtn) expandBtn.style.display = 'none';
   });
 
+  // YouTube modal connection
+  document.getElementById('youtube-option')?.addEventListener('click', () => {
+    openModal('youtube-modal');
+  });
+
+  document.getElementById('youtube-submit')?.addEventListener('click', () => {
+    const youtubeInput = document.getElementById('youtube-link-input');
+    const link = youtubeInput.value.trim();
+    if (link) {
+      document.getElementById('input').value = link;
+      document.querySelector('#form form').dispatchEvent(new Event('submit'));
+      youtubeInput.value = '';
+      closeModal();
+    }
+  });
+
+  // Shift + Enter handling for textarea
+  const inputEl = document.getElementById('input');
+  if (inputEl) {
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const form = inputEl.closest('form');
+        if (form) {
+          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+      }
+    });
+  }
+
   // Add server button - redirect to server creation page
   document.getElementById('add-server-btn')?.addEventListener('click', () => {
     window.location.href = '/server-create.html';
