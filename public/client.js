@@ -309,30 +309,34 @@ function openEditChannelModal(channelId, currentName) {
 
 // Update the submit handler in setupEventListeners or add it here
 function setupChannelEditHandler() {
-  document.getElementById('edit-channel-submit')?.addEventListener('click', () => {
-    const newName = document.getElementById('edit-channel-name-input').value.trim();
-    if (!newName) {
-      showNotification('Please enter a channel name', 'warning');
-      return;
-    }
-
-    fetch(`/api/servers/${currentServer}/channels/${editingChannelId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newName })
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        closeModal();
-        showNotification('Channel updated', 'success');
-        selectServer(currentServer);
-      } else {
-        showNotification(data.error || 'Failed to update channel', 'error');
+  const submitBtn = document.getElementById('edit-channel-submit');
+  if (submitBtn) {
+    submitBtn.onclick = () => {
+      const newName = document.getElementById('edit-channel-name-input').value.trim();
+      if (!newName) {
+        showNotification('Please enter a channel name', 'warning');
+        return;
       }
-    })
-    .catch(() => showNotification('Failed to update channel', 'error'));
-  });
+
+      fetch(`/api/servers/${currentServer}/channels/${editingChannelId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          closeModal();
+          showNotification('Channel updated', 'success');
+          // Refresh servers and re-select the current one to update UI
+          loadServers();
+        } else {
+          showNotification(data.error || 'Failed to update channel', 'error');
+        }
+      })
+      .catch(() => showNotification('Failed to update channel', 'error'));
+    };
+  }
 }
 
 function selectChannel(channelId) {

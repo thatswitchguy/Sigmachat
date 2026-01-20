@@ -470,6 +470,7 @@ body {
   min-height: 40px;
   line-height: 20px;
   overflow-y: hidden;
+  height: 40px;
 }
 
 .poll-option-header {
@@ -613,11 +614,12 @@ body {
   transition: background-color 0.15s ease, color 0.15s ease;
   white-space: nowrap;
   width: 100%;
+  font-weight: 500;
 }
 
 .option-btn:hover {
-  background-color: #40444b;
-  color: #dcddde;
+  background-color: #4f545c;
+  color: #ffffff;
 }
 
 /* Option Button Colors */
@@ -1296,6 +1298,7 @@ input:checked + .slider:before {
   min-height: 40px;
   line-height: 20px;
   overflow-y: hidden;
+  height: 40px;
 }
 
 .poll-option-header {
