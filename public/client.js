@@ -375,6 +375,38 @@ function loadChannelMessages(serverId, channelId) {
     });
 }
 
+// Global poll update handler
+socket.on('poll updated', (data) => {
+  const { messageId, pollData } = data;
+  const pollElement = document.querySelector(`.message[data-message-id="${messageId}"] .poll-container`);
+  if (pollElement) {
+    const totalVotes = pollData.options.reduce((sum, opt) => sum + opt.votes.length, 0);
+    const currentUser = document.getElementById('user-name-display')?.textContent || '';
+    
+    let optionsHtml = '';
+    pollData.options.forEach((opt, i) => {
+      const percentage = totalVotes === 0 ? 0 : Math.round((opt.votes.length / totalVotes) * 100);
+      const hasVoted = opt.votes.includes(currentUser);
+      optionsHtml += `
+        <div class="poll-option ${hasVoted ? 'voted' : ''}" onclick="votePoll('${messageId}', ${i})">
+          <div class="poll-progress" style="width: ${percentage}%"></div>
+          <div class="poll-option-header">
+            <span class="poll-option-text">${opt.text}</span>
+            <div style="display: flex; align-items: center;">
+              <span class="poll-vote-count">${opt.votes.length} votes</span>
+              <span class="poll-percentage">${percentage}%</span>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    pollElement.innerHTML = `
+      <div class="poll-question">${pollData.question}</div>
+      ${optionsHtml}
+    `;
+  }
+});
+
 function showMessageActions(element) {
   const actions = element.querySelector('.message-actions');
   if (actions) actions.style.display = 'flex';
