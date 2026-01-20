@@ -714,10 +714,10 @@ function setupEventListeners() {
   const inputEl = document.getElementById('input');
   if (inputEl) {
     inputEl.addEventListener('input', function() {
-      this.style.height = '1';
-      const newHeight = Math.min(this.scrollHeight, 24 * 4); // ~24px per line, max 4 rows
+      this.style.height = '40px';
+      const newHeight = Math.min(this.scrollHeight, 100);
       this.style.height = newHeight + 'px';
-      this.style.overflowY = this.scrollHeight > newHeight ? 'auto' : 'hidden';
+      this.style.overflowY = this.scrollHeight > 100 ? 'auto' : 'hidden';
     });
 
     inputEl.addEventListener('keydown', (e) => {
