@@ -466,6 +466,23 @@ body {
   resize: none;
   outline: none;
   transition: border-color 0.15s ease;
+  height: 44px;
+  line-height: 20px;
+  overflow-y: auto;
+}
+
+.poll-option-header {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+.poll-percentage {
+  font-size: 12px;
+  color: #b9bbbe;
+  margin-left: 8px;
 }
 
 #input:focus {
@@ -1273,6 +1290,23 @@ input:checked + .slider:before {
   resize: none;
   outline: none;
   transition: border-color 0.15s ease;
+  height: 44px;
+  line-height: 20px;
+  overflow-y: auto;
+}
+
+.poll-option-header {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+.poll-percentage {
+  font-size: 12px;
+  color: #b9bbbe;
+  margin-left: 8px;
 }
 
 #input:focus {

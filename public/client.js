@@ -513,19 +513,30 @@ function appendPoll(messageData, pollData) {
 
       let optionsHtml = '';
       pollData.options.forEach((opt, i) => {
-        const percentage = totalVotes === 0 ? 0 : (opt.votes.length / totalVotes) * 100;
+        const percentage = totalVotes === 0 ? 0 : Math.round((opt.votes.length / totalVotes) * 100);
         const hasVoted = opt.votes.includes(currentUser);
         optionsHtml += `
           <div class="poll-option ${hasVoted ? 'voted' : ''}" onclick="votePoll('${messageData.id}', ${i})">
             <div class="poll-progress" style="width: ${percentage}%"></div>
-            <span class="poll-option-text">${opt.text}</span>
-            <span class="poll-vote-count">${opt.votes.length}</span>
+            <div class="poll-option-header">
+              <span class="poll-option-text">${opt.text}</span>
+              <div style="display: flex; align-items: center;">
+                <span class="poll-vote-count">${opt.votes.length} votes</span>
+                <span class="poll-percentage">${percentage}%</span>
+              </div>
+            </div>
           </div>
         `;
       });
 
+      const pollActions = messageData.username === username ? `
+        <div class="message-actions" style="display: none; margin-left: 8px;">
+          <button class="delete-btn" onclick="deleteMessage('${currentServer}', '${currentChannel}', '${messageData.id}', 'room')">Delete</button>
+        </div>
+      ` : '';
+
       messageDiv.innerHTML = `
-        <div style="display: flex; align-items: flex-start;">
+        <div style="display: flex; align-items: flex-start;" onmouseenter="showMessageActions(this)" onmouseleave="hideMessageActions(this)">
           ${avatar}
           <div style="flex: 1;">
             ${date ? `<div class="message-date">${date}</div>` : ''}
@@ -536,6 +547,7 @@ function appendPoll(messageData, pollData) {
               ${optionsHtml}
             </div>
           </div>
+          ${pollActions}
         </div>
       `;
     });

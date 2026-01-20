@@ -82,12 +82,44 @@
         </script>
 
         <div class="profile-picture-section">
-          <label for="profile-url">Profile Picture URL:</label>
-          <input type="url" id="profile-url" placeholder="Enter image URL">
-          <button id="update-profile-pic">Update Picture</button>
-          <button id="remove-profile-pic">Remove Picture</button>
+          <label>Profile Picture:</label>
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <input type="url" id="profile-url" placeholder="Enter image URL" style="flex: 1;">
+            <button id="update-profile-pic">Update URL</button>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <input type="file" id="profile-upload" accept="image/*" style="display: none;">
+            <button onclick="document.getElementById('profile-upload').click()">Upload File</button>
+            <button id="remove-profile-pic" class="btn-danger">Remove Picture</button>
+          </div>
         </div>
       </div>
+
+      <script>
+        // Handle file upload
+        document.getElementById('profile-upload')?.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const formData = new FormData();
+          formData.append('profilePicture', file);
+
+          fetch('/api/profile-picture/upload', {
+            method: 'POST',
+            body: formData
+          })
+          .then(r => r.json())
+          .then(data => {
+            if (data.success) {
+              loadProfilePicture();
+              showNotification('Profile picture uploaded!', 'success');
+            } else {
+              showNotification(data.error || 'Upload failed', 'error');
+            }
+          })
+          .catch(() => showNotification('Upload failed', 'error'));
+        });
+      </script>
 
       <div id="privacy-section" class="account-section">
         <h2>Privacy & Safety</h2>
