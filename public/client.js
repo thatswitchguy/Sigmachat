@@ -709,12 +709,21 @@ function setupEventListeners() {
   // Shift + Enter handling for textarea
   const inputEl = document.getElementById('input');
   if (inputEl) {
+    inputEl.addEventListener('input', function() {
+      this.style.height = 'auto';
+      const newHeight = Math.min(this.scrollHeight, 24 * 4); // ~24px per line, max 4 rows
+      this.style.height = newHeight + 'px';
+      this.style.overflowY = this.scrollHeight > newHeight ? 'auto' : 'hidden';
+    });
+
     inputEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         const form = inputEl.closest('form');
         if (form) {
           form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+          inputEl.style.height = 'auto';
+          inputEl.style.overflowY = 'hidden';
         }
       }
     });
