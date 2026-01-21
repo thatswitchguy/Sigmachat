@@ -601,22 +601,24 @@ body {
 }
 
 .option-btn {
-  background: #2e2e2e;
+  background: none;
   border: none;
   color: #b5bac1;
-  padding: 6px 12px;
+  padding: 1px 8px;
+  margin: 1px 0;
   border-radius: 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 500;
   transition: background-color 0.15s ease, color 0.15s ease;
   white-space: nowrap;
   width: 100%;
-  font-weight: 500;
   height: 32px;
   line-height: 32px;
+  user-select: none;
 }
 
 .option-btn:hover {
@@ -627,17 +629,25 @@ body {
 .option-btn img {
   width: 18px;
   height: 18px;
-  filter: invert(85%) sepia(8%) saturate(181%) hue-rotate(182deg) brightness(88%) contrast(89%);
+  filter: none !important;
 }
 
 .option-btn:hover img {
-  filter: none;
+  filter: none !important;
 }
 
 /* Option Button Colors */
-.option-btn#upload-option { color: #ffffff; }
-.option-btn#poll-option { color: #ffffff; }
-.option-btn#youtube-option { color: #ffffff; }
+.option-btn#upload-option,
+.option-btn#poll-option,
+.option-btn#youtube-option {
+  color: #b5bac1;
+}
+
+.option-btn#upload-option:hover,
+.option-btn#poll-option:hover,
+.option-btn#youtube-option:hover {
+  color: #ffffff;
+}
 
 .option-btn img {
   width: 20px;
