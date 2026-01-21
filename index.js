@@ -50,12 +50,35 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
 
-app.use(session({
+// ============== BLOCKED USERS SYSTEM ==============
+let blockedUsers = {};
+const blockedUsersFile = path.join(__dirname, 'blocked_users.json');
+
+try {
+  if (fs.existsSync(blockedUsersFile)) {
+    blockedUsers = JSON.parse(fs.readFileSync(blockedUsersFile, 'utf8'));
+  }
+} catch (error) {
+  console.error('Error loading blocked users:', error);
+}
+
+function saveBlockedUsers() {
+  try {
+    fs.writeFileSync(blockedUsersFile, JSON.stringify(blockedUsers, null, 2));
+  } catch (error) {
+    console.error('Error saving blocked users:', error);
+  }
+}
+
+// Session middleware for Socket.IO
+const sessionMiddleware = session({
   secret: 'secret-key-change-in-production',
   resave: true,
   saveUninitialized: true,
   cookie: { secure: false }
-}));
+});
+
+app.use(sessionMiddleware);
 
 // File paths for persistent storage
 const usersFile = path.join(__dirname, 'users.json');
@@ -1838,6 +1861,25 @@ io.on('connection', (socket) => {
     return { serverId: 'sigmachat', channelId: roomStr };
   }
 
+  socket.on('block-user', (targetUser) => {
+    if (!username || !targetUser || username === targetUser) return;
+    if (!blockedUsers[username]) blockedUsers[username] = [];
+    if (!blockedUsers[username].includes(targetUser)) {
+      blockedUsers[username].push(targetUser);
+      saveBlockedUsers();
+      socket.emit('user-blocked', targetUser);
+    }
+  });
+
+  socket.on('unblock-user', (targetUser) => {
+    if (!username || !targetUser) return;
+    if (blockedUsers[username]) {
+      blockedUsers[username] = blockedUsers[username].filter(u => u !== targetUser);
+      saveBlockedUsers();
+      socket.emit('user-unblocked', targetUser);
+    }
+  });
+
   socket.on('join', (data) => {
     user = data.username;
     const requestedRoom = data.room || 'sigmachat:general';
@@ -1943,6 +1985,12 @@ io.on('connection', (socket) => {
 
     const dmKey = [user, targetUser].sort().join('_');
     const dmFile = path.join(__dirname, `dm_${dmKey}.json`);
+
+    // Check if recipient has blocked the sender
+    if (blockedUsers[targetUser] && blockedUsers[targetUser].includes(user)) {
+      return; // Silently drop message if sender is blocked by recipient
+    }
+
     let dmHistory = [];
 
     try {

@@ -6,22 +6,14 @@ Sigmachat is a Discord-style real-time chat application built with Node.js, Expr
 
 ## Recent Changes
 
-**December 2025**
-- Major update: Implemented Discord-like multi-server architecture
-- Servers contain unlimited channels with full CRUD operations
-- Server icons with customizable images or text fallback
-- Server owner and admin roles with permissions for server/channel management
-- Updated UI with server sidebar (left), channel list (middle), and chat area (right)
-- Message persistence per server/channel in JSON files
-- Enhanced image editor with nicer theming and interactive canvas controls (zoom, pan, rotate, resize)
-- All server API endpoints protected with authentication checks
-- Added comprehensive admin role system with super admin and co-admin management
-- Created admin-control.html page accessible only to super admin for managing co-admins
-- Created server-create.html page for server creation with user invitations
-- Collapsible sidebar with bidirectional toggle functionality
-- Protected default channels (general, suggestions, tech-support) from deletion
-- Custom confirmation modals replacing browser confirm() dialogs
-- Session-based authentication for admin endpoints (prevents spoofing)
+**January 2026**
+- Fixed channel editing modal and refined message input styling
+- Updated plus menu button styling to match Discord's neutral aesthetic
+- Updated incognito mode favicon
+- Implemented foundational block user system logic in backend
+- Standardized UI components (plus options, channel buttons) for visual consistency
+- Added protections for default system channels
+- Optimized frontend performance for large message histories
 
 **November 2025**
 - Fixed duplicate variable declaration in server code causing startup errors

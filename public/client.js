@@ -47,9 +47,30 @@ function updateIncognito() {
   }
 }
 
-function updatePreferences() {
-  loadUserPreferences();
+// Block user functionality
+function blockUser(targetUser) {
+  if (targetUser === username) {
+    showNotification("You can't block yourself", 'warning');
+    return;
+  }
+  showConfirmNotification(`Are you sure you want to block ${targetUser}? They won't be able to send you direct messages.`, () => {
+    socket.emit('block-user', targetUser);
+  }, 'Block User');
 }
+
+function unblockUser(targetUser) {
+  socket.emit('unblock-user', targetUser);
+}
+
+socket.on('user-blocked', (targetUser) => {
+  showNotification(`${targetUser} has been blocked`, 'success');
+  // Refresh UI if needed
+});
+
+socket.on('user-unblocked', (targetUser) => {
+  showNotification(`${targetUser} has been unblocked`, 'success');
+});
+
 
 function playNotificationSound() {
   if (!notificationsEnabled) return;
