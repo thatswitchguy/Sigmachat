@@ -568,8 +568,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
 }
 
 #plus-btn.active {
@@ -601,7 +601,7 @@ body {
 }
 
 .option-btn {
-  background: none;
+  background: #2e2e2e;
   border: none;
   color: #b5bac1;
   padding: 6px 12px;
@@ -631,13 +631,13 @@ body {
 }
 
 .option-btn:hover img {
-  filter: invert(100%);
+  filter: none;
 }
 
 /* Option Button Colors */
-.option-btn#upload-option { color: #5865f2; }
-.option-btn#poll-option { color: #3ba55c; }
-.option-btn#youtube-option { color: #ff0000; }
+.option-btn#upload-option { color: #ffffff; }
+.option-btn#poll-option { color: #ffffff; }
+.option-btn#youtube-option { color: #ffffff; }
 
 .option-btn img {
   width: 20px;
@@ -2878,7 +2878,7 @@ margin-right: 8px;
 }
 
 #upload-image-btn:hover {
-  background-color: #5865f2;
+  background-color: #4f545c;
 }
 
 /* Sidebar collapse */
