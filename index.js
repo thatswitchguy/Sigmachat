@@ -2017,6 +2017,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('chat message', (msg) => {
+    if (!user) return;
     const ts = formatTimestamp();
     const messageData = {
       id: ts.id,

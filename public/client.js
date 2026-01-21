@@ -218,6 +218,7 @@ function fallbackCopyTextToClipboard(text) {
     document.body.removeChild(textArea);
 }
 
+function updateUserPanel() {
   const userAvatar = document.getElementById('user-avatar');
   const userNameDisplay = document.getElementById('user-name-display');
   
@@ -719,7 +720,48 @@ function deleteChannel(channelId) {
   }, 'Delete Channel');
 }
 
+// Expand/Collapse Sidebar
+function setupSidebarToggle() {
+  const sidebar = document.getElementById('sidebar');
+  const expandBtn = document.getElementById('expand-sidebar-btn');
+  const collapseBtn = document.getElementById('collapse-sidebar-btn');
+
+  if (collapseBtn && expandBtn && sidebar) {
+    collapseBtn.onclick = () => {
+      sidebar.classList.add('collapsed');
+      expandBtn.style.display = 'block';
+    };
+
+    expandBtn.onclick = () => {
+      sidebar.classList.remove('collapsed');
+      expandBtn.style.display = 'none';
+    };
+  }
+}
+
+// Plus button toggle
+function setupPlusBtn() {
+  const plusBtn = document.getElementById('plus-btn');
+  const plusOptions = document.getElementById('plus-options');
+  
+  if (plusBtn && plusOptions) {
+    plusBtn.onclick = (e) => {
+      e.stopPropagation();
+      plusOptions.style.display = plusOptions.style.display === 'flex' ? 'none' : 'flex';
+      plusBtn.classList.toggle('active');
+    };
+
+    document.addEventListener('click', () => {
+      plusOptions.style.display = 'none';
+      plusBtn.classList.remove('active');
+    });
+  }
+}
+
 function setupEventListeners() {
+  setupSidebarToggle();
+  setupPlusBtn();
+  // ... existing listeners ...
   // Collapse sidebar button - toggles both ways
   document.getElementById('collapse-sidebar-btn')?.addEventListener('click', () => {
     const sidebar = document.getElementById('sidebar');
