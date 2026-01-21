@@ -184,7 +184,40 @@ function initializeApp() {
   }
 }
 
-function updateUserPanel() {
+function copyInviteLink() {
+    const inviteCode = servers[currentServer]?.inviteCode || currentServer;
+    const inviteUrl = `${window.location.origin}/join/${inviteCode}`;
+    const textToCopy = inviteUrl;
+    
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            showNotification('Invite link copied to clipboard!', 'success');
+        }).catch(err => {
+            fallbackCopyTextToClipboard(textToCopy);
+        });
+    } else {
+        fallbackCopyTextToClipboard(textToCopy);
+    }
+}
+
+function fallbackCopyTextToClipboard(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    textArea.style.top = "0";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+        document.execCommand('copy');
+        showNotification('Invite link copied to clipboard!', 'success');
+    } catch (err) {
+        showNotification('Failed to copy invite link', 'error');
+    }
+    document.body.removeChild(textArea);
+}
+
   const userAvatar = document.getElementById('user-avatar');
   const userNameDisplay = document.getElementById('user-name-display');
   

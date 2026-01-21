@@ -636,7 +636,7 @@ body {
   filter: none !important;
 }
 
-/* Option Button Colors */
+/* Match plus options colors to channel buttons */
 .option-btn#upload-option,
 .option-btn#poll-option,
 .option-btn#youtube-option {
