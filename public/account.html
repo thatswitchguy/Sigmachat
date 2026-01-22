@@ -230,13 +230,12 @@
     loadUserSettings();
 
     function updateIncognito() {
+      const favicon = document.querySelector('link[rel="icon"]');
       if (incognitoCheckbox.checked) {
         document.title = 'Home';
-        const favicon = document.querySelector('link[rel="icon"]');
         if (favicon) favicon.href = '/incognito_favicon.ico';
       } else {
         document.title = 'Account';
-        const favicon = document.querySelector('link[rel="icon"]');
         if (favicon) favicon.href = '/favicon.png';
       }
     }
