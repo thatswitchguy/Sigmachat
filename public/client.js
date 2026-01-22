@@ -468,21 +468,51 @@ function appendMessage(messageData, index, type) {
   if (processedMessage.includes('@')) {
     processedMessage = processedMessage.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
   }
-  processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
-  
-  // YouTube link processing
-  const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/;
-  processedMessage = processedMessage.replace(youtubeRegex, (match, videoId) => {
-    const fullUrl = match.startsWith('http') ? match : `https://${match}`;
-    return `<div class="youtube-embed" ondblclick="window.open('${fullUrl}', '_blank')">
-      <iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-    </div>`;
-  });
 
-  processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, function(match) {
-    if (match.match(/\.(jpg|jpeg|png|gif|webp|svg)/i)) return match;
-    return '<a href="' + match + '" target="_blank" class="message-link">' + match + '</a>';
-  });
+  const urls = [];
+  const urlRegex = /(https?:\/\/[^\s]+)/gi;
+  let match;
+  
+  // First, find all URLs and their types
+  const processedParts = [];
+  let lastIndex = 0;
+  
+  while ((match = urlRegex.exec(processedMessage)) !== null) {
+    // Add text before the URL
+    processedParts.push(processedMessage.substring(lastIndex, match.index));
+    
+    let url = match[0];
+    // Clean up trailing punctuation that might be caught in the regex
+    const trailingPunctuation = /[.,!?;:]+$/;
+    const punctuationMatch = url.match(trailingPunctuation);
+    let punctuation = '';
+    if (punctuationMatch) {
+      punctuation = punctuationMatch[0];
+      url = url.substring(0, url.length - punctuation.length);
+    }
+
+    const youtubeMatch = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+    const isImage = url.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?$/i);
+    
+    if (youtubeMatch) {
+      const videoId = youtubeMatch[1];
+      const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+      processedParts.push(`<div class="youtube-embed" ondblclick="window.open('${fullUrl}', '_blank')">
+        <iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>${punctuation}`);
+    } else if (isImage) {
+      processedParts.push(`<img src="${url}" alt="Image" class="message-image" onclick="openImageModal('${url}')">${punctuation}`);
+    } else {
+      processedParts.push(`<a href="${url}" target="_blank" class="message-link">${url}</a>${punctuation}`);
+    }
+    
+    lastIndex = match.index + url.length + punctuation.length;
+    urlRegex.lastIndex = lastIndex;
+  }
+  
+  // Add remaining text
+  processedParts.push(processedMessage.substring(lastIndex));
+  processedMessage = processedParts.join('');
 
   const date = messageData.date || '';
   const time = messageData.time || '';
@@ -767,23 +797,10 @@ function setupEventListeners() {
     if (expandBtn) expandBtn.style.display = 'none';
   });
 
-  // YouTube modal connection
-  document.getElementById('youtube-option')?.addEventListener('click', () => {
-    openModal('youtube-modal');
+  // Create server button - redirect to server creation page
+  document.getElementById('add-server-btn')?.addEventListener('click', () => {
+    window.location.href = '/server-create.html';
   });
-
-  document.getElementById('youtube-submit')?.addEventListener('click', () => {
-    const youtubeInput = document.getElementById('youtube-link-input');
-    const link = youtubeInput.value.trim();
-    if (link) {
-      document.getElementById('input').value = link;
-      document.querySelector('#form form').dispatchEvent(new Event('submit'));
-      youtubeInput.value = '';
-      closeModal();
-    }
-  });
-
-  // Shift + Enter handling for textarea
   const inputEl = document.getElementById('input');
   if (inputEl) {
     inputEl.addEventListener('input', function() {
