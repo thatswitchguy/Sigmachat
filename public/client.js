@@ -17,6 +17,32 @@ let dataUsage = true;
 let servers = {};
 
 let incognitoMode = false;
+let unreadMessages = 0;
+
+function updateFavicon() {
+  const favicon = document.querySelector('link[rel="icon"]');
+  if (!favicon) return;
+
+  if (incognitoMode) {
+    favicon.href = '/incognito_favicon.ico';
+    return;
+  }
+
+  if (unreadMessages > 0) {
+    favicon.href = '/unread_favicon.png';
+  } else {
+    favicon.href = '/favicon.png';
+  }
+}
+
+function updateTitle() {
+  if (incognitoMode) {
+    document.title = 'Home';
+  } else {
+    const baseTitle = currentDM ? `@${currentDM}` : `#${currentChannel}`;
+    document.title = unreadMessages > 0 ? `(${unreadMessages}) ${baseTitle} | Sigmachat` : `${baseTitle} | Sigmachat`;
+  }
+}
 
 // Load user preferences from server
 function loadUserPreferences() {
@@ -26,6 +52,7 @@ function loadUserPreferences() {
       allowDMs = settings.allowDMs !== false;
       desktopNotifications = settings.desktopNotifications !== false;
       dataUsage = settings.dataUsage !== false;
+      unreadMessages = 0; // Reset on load
       notificationsEnabled = settings.messageSounds !== false;
       incognitoMode = settings.incognitoMode === true;
       updateIncognito();
@@ -36,15 +63,8 @@ function loadUserPreferences() {
 }
 
 function updateIncognito() {
-  if (incognitoMode) {
-    document.title = 'Home';
-    const favicon = document.querySelector('link[rel="icon"]');
-    if (favicon) favicon.href = '/incognito_favicon.ico';
-  } else {
-    document.title = 'Sigmachat';
-    const favicon = document.querySelector('link[rel="icon"]');
-    if (favicon) favicon.href = '/favicon.png';
-  }
+  updateFavicon();
+  updateTitle();
 }
 
 // Block user functionality
@@ -111,6 +131,15 @@ function showNotification(message, type = 'info', title = '') {
     }
   }, 5000);
 }
+
+// Add focus listener to reset unread count
+window.addEventListener('focus', () => {
+  if (unreadMessages > 0) {
+    unreadMessages = 0;
+    updateFavicon();
+    updateTitle();
+  }
+});
 
 function showConfirmNotification(message, onConfirm, title = 'Confirm') {
   const overlay = document.getElementById('confirm-notification-overlay');
@@ -363,6 +392,9 @@ function setupChannelEditHandler() {
 function selectChannel(channelId) {
   currentChannel = channelId;
   currentDM = null;
+  unreadMessages = 0;
+  updateFavicon();
+  updateTitle();
   
   document.querySelectorAll('.channel-item').forEach(item => {
     item.classList.toggle('active', item.dataset.channelId === channelId);
@@ -1934,6 +1966,13 @@ if (createRoomForm) {
 }
 
 socket.on('chat message', (data) => {
+  // Update unread count if user is not in the room or tab is not focused
+  if ((currentRoom !== data.room || !document.hasFocus()) && data.username !== username && data.username !== 'System') {
+    unreadMessages++;
+    updateFavicon();
+    updateTitle();
+  }
+
   // Play notification sound only if user is NOT currently in this room and message is from another user
   if (currentRoom !== data.room && data.username !== username && data.username !== 'System') {
     playNotificationSound();
