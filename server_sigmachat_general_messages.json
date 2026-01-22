@@ -32,9 +32,11 @@
   {
     "id": "mkpp7lrelpvwvvpq9",
     "username": "other_banana",
-    "message": "yo",
+    "message": "well hello",
     "date": "Jan 22, 2026",
-    "time": "05:00 PM"
+    "time": "05:00 PM",
+    "edited": true,
+    "editedAt": "5:05:55 PM"
   },
   {
     "id": "mkpp8pnwxfiap49k3",
