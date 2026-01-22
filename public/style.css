@@ -553,104 +553,36 @@ body {
   display: flex;
 }
 
-.plus-container {
-  position: relative;
+.chat-input-buttons {
   display: flex;
+  gap: 12px;
   align-items: center;
+  margin-right: 8px;
 }
 
-#plus-btn {
+.chat-input-buttons button {
   background: none;
   border: none;
-  padding: 0;
+  padding: 4px;
   cursor: pointer;
-  transition: transform 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  transition: opacity 0.2s;
 }
 
-#plus-btn.active {
-  transform: rotate(360deg);
+.chat-input-buttons button:hover {
+  opacity: 0.8;
 }
 
-#plus-btn img {
-  width: 24px;
-  height: 24px;
+.chat-input-buttons button img {
+  width: 22px;
+  height: 22px;
+  filter: brightness(0) invert(0.7);
 }
 
-#plus-options {
-  position: absolute;
-  bottom: 100%;
-  left: 0;
-  background-color: #2f3136;
-  border-radius: 8px;
-  padding: 8px;
-  display: none;
-  flex-direction: column;
-  gap: 8px;
-  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-  z-index: 1000;
-  margin-bottom: 8px;
-}
-
-#plus-options.active {
-  display: flex;
-}
-
-.option-btn {
-  background: none;
-  border: none;
-  color: #b5bac1;
-  padding: 1px 8px;
-  margin: 1px 0;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 16px;
-  font-weight: 500;
-  transition: background-color 0.15s ease, color 0.15s ease;
-  white-space: nowrap;
-  width: 100%;
-  height: 32px;
-  line-height: 32px;
-  user-select: none;
-}
-
-.option-btn:hover {
-  background-color: #4f545c;
-  color: #ffffff;
-}
-
-.option-btn img {
-  width: 18px;
-  height: 18px;
-  filter: none !important;
-}
-
-.option-btn:hover img {
-  filter: none !important;
-}
-
-/* Match plus options colors to channel buttons */
-.option-btn#upload-option,
-.option-btn#poll-option,
-.option-btn#youtube-option {
-  color: #b5bac1;
-}
-
-.option-btn#upload-option:hover,
-.option-btn#poll-option:hover,
-.option-btn#youtube-option:hover {
-  color: #ffffff;
-}
-
-#plus-options {
-  background-color: #2f3136; /* Dark theme background */
+.chat-input-buttons button:hover img {
+  filter: brightness(0) invert(1);
 }
 
 /* Poll Modal Overlay */

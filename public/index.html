@@ -22,9 +22,6 @@
       <div id="sidebar-header">
         <h3 id="server-name">Sigmachat</h3>
         <div style="display: flex; gap: 8px;">
-          <button id="server-invite-btn" title="Copy Invite Link" onclick="copyInviteLink()" style="background: none; border: none; color: #b5bac1; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;">
-            <img src="https://cdn-icons-png.flaticon.com/512/1617/1617543.png" style="width: 20px; height: 20px;">
-          </button>
           <button id="collapse-sidebar-btn" title="Collapse Sidebar" style="background: none; border: none; color: #b5bac1; cursor: pointer; font-size: 18px; padding: 4px 8px;">◀</button>
           <button id="server-settings-btn" title="Server Settings" style="display: none;"><img src="https://cdn-icons-png.freepik.com/512/1827/1827849.png" style="width: 20px; height: 20px;"></button>
         </div>
@@ -69,24 +66,13 @@
       <button id="scroll-down-btn" title="Scroll to latest messages">↓</button>
       <div id="form">
         <form>
-          <div class="plus-container">
-            <button type="button" id="plus-btn" title="Expand options" style=" width: 50px height: 30px;">
-              <img src="/assets/151861-removebg-preview_1768843048150.png" alt="Add" style=" width: 20px; height: 20px;">
+          <div class="chat-input-buttons">
+            <button type="button" id="direct-upload-btn" title="Upload Image/Video">
+              <img src="/assets/10254377-removebg-preview_1768843041746.png" alt="Upload">
             </button>
-            <div id="plus-options">
-              <button type="button" class="option-btn" id="upload-option">
-                <img src="/assets/10254377-removebg-preview_1768843041746.png" alt="Upload">
-                Upload Image/Video
-              </button>
-              <button type="button" class="option-btn" id="poll-option">
-                <img src="/assets/bulleted_9357359_1768843161915.png" alt="Poll">
-                Create Poll
-              </button>
-              <button type="button" class="option-btn" id="youtube-option">
-                <img src="/assets/youtube_281783_1768843356809.png" alt="YouTube">
-                YouTube Watch Link
-              </button>
-            </div>
+            <button type="button" id="direct-poll-btn" title="Create Poll">
+              <img src="/assets/bulleted_9357359_1768843161915.png" alt="Poll">
+            </button>
           </div>
           <input type="file" id="image-upload" accept="image/*,video/*" style="display: none;">
           <textarea id="input" autocomplete="off" placeholder="Message #general" maxlength="2000"></textarea>
@@ -228,22 +214,6 @@
     </div>
   </div>
 
-    <div id="youtube-modal" class="modal" style="display: none;">
-      <div class="modal-header">
-        <h2>Watch YouTube</h2>
-        <button class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label>YouTube Link</label>
-          <input type="url" id="youtube-link-input" placeholder="https://www.youtube.com/watch?v=..." maxlength="200">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-secondary modal-cancel">Cancel</button>
-        <button class="btn-primary" id="youtube-submit">Add Video</button>
-      </div>
-    </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>

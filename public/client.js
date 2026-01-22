@@ -184,40 +184,6 @@ function initializeApp() {
   }
 }
 
-function copyInviteLink() {
-    const inviteCode = servers[currentServer]?.inviteCode || currentServer;
-    const inviteUrl = `${window.location.origin}/join/${inviteCode}`;
-    const textToCopy = inviteUrl;
-    
-    if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            showNotification('Invite link copied to clipboard!', 'success');
-        }).catch(err => {
-            fallbackCopyTextToClipboard(textToCopy);
-        });
-    } else {
-        fallbackCopyTextToClipboard(textToCopy);
-    }
-}
-
-function fallbackCopyTextToClipboard(text) {
-    const textArea = document.createElement("textarea");
-    textArea.value = text;
-    textArea.style.position = "fixed";
-    textArea.style.left = "-9999px";
-    textArea.style.top = "0";
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    try {
-        document.execCommand('copy');
-        showNotification('Invite link copied to clipboard!', 'success');
-    } catch (err) {
-        showNotification('Failed to copy invite link', 'error');
-    }
-    document.body.removeChild(textArea);
-}
-
 function updateUserPanel() {
   const userAvatar = document.getElementById('user-avatar');
   const userNameDisplay = document.getElementById('user-name-display');
@@ -507,7 +473,8 @@ function appendMessage(messageData, index, type) {
   // YouTube link processing
   const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/;
   processedMessage = processedMessage.replace(youtubeRegex, (match, videoId) => {
-    return `<div class="youtube-embed">
+    const fullUrl = match.startsWith('http') ? match : `https://${match}`;
+    return `<div class="youtube-embed" ondblclick="window.open('${fullUrl}', '_blank')">
       <iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
     </div>`;
   });
@@ -760,8 +727,18 @@ function setupPlusBtn() {
 
 function setupEventListeners() {
   setupSidebarToggle();
-  setupPlusBtn();
-  // ... existing listeners ...
+  
+  const uploadBtn = document.getElementById('direct-upload-btn');
+  const pollBtn = document.getElementById('direct-poll-btn');
+  
+  if (uploadBtn) {
+    uploadBtn.onclick = () => document.getElementById('image-upload').click();
+  }
+  
+  if (pollBtn) {
+    pollBtn.onclick = () => openModal('poll-modal');
+  }
+
   // Collapse sidebar button - toggles both ways
   document.getElementById('collapse-sidebar-btn')?.addEventListener('click', () => {
     const sidebar = document.getElementById('sidebar');
@@ -849,33 +826,6 @@ function setupEventListeners() {
     }
   });
 
-  // Plus button toggle
-  const plusBtn = document.getElementById('plus-btn');
-  const plusOptions = document.getElementById('plus-options');
-  
-  document.getElementById('plus-btn')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    plusBtn.classList.toggle('active');
-    plusOptions.classList.toggle('active');
-  });
-
-  // Handle outside clicks to close the menu
-  document.addEventListener('click', (e) => {
-    if (!plusBtn?.contains(e.target) && !plusOptions?.contains(e.target)) {
-      plusBtn?.classList.remove('active');
-      plusOptions?.classList.remove('active');
-    }
-  });
-
-  // Option buttons
-  document.getElementById('upload-option')?.addEventListener('click', () => {
-    document.getElementById('image-upload').click();
-  });
-
-  document.getElementById('poll-option')?.addEventListener('click', () => {
-    openModal('poll-modal');
-  });
-
   document.getElementById('add-poll-option-btn')?.addEventListener('click', () => {
     const container = document.getElementById('poll-options-container');
     const inputGroup = document.createElement('div');
@@ -929,21 +879,6 @@ function setupEventListeners() {
         <input type="text" class="poll-option-input" placeholder="Option 2" maxlength="50">
       </div>
     `;
-  });
-
-  document.getElementById('youtube-option')?.addEventListener('click', () => {
-    openModal('youtube-modal');
-  });
-
-  document.getElementById('youtube-submit')?.addEventListener('click', () => {
-    const input = document.getElementById('youtube-link-input');
-    const link = input.value.trim();
-    if (link) {
-      document.getElementById('input').value = link;
-      document.querySelector('#form form').dispatchEvent(new Event('submit'));
-      input.value = '';
-      closeModal();
-    }
   });
 
   // Create server submit

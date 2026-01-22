@@ -129,10 +129,6 @@ try {
     // Ensure all servers have invite codes
     let updated = false;
     Object.keys(servers).forEach(id => {
-      if (!servers[id].inviteCode) {
-        servers[id].inviteCode = id === 'sigmachat' ? 'sigmachat' : Math.random().toString(36).substring(2, 10);
-        updated = true;
-      }
     });
     if (updated) saveServers();
   } else {
@@ -761,30 +757,6 @@ app.get('/api/user', (req, res) => {
   } else {
     res.status(401).json({ error: 'Not logged in' });
   }
-});
-
-// Join a server (via invite code or ID)
-app.get('/join/:inviteCode', (req, res) => {
-  const { inviteCode } = req.params;
-  const currentUser = req.username;
-
-  if (!currentUser) {
-    return res.redirect(`/login?redirect=/join/${inviteCode}`);
-  }
-
-  const server = Object.values(servers).find(s => s.inviteCode === inviteCode || s.id === inviteCode);
-  
-  if (!server) {
-    return res.status(404).send('Invalid invite link. <a href="/chat">Return to chat</a>');
-  }
-
-  if (!isServerMember(server.id, currentUser)) {
-    if (!server.members) server.members = [];
-    server.members.push(currentUser);
-    saveServers();
-  }
-
-  res.redirect(`/chat?server=${server.id}`);
 });
 
 // API to get rooms - filter by user access
@@ -1932,20 +1904,6 @@ io.on('connection', (socket) => {
     user = data.username;
     let requestedRoom = data.room || 'sigmachat:general';
     
-    // Check if joining via invite code
-    if (!requestedRoom.includes(':') && !requestedRoom.startsWith('dm_')) {
-      const serverByInvite = Object.values(servers).find(s => s.inviteCode === requestedRoom);
-      if (serverByInvite) {
-        requestedRoom = `${serverByInvite.id}:general`;
-        // Automatically join server if not a member
-        if (!isServerMember(serverByInvite.id, user)) {
-          if (!serverByInvite.members) serverByInvite.members = [];
-          serverByInvite.members.push(user);
-          saveServers();
-        }
-      }
-    }
-
     const { serverId, channelId } = parseRoom(requestedRoom);
     
     // Verify user has access to the server
