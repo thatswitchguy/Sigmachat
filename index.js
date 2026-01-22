@@ -1524,10 +1524,13 @@ app.post('/api/profile-picture', (req, res) => {
     return res.status(400).json({ error: 'Invalid profile picture URL' });
   }
 
-  try {
-    new URL(profilePicture);
-  } catch (error) {
-    return res.status(400).json({ error: 'Invalid URL format' });
+  // Allow data URLs (base64) and standard http/https URLs
+  if (!profilePicture.startsWith('data:image/') && !profilePicture.startsWith('http')) {
+    try {
+      new URL(profilePicture);
+    } catch (e) {
+      return res.status(400).json({ error: 'Invalid image format or URL' });
+    }
   }
 
   profilePictures[req.username] = profilePicture;

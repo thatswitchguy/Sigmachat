@@ -44,6 +44,12 @@ function updateTitle() {
   }
 }
 
+// Ensure favicon and title are set on every page load
+window.addEventListener('load', () => {
+  updateFavicon();
+  updateTitle();
+});
+
 // Load user preferences from server
 function loadUserPreferences() {
   fetch('/api/user-settings')

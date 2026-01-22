@@ -231,7 +231,7 @@
 
     function updateIncognito() {
       const favicon = document.querySelector('link[rel="icon"]');
-      if (incognitoCheckbox.checked) {
+      if (incognitoCheckbox && incognitoCheckbox.checked) {
         document.title = 'Home';
         if (favicon) favicon.href = '/incognito_favicon.ico';
       } else {
