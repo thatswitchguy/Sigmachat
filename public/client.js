@@ -514,6 +514,29 @@ function appendMessage(messageData, index, type) {
   processedParts.push(processedMessage.substring(lastIndex));
   processedMessage = processedParts.join('');
 
+  // Shift + Enter handling for textarea
+  const inputEl = document.getElementById('input');
+  if (inputEl) {
+    inputEl.addEventListener('input', function() {
+      this.style.height = '40px';
+      const newHeight = Math.min(this.scrollHeight, 100);
+      this.style.height = (this.value === '' ? 40 : newHeight) + 'px';
+      this.style.overflowY = this.scrollHeight > 100 ? 'auto' : 'hidden';
+    });
+
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const form = inputEl.closest('form');
+        if (form) {
+          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+          inputEl.style.height = 'auto';
+          inputEl.style.overflowY = 'hidden';
+        }
+      }
+    });
+  }
+
   const date = messageData.date || '';
   const time = messageData.time || '';
   const messageId = messageData.id;
@@ -798,32 +821,6 @@ function setupEventListeners() {
   });
 
   // Create server button - redirect to server creation page
-  document.getElementById('add-server-btn')?.addEventListener('click', () => {
-    window.location.href = '/server-create.html';
-  });
-  const inputEl = document.getElementById('input');
-  if (inputEl) {
-    inputEl.addEventListener('input', function() {
-      this.style.height = '40px';
-      const newHeight = Math.min(this.scrollHeight, 100);
-      this.style.height = (this.value === '' ? 40 : newHeight) + 'px';
-      this.style.overflowY = this.scrollHeight > 100 ? 'auto' : 'hidden';
-    });
-
-    inputEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        const form = inputEl.closest('form');
-        if (form) {
-          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-          inputEl.style.height = 'auto';
-          inputEl.style.overflowY = 'hidden';
-        }
-      }
-    });
-  }
-
-  // Add server button - redirect to server creation page
   document.getElementById('add-server-btn')?.addEventListener('click', () => {
     window.location.href = '/server-create.html';
   });
