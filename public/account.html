@@ -2,9 +2,23 @@
 <html>
 <head>
   <title>Account</title>
-  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="icon" type="image/png" href="/favicon.png" id="favicon-link">
   <link rel="stylesheet" href="/style.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    (function() {
+      try {
+        const incognito = localStorage.getItem('incognitoMode') === 'true';
+        if (incognito) {
+          document.title = 'Home';
+          document.addEventListener('DOMContentLoaded', function() {
+            const favicon = document.querySelector('link[rel="icon"]');
+            if (favicon) favicon.href = '/incognito_favicon.ico';
+          });
+        }
+      } catch(e) {}
+    })();
+  </script>
 </head>
 <body>
   <div class="notification-container" id="notification-container"></div>
@@ -214,6 +228,8 @@
           desktopNotificationsCheckbox.checked = settings.desktopNotifications !== false;
           messageSoundsCheckbox.checked = settings.messageSounds !== false;
           incognitoCheckbox.checked = settings.incognitoMode === true;
+          // Sync localStorage with server settings
+          localStorage.setItem('incognitoMode', (settings.incognitoMode === true).toString());
           updateIncognito();
         })
         .catch(error => {
@@ -259,6 +275,9 @@
         incognitoMode: incognitoCheckbox.checked
       };
 
+      // Store incognito mode in localStorage for persistence across page reloads
+      localStorage.setItem('incognitoMode', incognitoCheckbox.checked.toString());
+      
       updateIncognito();
 
       fetch('/api/user-settings', {

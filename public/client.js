@@ -16,8 +16,19 @@ let desktopNotifications = true;
 let dataUsage = true;
 let servers = {};
 
-let incognitoMode = false;
+// Check localStorage immediately for incognito mode to prevent flash
+let incognitoMode = localStorage.getItem('incognitoMode') === 'true';
 let unreadMessages = 0;
+
+// Apply incognito immediately if set in localStorage
+if (incognitoMode) {
+  document.title = 'Home';
+  // Update favicon as soon as DOM is ready
+  document.addEventListener('DOMContentLoaded', () => {
+    const favicon = document.querySelector('link[rel="icon"]');
+    if (favicon) favicon.href = '/incognito_favicon.ico';
+  });
+}
 
 // Load user preferences from server
 function loadUserPreferences() {
@@ -30,6 +41,8 @@ function loadUserPreferences() {
       unreadMessages = 0; // Reset on load
       notificationsEnabled = settings.messageSounds !== false;
       incognitoMode = settings.incognitoMode === true;
+      // Store in localStorage for persistence across page reloads
+      localStorage.setItem('incognitoMode', incognitoMode.toString());
       updateIncognito();
       return settings;
     })
@@ -80,10 +93,11 @@ function openYouTube() {
     chatHeader.textContent = 'YouTube';
     messagesContainer.innerHTML = `
       <div style="width: 100%; height: 100%; display: flex; flex-direction: column;">
-        <iframe src="https://www.youtube.com/embed?listType=user_uploads" 
-                style="flex: 1; border: none;" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                allowfullscreen></iframe>
+        <iframe src="https://www.youtube.com/" 
+                style="flex: 1; border: none; width: 100%; height: 100%;" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
+                allowfullscreen
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation"></iframe>
       </div>
     `;
     currentChannel = null;
