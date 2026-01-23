@@ -19,40 +19,9 @@ let servers = {};
 let incognitoMode = false;
 let unreadMessages = 0;
 
-function updateFavicon() {
-  const favicon = document.querySelector('link[rel="icon"]');
-  if (!favicon) return;
-
-  if (incognitoMode) {
-    favicon.href = '/incognito_favicon.ico';
-    return;
-  }
-
-  if (unreadMessages > 0) {
-    favicon.href = '/unread_favicon.png';
-  } else {
-    favicon.href = '/favicon.png';
-  }
-}
-
-function updateTitle() {
-  if (incognitoMode) {
-    document.title = 'Home';
-  } else {
-    const baseTitle = currentDM ? `@${currentDM}` : `#${currentChannel}`;
-    document.title = unreadMessages > 0 ? `(${unreadMessages}) ${baseTitle} | Sigmachat` : `${baseTitle} | Sigmachat`;
-  }
-}
-
-// Ensure favicon and title are set on every page load
-window.addEventListener('load', () => {
-  updateFavicon();
-  updateTitle();
-});
-
 // Load user preferences from server
 function loadUserPreferences() {
-  fetch('/api/user-settings')
+  return fetch('/api/user-settings')
     .then(response => response.json())
     .then(settings => {
       allowDMs = settings.allowDMs !== false;
@@ -62,6 +31,7 @@ function loadUserPreferences() {
       notificationsEnabled = settings.messageSounds !== false;
       incognitoMode = settings.incognitoMode === true;
       updateIncognito();
+      return settings;
     })
     .catch(error => {
       console.error('Error loading user preferences:', error);
@@ -71,6 +41,55 @@ function loadUserPreferences() {
 function updateIncognito() {
   updateFavicon();
   updateTitle();
+}
+
+function updateFavicon() {
+  const favicon = document.querySelector('link[rel="icon"]');
+  if (!favicon) return;
+
+  if (incognitoMode) {
+    favicon.href = '/incognito_favicon.ico';
+  } else {
+    if (unreadMessages > 0) {
+      favicon.href = '/unread_favicon.png';
+    } else {
+      favicon.href = '/favicon.png';
+    }
+  }
+}
+
+function updateTitle() {
+  if (incognitoMode) {
+    document.title = 'Home';
+  } else {
+    const baseTitle = currentDM ? `@${currentDM}` : (currentChannel ? `#${currentChannel}` : 'Sigmachat');
+    document.title = unreadMessages > 0 ? `(${unreadMessages}) ${baseTitle} | Sigmachat` : `${baseTitle} | Sigmachat`;
+  }
+}
+
+// Add these to catch any state changes
+window.addEventListener('load', () => {
+  loadUserPreferences();
+});
+
+function openYouTube() {
+  const messagesContainer = document.getElementById('messages');
+  const chatHeader = document.getElementById('current-room');
+  
+  if (messagesContainer && chatHeader) {
+    chatHeader.textContent = 'YouTube';
+    messagesContainer.innerHTML = `
+      <div style="width: 100%; height: 100%; display: flex; flex-direction: column;">
+        <iframe src="https://www.youtube.com/embed?listType=user_uploads" 
+                style="flex: 1; border: none;" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowfullscreen></iframe>
+      </div>
+    `;
+    currentChannel = null;
+    currentDM = null;
+    updateTitle();
+  }
 }
 
 // Block user functionality

@@ -233,10 +233,19 @@
       const favicon = document.querySelector('link[rel="icon"]');
       if (incognitoCheckbox && incognitoCheckbox.checked) {
         document.title = 'Home';
-        if (favicon) favicon.href = '/incognito_favicon.ico';
+        if (favicon) {
+          favicon.href = '/incognito_favicon.ico';
+          // Force update for chrome/firefox
+          const newFavicon = favicon.cloneNode(true);
+          favicon.parentNode.replaceChild(newFavicon, favicon);
+        }
       } else {
         document.title = 'Account';
-        if (favicon) favicon.href = '/favicon.png';
+        if (favicon) {
+          favicon.href = '/favicon.png';
+          const newFavicon = favicon.cloneNode(true);
+          favicon.parentNode.replaceChild(newFavicon, favicon);
+        }
       }
     }
 
