@@ -2053,6 +2053,44 @@ io.on('connection', (socket) => {
         banData.expiresAt = null; // Permanent ban
         // Delete user account permanently if permanent ban
         if (users[targetUser]) {
+          // Delete user messages from all possible locations
+          
+          // 1. Delete from default rooms
+          const roomsToClean = ['general', 'suggestions', 'tech-support'];
+          roomsToClean.forEach(roomId => {
+            if (roomMessages[roomId]) {
+              roomMessages[roomId] = roomMessages[roomId].filter(m => m.username !== targetUser);
+              saveRoomMessages(roomId);
+            }
+          });
+
+          // 2. Delete from servers and their channels
+          Object.keys(servers).forEach(serverId => {
+            const server = servers[serverId];
+            if (server.channels) {
+              Object.keys(server.channels).forEach(channelId => {
+                let messages = loadServerMessages(serverId, channelId);
+                const originalLength = messages.length;
+                messages = messages.filter(m => m.username !== targetUser);
+                if (messages.length !== originalLength) {
+                  saveServerMessages(serverId, channelId, messages);
+                }
+              });
+            }
+          });
+
+          // 3. Delete DM files related to this user
+          const files = fs.readdirSync(__dirname);
+          files.forEach(file => {
+            if (file.startsWith('dm_') && file.endsWith('.json') && file.includes(targetUser)) {
+              try {
+                fs.unlinkSync(path.join(__dirname, file));
+              } catch (err) {
+                console.error(`Error deleting DM file ${file}:`, err);
+              }
+            }
+          });
+
           delete users[targetUser];
           fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
         }
