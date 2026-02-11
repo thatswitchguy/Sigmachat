@@ -2040,6 +2040,15 @@ io.on('connection', (socket) => {
 
     if (targetSocket) {
       targetSocket.emit('dm message', messageData);
+    } else {
+      // Fallback: If not found by username, try to find in the entire io.sockets.sockets map
+      // sometimes socket.username might not be set correctly on all instances
+      for (const [id, s] of io.sockets.sockets) {
+        if (s.username === targetUser) {
+          s.emit('dm message', messageData);
+          break;
+        }
+      }
     }
 
     socket.emit('dm message', messageData);

@@ -41,5 +41,5 @@ build = ["sh", "-c", "."]
 [userenv]
 
 [userenv.shared]
-MONGODB_URI = "mongosh \"mongodb+srv://thatswitchguy.slccmso.mongodb.net/\" --apiVersion 1 --username khanzakariya_db_user --password t4XApGxm7baL90mS"
+MONGODB_URI = "mongodb+srv://khanzakariya_db_user:t4XApGxm7baL90mS@thatswitchguy.slccmso.mongodb.net/sigmachat?retryWrites=true&w=majority&appName=Cluster0"
 
