@@ -38,3 +38,8 @@ deploymentTarget = "autoscale"
 run = ["node", "index.js"]
 build = ["sh", "-c", "."]
 
+[userenv]
+
+[userenv.shared]
+MONGODB_URI = "mongosh \"mongodb+srv://thatswitchguy.slccmso.mongodb.net/\" --apiVersion 1 --username khanzakariya_db_user --password t4XApGxm7baL90mS"
+
