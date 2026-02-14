@@ -2,7 +2,10 @@ const mongoose = require('mongoose');
 
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Connected to MongoDB Successfully'))
-  .catch(err => console.error('MongoDB Connection Error:', err));
+  .catch(err => {
+    console.error('MongoDB Connection Error:', err);
+    console.log('Falling back to local file storage mode due to connection error.');
+  });
 
 const express = require('express');
 const session = require('express-session');

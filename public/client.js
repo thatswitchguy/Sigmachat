@@ -262,7 +262,7 @@ function updateUserPanel() {
       .then(r => r.json())
       .then(data => {
         if (data.profilePicture) {
-          userAvatar.innerHTML = `<img src="${data.profilePicture}" alt="${username}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'">`;
+          userAvatar.innerHTML = `<img src="${data.profilePicture}" alt="${username}" onerror="this.style.display='none'; this.parentElement.textContent='${username.charAt(0).toUpperCase()}';">`;
         } else {
           userAvatar.textContent = username.charAt(0).toUpperCase();
         }
@@ -618,7 +618,8 @@ function appendMessage(messageData, index, type) {
     .then(profile => {
       let avatar;
       if (profile.profilePicture) {
-        avatar = `<img src="${profile.profilePicture}" alt="${messageData.username}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px;">`;
+        avatar = `<img src="${profile.profilePicture}" alt="${messageData.username}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div style="display: none; width: 32px; height: 32px; border-radius: 50%; background-color: #5865f2; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 8px;">${messageData.username.charAt(0).toUpperCase()}</div>`;
       } else {
         avatar = `<div style="width: 32px; height: 32px; border-radius: 50%; background-color: #5865f2; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 8px;">${messageData.username.charAt(0).toUpperCase()}</div>`;
       }
@@ -688,7 +689,8 @@ function appendPoll(messageData, pollData) {
     .then(profile => {
       let avatar;
       if (profile.profilePicture) {
-        avatar = `<img src="${profile.profilePicture}" alt="${messageData.username}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px;">`;
+        avatar = `<img src="${profile.profilePicture}" alt="${messageData.username}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div style="display: none; width: 32px; height: 32px; border-radius: 50%; background-color: #5865f2; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 8px;">${messageData.username.charAt(0).toUpperCase()}</div>`;
       } else {
         avatar = `<div style="width: 32px; height: 32px; border-radius: 50%; background-color: #5865f2; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 8px;">${messageData.username.charAt(0).toUpperCase()}</div>`;
       }
@@ -1488,17 +1490,28 @@ function loadOnlineUsers() {
 }
 
 function startDM(targetUser) {
-  // Update preferences before starting DM
-  updatePreferences();
-
   if (!allowDMs) {
     showNotification('The user has disabled direct messages from DMs from other server members', 'warning');
     return;
   }
 
   currentDM = targetUser;
-  currentRoom = null;
-  messages.innerHTML = '';
+  currentChannel = null;
+  unreadMessages = 0;
+  updateFavicon();
+  updateTitle();
+  
+  document.querySelectorAll('.online-user-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.username === targetUser);
+  });
+  
+  document.getElementById('current-room').textContent = `@${targetUser}`;
+  document.getElementById('input').placeholder = `Message @${targetUser}`;
+  
+  const messagesContainer = document.getElementById('messages');
+  messagesContainer.innerHTML = '';
+  
+  socket.emit('switch room', { room: `dm:${targetUser}` });
 
   // Load DM history
   fetch(`/api/dm/${targetUser}`)
@@ -1506,69 +1519,15 @@ function startDM(targetUser) {
     .then(dmMessages => {
       dmHistories[targetUser] = dmMessages;
       dmMessages.forEach((messageData, index) => {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'message dm-message';
-        const messageId = messageData.id || `legacy-${index}`;
-        messageDiv.dataset.messageId = messageId;
-        messageDiv.dataset.targetUser = targetUser;
-
-        // Process mentions, links, and images in DM messages
-        let processedMessage = messageData.message;
-        if (processedMessage.includes('@')) {
-          processedMessage = processedMessage.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
-        }
-
-        // Process images FIRST (before links to prevent double wrapping)
-        // Match image URLs with common extensions (with or without query parameters)
-        processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
-
-        // Process remaining links (that aren't already images)
-        processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, function(match) {
-          // Don't link if it's already an image
-          if (match.match(/\.(jpg|jpeg|png|gif|webp|svg)/i)) {
-            return match;
-          }
-          return '<a href="' + match + '" target="_blank" class="message-link">' + match + '</a>';
-        });
-
-        // Get user's profile picture
-        fetch(`/api/user-profile/${messageData.from}`)
-          .then(response => response.json())
-          .then(profileData => {
-            let avatarContent;
-            if (profileData.profilePicture) {
-              avatarContent = `<img src="${profileData.profilePicture}" alt="${messageData.from}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px;">`;
-            } else {
-              avatarContent = `<div style="width: 32px; height: 32px; border-radius: 50%; background-color: #5865f2; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 8px;">${messageData.from.charAt(0).toUpperCase()}</div>`;
-            }
-
-            const editedIndicator = messageData.edited ? ` <span class="edited">(edited at ${messageData.editedAt})</span>` : '';
-            const messageActions = messageData.from === username ? `
-              <div class="message-actions" style="display: none; margin-left: 8px;">
-                <button class="edit-btn" onclick="editMessage('${targetUser}', null, '${messageId}', 'dm')">Edit</button>
-                <button class="delete-btn" onclick="deleteMessage('${targetUser}', null, '${messageId}', 'dm')">Delete</button>
-              </div>
-            ` : '';
-
-            const dmDate = messageData.date || '';
-            const dmTime = messageData.time || messageData.timestamp || '';
-            messageDiv.innerHTML = `
-              <div style="display: flex; align-items: center;" onmouseenter="showMessageActions(this)" onmouseleave="hideMessageActions(this)">
-                ${avatarContent}
-                <div style="flex: 1;">
-                  ${dmDate ? `<div class="message-date">${dmDate}</div>` : ''}
-                  <span class="timestamp">[${dmTime}]</span>
-                  <span class="username">${messageData.from}:</span>
-                  <span class="content">${processedMessage}</span>
-                  ${editedIndicator}
-                </div>
-                ${messageActions}
-              </div>
-            `;
-          })
-          .catch(() => {
-            // Fallback without profile picture
-            const editedIndicator = messageData.edited ? ` <span class="edited">(edited at ${messageData.editedAt})</span>` : '';
+        appendMessage(messageData, index, 'dm');
+      });
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      isScrolledToBottom = true;
+    })
+    .catch(error => {
+      console.error('Error loading DM history:', error);
+    });
+}
             const messageActions = messageData.from === username ? `
               <div class="message-actions" style="display: none; margin-left: 8px;">
                 <button class="edit-btn" onclick="editMessage('${targetUser}', ${index}, 'dm')">Edit</button>
