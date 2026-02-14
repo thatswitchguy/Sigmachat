@@ -1528,45 +1528,6 @@ function startDM(targetUser) {
       console.error('Error loading DM history:', error);
     });
 }
-            const messageActions = messageData.from === username ? `
-              <div class="message-actions" style="display: none; margin-left: 8px;">
-                <button class="edit-btn" onclick="editMessage('${targetUser}', ${index}, 'dm')">Edit</button>
-                <button class="delete-btn" onclick="deleteMessage('${targetUser}', ${index}, 'dm')">Delete</button>
-              </div>
-            ` : '';
-
-            const dmDate2 = messageData.date || '';
-            const dmTime2 = messageData.time || messageData.timestamp || '';
-            messageDiv.innerHTML = `
-              <div style="display: flex; align-items: center;" onmouseenter="showMessageActions(this)" onmouseleave="hideMessageActions(this)">
-                <div style="flex: 1;">
-                  ${dmDate2 ? `<div class="message-date">${dmDate2}</div>` : ''}
-                  <span class="timestamp">[${dmTime2}]</span>
-                  <span class="username">${messageData.from}:</span>
-                  <span class="content">${processedMessage}</span>
-                  ${editedIndicator}
-                </div>
-                ${messageActions}
-              </div>
-            `;
-          });
-        messages.appendChild(messageDiv);
-      });
-      autoScrollIfAtBottom();
-    })
-    .catch(error => {
-      console.error('Error loading DM history:', error);
-    });
-
-  // Update header
-  document.getElementById('current-room').textContent = `@${targetUser}`;
-  document.getElementById('input').placeholder = `Message @${targetUser}`;
-
-  // Update active styling
-  document.querySelectorAll('.room-item').forEach(item => {
-    item.classList.remove('active');
-  });
-}
 
 function createRoom(roomName) {
   fetch('/api/rooms', {
