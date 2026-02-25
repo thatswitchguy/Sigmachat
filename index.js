@@ -1004,6 +1004,20 @@ app.delete('/api/servers/:serverId', (req, res) => {
     return res.status(400).json({ error: 'Cannot delete the default server' });
   }
 
+  // Delete all message files for this server's channels
+  if (server.channels) {
+    Object.keys(server.channels).forEach(channelId => {
+      const messageFile = getServerMessagesFile(serverId, channelId);
+      try {
+        if (fs.existsSync(messageFile)) {
+          fs.unlinkSync(messageFile);
+        }
+      } catch (err) {
+        console.error(`Error deleting message file ${messageFile}:`, err);
+      }
+    });
+  }
+
   delete servers[serverId];
   saveServers();
   res.json({ success: true });
