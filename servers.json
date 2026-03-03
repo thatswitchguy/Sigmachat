@@ -29,5 +29,27 @@
     },
     "createdAt": "2025-12-15T18:00:49.213Z",
     "inviteCode": "sigmachat"
+  },
+  "mm65mxtlcmds0ks3q": {
+    "id": "mm65mxtlcmds0ks3q",
+    "name": "Sigmacraft server",
+    "icon": "/uploads/1772273109292-48817224.jpg",
+    "owner": "thatswitchguy",
+    "admins": [],
+    "members": [
+      "other_banana",
+      "test account"
+    ],
+    "channels": {
+      "general": {
+        "name": "general",
+        "type": "text"
+      },
+      "welcome": {
+        "name": "welcome",
+        "type": "text"
+      }
+    },
+    "createdAt": "2026-02-28T10:04:46.905Z"
   }
 }
