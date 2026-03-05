@@ -2408,6 +2408,7 @@ if (uploadImageBtn && imageUploadInput) {
 
     const formData = new FormData();
     formData.append('image', file);
+    formData.append('serverId', currentServer);
 
     try {
       const response = await fetch('/api/upload-image', {

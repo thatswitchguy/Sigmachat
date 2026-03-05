@@ -113,7 +113,13 @@ const PORT = process.env.PORT || 5000;
 // Configure multer for image uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, 'public', 'uploads');
+    let uploadDir = path.join(__dirname, 'public', 'uploads');
+    
+    // Check if it's a server-specific upload
+    if (req.body.serverId) {
+      uploadDir = path.join(uploadDir, 'servers', req.body.serverId);
+    }
+    
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
@@ -253,6 +259,12 @@ try {
 
 // Server messages: { serverId: { channelId: [] } }
 let serverMessages = {};
+
+// Ensure uploads/servers directory exists
+const serversUploadDir = path.join(__dirname, 'public', 'uploads', 'servers');
+if (!fs.existsSync(serversUploadDir)) {
+  fs.mkdirSync(serversUploadDir, { recursive: true });
+}
 
 async function saveServers() {
   try {
@@ -1177,6 +1189,16 @@ app.delete('/api/servers/:serverId', (req, res) => {
         console.error(`Error deleting message file ${messageFile}:`, err);
       }
     });
+  }
+
+  // Delete server folder if it exists
+  const serverDir = path.join(__dirname, 'public', 'uploads', 'servers', serverId);
+  try {
+    if (fs.existsSync(serverDir)) {
+      fs.rmSync(serverDir, { recursive: true, force: true });
+    }
+  } catch (err) {
+    console.error(`Error deleting server directory ${serverDir}:`, err);
   }
 
   delete servers[serverId];
@@ -2334,7 +2356,14 @@ app.post('/api/upload-image', upload.single('image'), (req, res) => {
     return res.status(400).json({ error: 'No file uploaded' });
   }
 
-  const imageUrl = `/uploads/${req.file.filename}`;
+  const serverId = req.body.serverId;
+  let imageUrl;
+  if (serverId && serverId !== 'sigmachat') {
+    imageUrl = `/uploads/servers/${serverId}/${req.file.filename}`;
+  } else {
+    imageUrl = `/uploads/${req.file.filename}`;
+  }
+  
   res.json({ success: true, imageUrl: imageUrl });
 });
 
