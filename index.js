@@ -1158,7 +1158,6 @@ app.delete('/api/servers/:serverId', (req, res) => {
   }
 
   if (server.owner !== currentUser && !isGlobalAdmin(currentUser)) {
-    console.log(`Delete denied: ${currentUser} is not owner ${server.owner} or global admin`);
     return res.status(403).json({ error: 'Only the owner or a global admin can delete the server' });
   }
 
