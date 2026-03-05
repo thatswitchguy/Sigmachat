@@ -397,35 +397,118 @@ function openEditChannelModal(channelId, currentName) {
 }
 
 // Update the submit handler in setupEventListeners or add it here
-function setupChannelEditHandler() {
-  const submitBtn = document.getElementById('edit-channel-submit');
-  if (submitBtn) {
-    submitBtn.onclick = () => {
-      const newName = document.getElementById('edit-channel-name-input').value.trim();
-      if (!newName) {
-        showNotification('Please enter a channel name', 'warning');
-        return;
+function deleteChannel(channelId) {
+  showConfirmNotification(`Are you sure you want to delete #${channelId}?`, () => {
+    fetch(`/api/servers/${currentServer}/channels/${channelId}`, {
+      method: 'DELETE'
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        showNotification('Channel deleted', 'success');
+        loadServers();
+      } else {
+        showNotification(data.error || 'Failed to delete channel', 'error');
       }
+    })
+    .catch(() => showNotification('Failed to delete channel', 'error'));
+  }, 'Delete Channel');
+}
 
-      fetch(`/api/servers/${currentServer}/channels/${editingChannelId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName })
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) {
-          closeModal();
-          showNotification('Channel updated', 'success');
-          // Refresh servers and re-select the current one to update UI
-          loadServers();
-        } else {
-          showNotification(data.error || 'Failed to update channel', 'error');
-        }
-      })
-      .catch(() => showNotification('Failed to update channel', 'error'));
-    };
+function openModal(modalId) {
+  const overlay = document.getElementById('modal-overlay');
+  const modal = document.getElementById(modalId);
+  if (overlay && modal) {
+    overlay.style.display = 'flex';
+    // Hide all modals first
+    overlay.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+    modal.style.display = 'block';
   }
+}
+
+function closeModal() {
+  const overlay = document.getElementById('modal-overlay');
+  if (overlay) {
+    overlay.style.display = 'none';
+    overlay.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+  }
+}
+
+// Add global closeModal to close buttons
+document.querySelectorAll('.modal-close, .modal-cancel').forEach(btn => {
+  btn.onclick = closeModal;
+});
+
+// Setup click on add server button
+const addServerBtn = document.getElementById('add-server-btn');
+if (addServerBtn) {
+  addServerBtn.onclick = () => openModal('create-server-modal');
+}
+
+// Setup add server submit
+const createServerSubmit = document.getElementById('create-server-submit');
+if (createServerSubmit) {
+  createServerSubmit.onclick = () => {
+    const name = document.getElementById('new-server-name').value.trim();
+    const icon = document.getElementById('new-server-icon').value.trim();
+    
+    if (!name) {
+      showNotification('Server name is required', 'warning');
+      return;
+    }
+
+    fetch('/api/servers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, icon })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        closeModal();
+        showNotification('Server created', 'success');
+        loadServers();
+      } else {
+        showNotification(data.error || 'Failed to create server', 'error');
+      }
+    })
+    .catch(() => showNotification('Failed to create server', 'error'));
+  };
+}
+
+// Setup add channel button
+const addChannelBtn = document.getElementById('add-channel-btn');
+if (addChannelBtn) {
+  addChannelBtn.onclick = () => openModal('create-channel-modal');
+}
+
+// Setup create channel submit
+const createChannelSubmit = document.getElementById('create-channel-submit');
+if (createChannelSubmit) {
+  createChannelSubmit.onclick = () => {
+    const name = document.getElementById('new-channel-name').value.trim();
+    if (!name) {
+      showNotification('Channel name is required', 'warning');
+      return;
+    }
+
+    fetch(`/api/servers/${currentServer}/channels`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        closeModal();
+        showNotification('Channel created', 'success');
+        loadServers();
+      } else {
+        showNotification(data.error || 'Failed to create channel', 'error');
+      }
+    })
+    .catch(() => showNotification('Failed to create channel', 'error'));
+  };
 }
 
 function selectChannel(channelId) {
@@ -852,6 +935,125 @@ function setupPlusBtn() {
 }
 
 function setupEventListeners() {
+  const serverSettingsBtn = document.getElementById('server-settings-btn');
+  const deleteServerBtn = document.getElementById('delete-server-btn');
+  const leaveServerBtn = document.getElementById('leave-server-btn');
+  const saveServerSettingsBtn = document.getElementById('save-server-settings');
+
+  if (serverSettingsBtn) {
+    serverSettingsBtn.onclick = () => {
+      const server = servers[currentServer];
+      if (server) {
+        const nameInput = document.getElementById('edit-server-name');
+        const iconInput = document.getElementById('edit-server-icon');
+        if (nameInput) nameInput.value = server.name;
+        if (iconInput) iconInput.value = server.icon || '';
+        
+        const deleteBtn = document.getElementById('delete-server-btn');
+        const leaveBtn = document.getElementById('leave-server-btn');
+        
+        if (deleteBtn) deleteBtn.style.display = (server.isOwner || isGlobalAdmin) ? 'block' : 'none';
+        if (leaveBtn) leaveBtn.style.display = server.id !== 'sigmachat' && !server.isOwner ? 'block' : 'none';
+        
+        openModal('server-settings-modal');
+      }
+    };
+  }
+
+  if (deleteServerBtn) {
+    deleteServerBtn.onclick = () => {
+      showConfirmNotification(`Are you sure you want to delete ${servers[currentServer].name}? This action cannot be undone.`, () => {
+        fetch(`/api/servers/${currentServer}`, { method: 'DELETE' })
+          .then(r => r.json())
+          .then(data => {
+            if (data.success) {
+              closeModal();
+              showNotification('Server deleted', 'success');
+              loadServers();
+            } else {
+              showNotification(data.error || 'Failed to delete server', 'error');
+            }
+          })
+          .catch(() => showNotification('Failed to delete server', 'error'));
+      }, 'Delete Server');
+    };
+  }
+
+  if (leaveServerBtn) {
+    leaveServerBtn.onclick = () => {
+      showConfirmNotification(`Are you sure you want to leave ${servers[currentServer].name}?`, () => {
+        fetch(`/api/servers/${currentServer}/leave`, { method: 'POST' })
+          .then(r => r.json())
+          .then(data => {
+            if (data.success) {
+              closeModal();
+              showNotification('Left server', 'success');
+              loadServers();
+            } else {
+              showNotification(data.error || 'Failed to leave server', 'error');
+            }
+          })
+          .catch(() => showNotification('Failed to leave server', 'error'));
+      }, 'Leave Server');
+    };
+  }
+
+  if (saveServerSettingsBtn) {
+    saveServerSettingsBtn.onclick = () => {
+      const name = document.getElementById('edit-server-name').value.trim();
+      const icon = document.getElementById('edit-server-icon').value.trim();
+      
+      if (!name) {
+        showNotification('Server name is required', 'warning');
+        return;
+      }
+
+      fetch(`/api/servers/${currentServer}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, icon })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          closeModal();
+          showNotification('Server settings updated', 'success');
+          loadServers();
+        } else {
+          showNotification(data.error || 'Failed to update server', 'error');
+        }
+      })
+      .catch(() => showNotification('Failed to update server', 'error'));
+    };
+  }
+
+  // Handle server icon upload
+  const serverIconUpload = document.getElementById('server-icon-upload');
+  if (serverIconUpload) {
+    serverIconUpload.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('icon', file);
+
+      fetch(`/api/servers/${currentServer}/icon/upload`, {
+        method: 'POST',
+        body: formData
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          const iconInput = document.getElementById('edit-server-icon');
+          if (iconInput) iconInput.value = data.icon;
+          showNotification('Icon uploaded', 'success');
+        } else {
+          showNotification(data.error || 'Upload failed', 'error');
+        }
+      })
+      .catch(() => showNotification('Upload failed', 'error'));
+    };
+  }
   setupSidebarToggle();
   
   const uploadBtn = document.getElementById('direct-upload-btn');
