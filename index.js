@@ -41,7 +41,11 @@ const User = mongoose.model('User', UserSchema);
 const Server = mongoose.model('Server', ServerSchema);
 const Message = mongoose.model('Message', MessageSchema);
 
-mongoose.connect(process.env.MONGODB_URI)
+mongoose.connect(undefined || 'mongodb://localhost:27017/chat', {
+  serverSelectionTimeoutMS: 2000,
+  connectTimeoutMS: 2000,
+  family: 4
+})
   .then(async () => {
     console.log('Connected to MongoDB Successfully');
     await syncDataFromMongo();
@@ -272,11 +276,15 @@ async function saveServers() {
     if (mongoose.connection.readyState === 1) {
       for (const serverId in servers) {
         const s = servers[serverId];
-        await Server.findOneAndUpdate(
-          { id: serverId },
-          { ...s, channels: new Map(Object.entries(s.channels || {})) },
-          { upsert: true }
-        );
+        try {
+          await Server.findOneAndUpdate(
+            { id: serverId },
+            { ...s, channels: new Map(Object.entries(s.channels || {})) },
+            { upsert: true }
+          );
+        } catch (e) {
+          console.error(`Error syncing server ${serverId} to Mongo:`, e.message);
+        }
       }
     }
   } catch (error) {
@@ -309,11 +317,15 @@ async function saveServerMessages(serverId, channelId, messages) {
       // For simplicity, we'll sync the latest messages. 
       // A full sync would be more complex, but this meets the "update" requirement.
       for (const msg of messagesToSave) {
-        await Message.findOneAndUpdate(
-          { id: msg.id || msg.timestamp, serverId, channelId },
-          { ...msg, serverId, channelId },
-          { upsert: true }
-        );
+        try {
+          await Message.findOneAndUpdate(
+            { id: msg.id || msg.timestamp, serverId, channelId },
+            { ...msg, serverId, channelId },
+            { upsert: true }
+          );
+        } catch (e) {
+          console.error(`Error syncing message ${msg.id} to Mongo:`, e.message);
+        }
       }
     }
   } catch (error) {
@@ -489,11 +501,15 @@ async function saveUserSettings() {
     fs.writeFileSync(userSettingsFile, JSON.stringify(userSettings, null, 2));
     if (mongoose.connection.readyState === 1) {
       for (const username in userSettings) {
-        await User.findOneAndUpdate(
-          { username },
-          { settings: userSettings[username] },
-          { upsert: true }
-        );
+        try {
+          await User.findOneAndUpdate(
+            { username },
+            { settings: userSettings[username] },
+            { upsert: true }
+          );
+        } catch (e) {
+          console.error(`Error syncing settings for ${username} to Mongo:`, e.message);
+        }
       }
     }
   } catch (error) {
@@ -527,16 +543,20 @@ async function saveUsers() {
     fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
     if (mongoose.connection.readyState === 1) {
       for (const username in users) {
-        await User.findOneAndUpdate(
-          { username },
-          { 
-            password: users[username].password, 
-            createdAt: users[username].createdAt,
-            profilePicture: profilePictures[username],
-            settings: userSettings[username]
-          },
-          { upsert: true }
-        );
+        try {
+          await User.findOneAndUpdate(
+            { username },
+            { 
+              password: users[username].password, 
+              createdAt: users[username].createdAt,
+              profilePicture: profilePictures[username],
+              settings: userSettings[username]
+            },
+            { upsert: true }
+          );
+        } catch (e) {
+          console.error(`Error syncing user ${username} to Mongo:`, e.message);
+        }
       }
     }
   } catch (error) {
@@ -566,11 +586,15 @@ async function saveRoomMessages(roomId) {
     fs.writeFileSync(fileName, JSON.stringify(messagesToSave, null, 2));
     if (mongoose.connection.readyState === 1) {
       for (const msg of messagesToSave) {
-        await Message.findOneAndUpdate(
-          { id: msg.id || msg.timestamp, roomId },
-          { ...msg, roomId },
-          { upsert: true }
-        );
+        try {
+          await Message.findOneAndUpdate(
+            { id: msg.id || msg.timestamp, roomId },
+            { ...msg, roomId },
+            { upsert: true }
+          );
+        } catch (e) {
+          console.error(`Error syncing room message ${msg.id} to Mongo:`, e.message);
+        }
       }
     }
   } catch (error) {
@@ -587,11 +611,15 @@ async function saveDMMessages(user1, user2, messages) {
     fs.writeFileSync(dmFile, JSON.stringify(messagesToSave, null, 2));
     if (mongoose.connection.readyState === 1) {
       for (const msg of messagesToSave) {
-        await Message.findOneAndUpdate(
-          { id: msg.id || msg.timestamp, from: msg.from, to: msg.to },
-          { ...msg, from: msg.from, to: msg.to },
-          { upsert: true }
-        );
+        try {
+          await Message.findOneAndUpdate(
+            { id: msg.id || msg.timestamp, from: msg.from, to: msg.to },
+            { ...msg, from: msg.from, to: msg.to },
+            { upsert: true }
+          );
+        } catch (e) {
+          console.error(`Error syncing DM message ${msg.id} to Mongo:`, e.message);
+        }
       }
     }
   } catch (error) {
@@ -605,11 +633,15 @@ async function saveProfilePictures() {
     fs.writeFileSync(profilePicturesFile, JSON.stringify(profilePictures, null, 2));
     if (mongoose.connection.readyState === 1) {
       for (const username in profilePictures) {
-        await User.findOneAndUpdate(
-          { username },
-          { profilePicture: profilePictures[username] },
-          { upsert: true }
-        );
+        try {
+          await User.findOneAndUpdate(
+            { username },
+            { profilePicture: profilePictures[username] },
+            { upsert: true }
+          );
+        } catch (e) {
+          console.error(`Error syncing profile picture for ${username} to Mongo:`, e.message);
+        }
       }
     }
   } catch (error) {
