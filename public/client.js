@@ -851,7 +851,62 @@ function setupPlusBtn() {
   }
 }
 
+function setupAuraHandler() {
+    if (document.getElementById('aura-handler-init')) return;
+    
+    const auraBtn = document.getElementById('aura-btn');
+    if (auraBtn) {
+        const handleAuraClick = () => {
+            const sidebar = document.getElementById('sidebar');
+            const mainChat = document.getElementById('main-chat');
+            const auraEmbed = document.getElementById('aura-embed-container');
+            const expandSidebarBtn = document.getElementById('expand-sidebar-btn');
+
+            if (sidebar) sidebar.style.display = 'none';
+            if (mainChat) mainChat.style.display = 'none';
+            if (expandSidebarBtn) expandSidebarBtn.style.display = 'none';
+            if (auraEmbed) auraEmbed.style.display = 'flex';
+
+            document.querySelectorAll('.server-icon').forEach(icon => icon.classList.remove('active'));
+            auraBtn.classList.add('active');
+        };
+
+        auraBtn.addEventListener('click', handleAuraClick);
+        
+        // Handle G key press
+        document.addEventListener('keydown', (e) => {
+            // Don't trigger if user is typing in an input or textarea
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            
+            if (e.key.toLowerCase() === 'g') {
+                handleAuraClick();
+            }
+        });
+        
+        const marker = document.createElement('div');
+        marker.id = 'aura-handler-init';
+        marker.style.display = 'none';
+        document.body.appendChild(marker);
+    }
+
+    // Restore view when other server icons are clicked
+    document.addEventListener('click', (e) => {
+        const serverIcon = e.target.closest('.server-icon:not(#aura-btn)');
+        if (serverIcon) {
+            const sidebar = document.getElementById('sidebar');
+            const mainChat = document.getElementById('main-chat');
+            const auraEmbed = document.getElementById('aura-embed-container');
+            
+            if (sidebar) sidebar.style.display = 'flex';
+            if (mainChat) mainChat.style.display = 'flex';
+            if (auraEmbed) auraEmbed.style.display = 'none';
+            if (auraBtn) auraBtn.classList.remove('active');
+        }
+    });
+}
+
 function setupEventListeners() {
+    setupAuraHandler();
   setupSidebarToggle();
   
   const uploadBtn = document.getElementById('direct-upload-btn');
@@ -1923,45 +1978,6 @@ if (createRoomForm) {
     openCreateRoom();
   });
 }
-
-socket.on('chat message', (data) => {
-    // Aura Button Handler
-    if (!document.getElementById('aura-handler-init')) {
-        const auraBtn = document.getElementById('aura-btn');
-        if (auraBtn) {
-            auraBtn.addEventListener('click', () => {
-                const sidebar = document.getElementById('sidebar');
-                const mainChat = document.getElementById('main-chat');
-                const auraEmbed = document.getElementById('aura-embed-container');
-                const expandSidebarBtn = document.getElementById('expand-sidebar-btn');
-
-                sidebar.style.display = 'none';
-                mainChat.style.display = 'none';
-                if (expandSidebarBtn) expandSidebarBtn.style.display = 'none';
-                auraEmbed.style.display = 'flex';
-
-                document.querySelectorAll('.server-icon').forEach(icon => icon.classList.remove('active'));
-                auraBtn.classList.add('active');
-            });
-            
-            // Marker to prevent double initialization if this code runs multiple times
-            const marker = document.createElement('div');
-            marker.id = 'aura-handler-init';
-            marker.style.display = 'none';
-            document.body.appendChild(marker);
-        }
-
-        // Restore view when other server icons are clicked
-        document.addEventListener('click', (e) => {
-            const serverIcon = e.target.closest('.server-icon:not(#aura-btn)');
-            if (serverIcon) {
-                document.getElementById('sidebar').style.display = 'flex';
-                document.getElementById('main-chat').style.display = 'flex';
-                document.getElementById('aura-embed-container').style.display = 'none';
-                document.getElementById('aura-btn').classList.remove('active');
-            }
-        });
-    }
 
   // Update unread count if user is not in the room or tab is not focused
   if ((currentRoom !== data.room || !document.hasFocus()) && data.username !== username && data.username !== 'System') {
