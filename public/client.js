@@ -2088,7 +2088,7 @@ if (createRoomForm) {
 
   messages.appendChild(messageDiv);
   autoScrollIfAtBottom();
-});
+
 
 socket.on('room switched', (room) => {
   currentRoom = room;
