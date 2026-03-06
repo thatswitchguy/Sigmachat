@@ -339,8 +339,15 @@ function selectServer(serverId) {
       
       renderChannelList(server.channels);
       
-      const firstChannel = Object.keys(server.channels)[0] || 'general';
-      selectChannel(firstChannel);
+      const firstChannel = Object.keys(server.channels)[0];
+      if (firstChannel) {
+        selectChannel(firstChannel);
+      } else {
+        const messagesContainer = document.getElementById('messages');
+        if (messagesContainer) messagesContainer.innerHTML = '<div class="message system"><span class="content">No channels available in this server.</span></div>';
+        const currentRoom = document.getElementById('current-room');
+        if (currentRoom) currentRoom.textContent = 'No Channels';
+      }
     })
     .catch(error => {
       console.error('Error loading server:', error);

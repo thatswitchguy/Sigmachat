@@ -41,7 +41,7 @@ const User = mongoose.model('User', UserSchema);
 const Server = mongoose.model('Server', ServerSchema);
 const Message = mongoose.model('Message', MessageSchema);
 
-mongoose.connect(undefined || 'mongodb://localhost:27017/chat', {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/chat', {
   serverSelectionTimeoutMS: 2000,
   connectTimeoutMS: 2000,
   family: 4
@@ -544,14 +544,16 @@ async function saveUsers() {
     if (mongoose.connection.readyState === 1) {
       for (const username in users) {
         try {
+          const userUpdate = { 
+            password: users[username].password, 
+            createdAt: users[username].createdAt
+          };
+          if (profilePictures[username]) userUpdate.profilePicture = profilePictures[username];
+          if (userSettings[username]) userUpdate.settings = userSettings[username];
+
           await User.findOneAndUpdate(
             { username },
-            { 
-              password: users[username].password, 
-              createdAt: users[username].createdAt,
-              profilePicture: profilePictures[username],
-              settings: userSettings[username]
-            },
+            userUpdate,
             { upsert: true }
           );
         } catch (e) {
