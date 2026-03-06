@@ -116,7 +116,7 @@ body {
 #chat-container {
   display: flex;
   height: 100vh;
-  background-color: #36393f;
+  background-color: #1a1a1e;
 }
 
 /* Server List (Discord-style left sidebar) */
@@ -232,6 +232,79 @@ body {
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+}
+
+ARCHIVE S LINK
+
+.archiveslink {
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background-color: #36393f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  position: relative;
+  color: #5865f2
+}
+
+.archiveslink:hover {
+  border-radius: 16px;
+  background-color: #5865f2;
+}
+
+.archiveslink.active {
+  border-radius: 16px;
+  background-color: #5865f2;
+}
+
+.archiveslink::before {
+  content: '';
+  position: absolute;
+  left: -16px;
+  width: 8px;
+  height: 0;
+  background-color: #ffffff;
+  border-radius: 0 4px 4px 0;
+  transition: height 0.2s ease;
+}
+
+.archiveslink:hover::before {
+  height: 20px;
+}
+
+.archiveslink.active::before {
+  height: 40px;
+}
+
+.archiveslink img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.archiveslink span {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.archiveslink {
+  background-color: #36393f;
+  color: #3ba55c;
+}
+
+.archiveslink:hover {
+  background-color: #3ba55c;
+  color: #ffffff;
+}
+
+.archiveslink span {
+  font-size: 24px;
+  color: inherit;
 }
 
 #sidebar-header {
