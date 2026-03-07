@@ -86,24 +86,7 @@ window.addEventListener('load', () => {
 });
 
 function openYouTube() {
-  const messagesContainer = document.getElementById('messages');
-  const chatHeader = document.getElementById('current-room');
-  
-  if (messagesContainer && chatHeader) {
-    chatHeader.textContent = 'YouTube';
-    messagesContainer.innerHTML = `
-      <div style="width: 100%; height: 100%; display: flex; flex-direction: column;">
-        <iframe src="https://www.youtube.com/" 
-                style="flex: 1; border: none; width: 100%; height: 100%;" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
-                allowfullscreen
-                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation"></iframe>
-      </div>
-    `;
-    currentChannel = null;
-    currentDM = null;
-    updateTitle();
-  }
+  window.open("https://www.youtube.com/", "_blank");
 }
 
 // Block user functionality
@@ -1986,6 +1969,7 @@ if (createRoomForm) {
   });
 }
 
+socket.on('chat message', (data) => {
   // Update unread count if user is not in the room or tab is not focused
   if ((currentRoom !== data.room || !document.hasFocus()) && data.username !== username && data.username !== 'System') {
     unreadMessages++;
@@ -2088,7 +2072,7 @@ if (createRoomForm) {
 
   messages.appendChild(messageDiv);
   autoScrollIfAtBottom();
-
+});
 
 socket.on('room switched', (room) => {
   currentRoom = room;
