@@ -2426,13 +2426,8 @@ function closeImageModal() {
 
 // Image upload functionality
 const imageUploadInput = document.getElementById('image-upload');
-const uploadImageBtn = document.getElementById('upload-image-btn');
 
-if (uploadImageBtn && imageUploadInput) {
-  uploadImageBtn.addEventListener('click', () => {
-    imageUploadInput.click();
-  });
-
+if (imageUploadInput) {
   imageUploadInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
