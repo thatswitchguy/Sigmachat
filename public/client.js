@@ -628,7 +628,7 @@ function appendMessage(messageData, index, type) {
       ` : '';
 
       messageDiv.innerHTML = `
-        <div style="display: flex; align-items: flex-start;" onmouseenter="showMessageActions(this)" onmouseleave="hideMessageActions(this)">
+        <div style="display: flex; align-items: flex-start;">
           ${avatar}
           <div style="flex: 1;">
             ${date ? `<div class="message-date">${date}</div>` : ''}
@@ -650,7 +650,7 @@ function appendMessage(messageData, index, type) {
       ` : '';
 
       messageDiv.innerHTML = `
-        <div style="display: flex; align-items: flex-start;" onmouseenter="showMessageActions(this)" onmouseleave="hideMessageActions(this)">
+        <div style="display: flex; align-items: flex-start;">
           <div style="width: 32px; height: 32px; border-radius: 50%; background-color: #5865f2; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 8px;">${messageData.username.charAt(0).toUpperCase()}</div>
           <div style="flex: 1;">
             ${date ? `<div class="message-date">${date}</div>` : ''}
@@ -716,7 +716,7 @@ function appendPoll(messageData, pollData) {
       ` : '';
 
       messageDiv.innerHTML = `
-        <div style="display: flex; align-items: flex-start;" onmouseenter="showMessageActions(this)" onmouseleave="hideMessageActions(this)">
+        <div style="display: flex; align-items: flex-start;">
           ${avatar}
           <div style="flex: 1;">
             ${date ? `<div class="message-date">${date}</div>` : ''}
@@ -1414,7 +1414,7 @@ function loadRoomMessages(roomId) {
               const date = messageData.date || '';
               const time = messageData.time || '';
               messageDiv.innerHTML = `
-                <div style="display: flex; align-items: center;" onmouseenter="showMessageActions(this)" onmouseleave="hideMessageActions(this)">
+                <div style="display: flex; align-items: center;">
                   ${avatarContent}
                   <div style="flex: 1;">
                     ${date ? `<div class="message-date">${date}</div>` : ''}
@@ -1439,7 +1439,7 @@ function loadRoomMessages(roomId) {
               const date = messageData.date || '';
               const time = messageData.time || '';
               messageDiv.innerHTML = `
-                <div style="display: flex; align-items: center;" onmouseenter="showMessageActions(this)" onmouseleave="hideMessageActions(this)">
+                <div style="display: flex; align-items: center;">
                   <div style="flex: 1;">
                     ${date ? `<div class="message-date">${date}</div>` : ''}
                     <span class="timestamp">[${time}]</span>
@@ -2060,7 +2060,7 @@ socket.on('chat message', (data) => {
         const msgDate = data.date || '';
         const msgTime = data.time || '';
         messageDiv.innerHTML = `
-          <div style="display: flex; align-items: center;" onmouseenter="showMessageActions(this)" onmouseleave="hideMessageActions(this)">
+          <div style="display: flex; align-items: center;">
             ${avatarContent}
             <div style="flex: 1;">
               ${msgDate ? `<div class="message-date">${msgDate}</div>` : ''}
@@ -2084,7 +2084,7 @@ socket.on('chat message', (data) => {
         const msgDate2 = data.date || '';
         const msgTime2 = data.time || '';
         messageDiv.innerHTML = `
-          <div style="display: flex; align-items: center;" onmouseenter="showMessageActions(this)" onmouseleave="hideMessageActions(this)">
+          <div style="display: flex; align-items: center;">
             <div style="flex: 1;">
               ${msgDate2 ? `<div class="message-date">${msgDate2}</div>` : ''}
               <span class="timestamp">[${msgTime2}]</span>
@@ -2118,35 +2118,66 @@ socket.on('dm message', (data) => {
   if (isCurrentDM) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message dm-message';
+    messageDiv.dataset.messageId = data.id;
 
     // Process mentions, links, and images in DM messages
     let processedMessage = data.message;
     if (processedMessage.includes('@')) {
       processedMessage = processedMessage.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
     }
-
-    // Process images FIRST (before links to prevent double wrapping)
-    // Match image URLs with common extensions (with or without query parameters)
     processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
     processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(mp4|webm|mov|avi|mkv|ogg)(\?[^\s]*)?)/gi, '<video src="$1" class="message-video" controls preload="metadata"></video>');
-
-    // Process remaining links (that aren't already images or videos)
     processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, function(match) {
-      // Don't link if it's already an image or video
-      if (match.match(/\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|mov|avi|mkv|ogg)/i)) {
-        return match;
-      }
+      if (match.match(/\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|mov|avi|mkv|ogg)/i)) return match;
       return '<a href="' + match + '" target="_blank" class="message-link">' + match + '</a>';
     });
 
     const dmMsgDate = data.date || '';
     const dmMsgTime = data.time || '';
-    messageDiv.innerHTML = `
-      ${dmMsgDate ? `<div class="message-date">${dmMsgDate}</div>` : ''}
-      <span class="timestamp">[${dmMsgTime}]</span>
-      <span class="username">${data.from}:</span>
-      <span class="content">${processedMessage}</span>
-    `;
+    const dmMessageActions = data.from === username ? `
+      <div class="message-actions" style="display: none; margin-left: 8px;">
+        <button class="delete-btn" onclick="deleteMessage('${data.from}', null, '${data.id}', 'dm')">Delete</button>
+      </div>
+    ` : '';
+
+    fetch(`/api/user-profile/${data.from}`)
+      .then(r => r.json())
+      .then(profile => {
+        let avatar;
+        if (profile.profilePicture) {
+          avatar = `<img src="${profile.profilePicture}" alt="${data.from}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div style="display: none; width: 32px; height: 32px; border-radius: 50%; background-color: #5865f2; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 8px;">${data.from.charAt(0).toUpperCase()}</div>`;
+        } else {
+          avatar = `<div style="width: 32px; height: 32px; border-radius: 50%; background-color: #5865f2; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 8px;">${data.from.charAt(0).toUpperCase()}</div>`;
+        }
+        messageDiv.innerHTML = `
+          <div style="display: flex; align-items: flex-start;">
+            ${avatar}
+            <div style="flex: 1;">
+              ${dmMsgDate ? `<div class="message-date">${dmMsgDate}</div>` : ''}
+              <span class="timestamp">[${dmMsgTime}]</span>
+              <span class="username">${data.from}:</span>
+              <span class="content">${processedMessage}</span>
+            </div>
+            ${dmMessageActions}
+          </div>
+        `;
+      })
+      .catch(() => {
+        messageDiv.innerHTML = `
+          <div style="display: flex; align-items: flex-start;">
+            <div style="width: 32px; height: 32px; border-radius: 50%; background-color: #5865f2; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 8px;">${data.from.charAt(0).toUpperCase()}</div>
+            <div style="flex: 1;">
+              ${dmMsgDate ? `<div class="message-date">${dmMsgDate}</div>` : ''}
+              <span class="timestamp">[${dmMsgTime}]</span>
+              <span class="username">${data.from}:</span>
+              <span class="content">${processedMessage}</span>
+            </div>
+            ${dmMessageActions}
+          </div>
+        `;
+      });
+
     messages.appendChild(messageDiv);
     autoScrollIfAtBottom();
   }
@@ -2720,3 +2751,88 @@ socket.on('dm message deleted', (data) => {
     messageDiv.remove();
   }
 });
+// ============== MESSAGE CONTEXT MENU (right-click / long-press) ==============
+
+function showMessageContextMenu(x, y, editBtn, deleteBtn) {
+  const existing = document.getElementById('msg-context-menu');
+  if (existing) existing.remove();
+
+  if (!editBtn && !deleteBtn) return;
+
+  const menu = document.createElement('div');
+  menu.id = 'msg-context-menu';
+  menu.className = 'context-menu';
+  menu.style.zIndex = '10000';
+
+  if (editBtn) {
+    const editItem = document.createElement('div');
+    editItem.className = 'context-menu-item';
+    editItem.textContent = 'Edit Message';
+    editItem.onclick = () => { menu.remove(); editBtn.click(); };
+    menu.appendChild(editItem);
+  }
+
+  if (deleteBtn) {
+    const deleteItem = document.createElement('div');
+    deleteItem.className = 'context-menu-item danger';
+    deleteItem.textContent = 'Delete Message';
+    deleteItem.onclick = () => { menu.remove(); deleteBtn.click(); };
+    menu.appendChild(deleteItem);
+  }
+
+  menu.style.left = '0px';
+  menu.style.top = '-9999px';
+  document.body.appendChild(menu);
+  const menuW = menu.offsetWidth;
+  const menuH = menu.offsetHeight;
+  const left = x + menuW > window.innerWidth ? x - menuW : x;
+  const top = y + menuH > window.innerHeight ? y - menuH : y;
+  menu.style.left = left + 'px';
+  menu.style.top = top + 'px';
+
+  const closeMenu = (e) => {
+    if (!menu.contains(e.target)) {
+      menu.remove();
+      document.removeEventListener('mousedown', closeMenu);
+    }
+  };
+  setTimeout(() => document.addEventListener('mousedown', closeMenu), 0);
+}
+
+const messagesEl = document.getElementById('messages');
+if (messagesEl) {
+  messagesEl.addEventListener('contextmenu', function(e) {
+    const messageDiv = e.target.closest('.message');
+    if (!messageDiv) return;
+    const actions = messageDiv.querySelector('.message-actions');
+    if (!actions) return;
+    const editBtn = actions.querySelector('.edit-btn');
+    const deleteBtn = actions.querySelector('.delete-btn');
+    if (!editBtn && !deleteBtn) return;
+    e.preventDefault();
+    showMessageContextMenu(e.clientX, e.clientY, editBtn, deleteBtn);
+  });
+
+  let longPressTimer = null;
+  messagesEl.addEventListener('touchstart', function(e) {
+    const messageDiv = e.target.closest('.message');
+    if (!messageDiv) return;
+    longPressTimer = setTimeout(() => {
+      const actions = messageDiv.querySelector('.message-actions');
+      if (!actions) return;
+      const editBtn = actions.querySelector('.edit-btn');
+      const deleteBtn = actions.querySelector('.delete-btn');
+      if (!editBtn && !deleteBtn) return;
+      const touch = e.touches[0];
+      showMessageContextMenu(touch.clientX, touch.clientY, editBtn, deleteBtn);
+    }, 500);
+  }, { passive: true });
+
+  messagesEl.addEventListener('touchend', function() {
+    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+  }, { passive: true });
+
+  messagesEl.addEventListener('touchmove', function() {
+    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+  }, { passive: true });
+}
