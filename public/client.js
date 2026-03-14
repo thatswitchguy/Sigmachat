@@ -1975,6 +1975,10 @@ document.querySelector('#form form').addEventListener('submit', (e) => {
       socket.emit('chat message', message);
     }
     input.value = '';
+    // Always scroll to bottom when the user sends a message
+    messages.scrollTop = messages.scrollHeight;
+    isScrolledToBottom = true;
+    scrollDownBtn.classList.remove('show');
   }
 });
 
