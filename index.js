@@ -1,103 +1,3 @@
-const mongoose = require('mongoose');
-
-// MongoDB Schemas
-const UserSchema = new mongoose.Schema({
-  username: { type: String, unique: true, required: true },
-  password: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now },
-  profilePicture: String,
-  settings: { type: Object, default: {} }
-});
-
-const ServerSchema = new mongoose.Schema({
-  id: { type: String, unique: true, required: true },
-  name: String,
-  icon: String,
-  owner: String,
-  admins: [String],
-  members: [String],
-  channels: { type: Map, of: Object },
-  createdAt: { type: Date, default: Date.now }
-});
-
-const MessageSchema = new mongoose.Schema({
-  id: String,
-  serverId: String,
-  channelId: String,
-  roomId: String, // for legacy rooms
-  username: String,
-  from: String, // for DMs
-  to: String, // for DMs
-  message: String,
-  timestamp: String,
-  time: String,
-  date: String,
-  edited: Boolean,
-  editedAt: String,
-  type: { type: String, default: 'text' }
-});
-
-const User = mongoose.model('User', UserSchema);
-const Server = mongoose.model('Server', ServerSchema);
-const Message = mongoose.model('Message', MessageSchema);
-
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/chat', {
-  serverSelectionTimeoutMS: 2000,
-  connectTimeoutMS: 2000,
-  family: 4
-})
-  .then(async () => {
-    console.log('Connected to MongoDB Successfully');
-    await syncDataFromMongo();
-  })
-  .catch(err => {
-    console.error('MongoDB Connection Error:', err);
-    console.log('Falling back to local file storage mode due to connection error.');
-  });
-
-async function syncDataFromMongo() {
-  try {
-    const mongoUsers = await User.find();
-    mongoUsers.forEach(u => {
-      users[u.username] = { username: u.username, password: u.password, createdAt: u.createdAt };
-      if (u.profilePicture) profilePictures[u.username] = u.profilePicture;
-      if (u.settings) userSettings[u.username] = u.settings;
-    });
-
-    const mongoServers = await Server.find();
-    mongoServers.forEach(s => {
-      servers[s.id] = {
-        id: s.id,
-        name: s.name,
-        icon: s.icon,
-        owner: s.owner,
-        admins: s.admins,
-        members: s.members,
-        channels: s.channels ? Object.fromEntries(s.channels) : {},
-        createdAt: s.createdAt
-      };
-    });
-
-    const mongoMessages = await Message.find().sort({ timestamp: -1 }).limit(1000);
-    mongoMessages.forEach(m => {
-      const msg = m.toObject();
-      if (msg.serverId && msg.channelId) {
-        // These are loaded on demand by loadServerMessages usually, 
-        // but we can pre-populate or just let the file-based load work as fallback.
-        // For now, let's just ensure they are in the DB.
-      } else if (msg.roomId) {
-        if (!roomMessages[msg.roomId]) roomMessages[msg.roomId] = [];
-        if (!roomMessages[msg.roomId].find(existing => existing.id === msg.id)) {
-          roomMessages[msg.roomId].push(msg);
-        }
-      }
-    });
-    console.log('Data synced from MongoDB');
-  } catch (err) {
-    console.error('Error syncing from MongoDB:', err);
-  }
-}
-
 const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
@@ -270,23 +170,9 @@ if (!fs.existsSync(serversUploadDir)) {
   fs.mkdirSync(serversUploadDir, { recursive: true });
 }
 
-async function saveServers() {
+function saveServers() {
   try {
     fs.writeFileSync(serversFile, JSON.stringify(servers, null, 2));
-    if (mongoose.connection.readyState === 1) {
-      for (const serverId in servers) {
-        const s = servers[serverId];
-        try {
-          await Server.findOneAndUpdate(
-            { id: serverId },
-            { ...s, channels: new Map(Object.entries(s.channels || {})) },
-            { upsert: true }
-          );
-        } catch (e) {
-          console.error(`Error syncing server ${serverId} to Mongo:`, e.message);
-        }
-      }
-    }
   } catch (error) {
     console.error('Error saving servers:', error);
   }
@@ -308,26 +194,11 @@ function loadServerMessages(serverId, channelId) {
   return [];
 }
 
-async function saveServerMessages(serverId, channelId, messages) {
+function saveServerMessages(serverId, channelId, messages) {
   const file = getServerMessagesFile(serverId, channelId);
   try {
     const messagesToSave = messages.slice(-500);
     fs.writeFileSync(file, JSON.stringify(messagesToSave, null, 2));
-    if (mongoose.connection.readyState === 1) {
-      // For simplicity, we'll sync the latest messages. 
-      // A full sync would be more complex, but this meets the "update" requirement.
-      for (const msg of messagesToSave) {
-        try {
-          await Message.findOneAndUpdate(
-            { id: msg.id || msg.timestamp, serverId, channelId },
-            { ...msg, serverId, channelId },
-            { upsert: true }
-          );
-        } catch (e) {
-          console.error(`Error syncing message ${msg.id} to Mongo:`, e.message);
-        }
-      }
-    }
   } catch (error) {
     console.error(`Error saving messages for ${serverId}/${channelId}:`, error);
   }
@@ -496,22 +367,9 @@ try {
 }
 
 // Save user settings to file
-async function saveUserSettings() {
+function saveUserSettings() {
   try {
     fs.writeFileSync(userSettingsFile, JSON.stringify(userSettings, null, 2));
-    if (mongoose.connection.readyState === 1) {
-      for (const username in userSettings) {
-        try {
-          await User.findOneAndUpdate(
-            { username },
-            { settings: userSettings[username] },
-            { upsert: true }
-          );
-        } catch (e) {
-          console.error(`Error syncing settings for ${username} to Mongo:`, e.message);
-        }
-      }
-    }
   } catch (error) {
     console.error('Error saving user settings:', error);
   }
@@ -538,36 +396,16 @@ try {
 }
 
 // Save users to file
-async function saveUsers() {
+function saveUsers() {
   try {
     fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
-    if (mongoose.connection.readyState === 1) {
-      for (const username in users) {
-        try {
-          const userUpdate = { 
-            password: users[username].password, 
-            createdAt: users[username].createdAt
-          };
-          if (profilePictures[username]) userUpdate.profilePicture = profilePictures[username];
-          if (userSettings[username]) userUpdate.settings = userSettings[username];
-
-          await User.findOneAndUpdate(
-            { username },
-            userUpdate,
-            { upsert: true }
-          );
-        } catch (e) {
-          console.error(`Error syncing user ${username} to Mongo:`, e.message);
-        }
-      }
-    }
   } catch (error) {
     console.error('Error saving users:', error);
   }
 }
 
 // Save room messages to file
-async function saveRoomMessages(roomId) {
+function saveRoomMessages(roomId) {
   try {
     let fileName;
     switch(roomId) {
@@ -586,66 +424,27 @@ async function saveRoomMessages(roomId) {
 
     const messagesToSave = roomMessages[roomId].slice(-500);
     fs.writeFileSync(fileName, JSON.stringify(messagesToSave, null, 2));
-    if (mongoose.connection.readyState === 1) {
-      for (const msg of messagesToSave) {
-        try {
-          await Message.findOneAndUpdate(
-            { id: msg.id || msg.timestamp, roomId },
-            { ...msg, roomId },
-            { upsert: true }
-          );
-        } catch (e) {
-          console.error(`Error syncing room message ${msg.id} to Mongo:`, e.message);
-        }
-      }
-    }
   } catch (error) {
     console.error(`Error saving ${roomId} messages:`, error);
   }
 }
 
 // Save DM messages between two users
-async function saveDMMessages(user1, user2, messages) {
+function saveDMMessages(user1, user2, messages) {
   try {
     const dmKey = [user1, user2].sort().join('_');
     const dmFile = path.join(__dirname, `dm_${dmKey}.json`);
     const messagesToSave = messages.slice(-500);
     fs.writeFileSync(dmFile, JSON.stringify(messagesToSave, null, 2));
-    if (mongoose.connection.readyState === 1) {
-      for (const msg of messagesToSave) {
-        try {
-          await Message.findOneAndUpdate(
-            { id: msg.id || msg.timestamp, from: msg.from, to: msg.to },
-            { ...msg, from: msg.from, to: msg.to },
-            { upsert: true }
-          );
-        } catch (e) {
-          console.error(`Error syncing DM message ${msg.id} to Mongo:`, e.message);
-        }
-      }
-    }
   } catch (error) {
     console.error('Error saving DM messages:', error);
   }
 }
 
 // Save profile pictures to file
-async function saveProfilePictures() {
+function saveProfilePictures() {
   try {
     fs.writeFileSync(profilePicturesFile, JSON.stringify(profilePictures, null, 2));
-    if (mongoose.connection.readyState === 1) {
-      for (const username in profilePictures) {
-        try {
-          await User.findOneAndUpdate(
-            { username },
-            { profilePicture: profilePictures[username] },
-            { upsert: true }
-          );
-        } catch (e) {
-          console.error(`Error syncing profile picture for ${username} to Mongo:`, e.message);
-        }
-      }
-    }
   } catch (error) {
     console.error('Error saving profile pictures:', error);
   }
@@ -2425,7 +2224,7 @@ app.post('/api/user-settings', (req, res) => {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
-  const { allowDMs, dataUsage, desktopNotifications, messageSounds } = req.body;
+  const { allowDMs, dataUsage, desktopNotifications, messageSounds, incognitoMode } = req.body;
 
   if (!userSettings[req.username]) {
     userSettings[req.username] = {};
@@ -2435,6 +2234,7 @@ app.post('/api/user-settings', (req, res) => {
   if (typeof dataUsage === 'boolean') userSettings[req.username].dataUsage = dataUsage;
   if (typeof desktopNotifications === 'boolean') userSettings[req.username].desktopNotifications = desktopNotifications;
   if (typeof messageSounds === 'boolean') userSettings[req.username].messageSounds = messageSounds;
+  if (typeof incognitoMode === 'boolean') userSettings[req.username].incognitoMode = incognitoMode;
 
   saveUserSettings();
   res.json({ success: true, settings: userSettings[req.username] });

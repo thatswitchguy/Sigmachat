@@ -44,6 +44,9 @@ function loadUserPreferences() {
       // Store in localStorage for persistence across page reloads
       localStorage.setItem('incognitoMode', incognitoMode.toString());
       updateIncognito();
+      // Sync checkbox state
+      const checkbox = document.getElementById('incognito-mode');
+      if (checkbox) checkbox.checked = incognitoMode;
       return settings;
     })
     .catch(error => {
@@ -1175,6 +1178,21 @@ function setupEventListeners() {
   document.getElementById('account-btn')?.addEventListener('click', () => {
     window.location.href = '/account';
   });
+
+  // Incognito toggle
+  const incognitoCheckbox = document.getElementById('incognito-mode');
+  if (incognitoCheckbox) {
+    incognitoCheckbox.addEventListener('change', () => {
+      incognitoMode = incognitoCheckbox.checked;
+      localStorage.setItem('incognitoMode', incognitoMode.toString());
+      updateIncognito();
+      fetch('/api/user-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ incognitoMode })
+      }).catch(() => {});
+    });
+  }
 
   // Logout button
   document.getElementById('logout-btn')?.addEventListener('click', () => {

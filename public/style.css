@@ -360,7 +360,22 @@ body {
 
 #header-actions {
   display: flex;
+  align-items: center;
   gap: 10px;
+}
+
+#incognito-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: #b5bac1;
+  font-size: 13px;
+  user-select: none;
+}
+
+#incognito-label:hover {
+  color: #dcddde;
 }
 
 #general-btn, #account-btn, #logout-btn {
