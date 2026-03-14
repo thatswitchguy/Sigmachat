@@ -557,6 +557,7 @@ function appendMessage(messageData, index, type) {
 
     const youtubeMatch = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
     const isImage = url.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?$/i);
+    const isVideo = url.match(/\.(mp4|webm|mov|avi|mkv|ogg)(\?[^\s]*)?$/i);
     
     if (youtubeMatch) {
       const videoId = youtubeMatch[1];
@@ -564,6 +565,8 @@ function appendMessage(messageData, index, type) {
       processedParts.push(`<div class="youtube-embed" ondblclick="window.open('${fullUrl}', '_blank')">
         <iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
       </div>${punctuation}`);
+    } else if (isVideo) {
+      processedParts.push(`<video src="${url}" class="message-video" controls preload="metadata"></video>${punctuation}`);
     } else if (isImage) {
       processedParts.push(`<img src="${url}" alt="Image" class="message-image" onclick="openImageModal('${url}')">${punctuation}`);
     } else {
@@ -1380,9 +1383,10 @@ function loadRoomMessages(roomId) {
           }
 
           processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
+          processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(mp4|webm|mov|avi|mkv|ogg)(\?[^\s]*)?)/gi, '<video src="$1" class="message-video" controls preload="metadata"></video>');
 
           processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, function(match) {
-            if (match.match(/\.(jpg|jpeg|png|gif|webp|svg)/i)) {
+            if (match.match(/\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|mov|avi|mkv|ogg)/i)) {
               return match;
             }
             return '<a href="' + match + '" target="_blank" class="message-link">' + match + '</a>';
@@ -2024,11 +2028,12 @@ socket.on('chat message', (data) => {
     // Process images FIRST (before links to prevent double wrapping)
     // Match image URLs with common extensions (with or without query parameters)
     processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
+    processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(mp4|webm|mov|avi|mkv|ogg)(\?[^\s]*)?)/gi, '<video src="$1" class="message-video" controls preload="metadata"></video>');
 
     // Process remaining links (that aren't already images)
     processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, function(match) {
-      // Don't link if it's already an image
-      if (match.match(/\.(jpg|jpeg|png|gif|webp|svg)/i)) {
+      // Don't link if it's already an image or video
+      if (match.match(/\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|mov|avi|mkv|ogg)/i)) {
         return match;
       }
       return '<a href="' + match + '" target="_blank" class="message-link">' + match + '</a>';
@@ -2123,11 +2128,12 @@ socket.on('dm message', (data) => {
     // Process images FIRST (before links to prevent double wrapping)
     // Match image URLs with common extensions (with or without query parameters)
     processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
+    processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(mp4|webm|mov|avi|mkv|ogg)(\?[^\s]*)?)/gi, '<video src="$1" class="message-video" controls preload="metadata"></video>');
 
-    // Process remaining links (that aren't already images)
+    // Process remaining links (that aren't already images or videos)
     processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, function(match) {
-      // Don't link if it's already an image
-      if (match.match(/\.(jpg|jpeg|png|gif|webp|svg)/i)) {
+      // Don't link if it's already an image or video
+      if (match.match(/\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|mov|avi|mkv|ogg)/i)) {
         return match;
       }
       return '<a href="' + match + '" target="_blank" class="message-link">' + match + '</a>';
@@ -2454,16 +2460,16 @@ if (imageUploadInput) {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Check file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      showNotification('Image must be less than 5MB', 'error');
+    // Check file size (100MB limit)
+    if (file.size > 100 * 1024 * 1024) {
+      showNotification('File must be less than 100MB', 'error');
       imageUploadInput.value = '';
       return;
     }
 
     // Check file type
-    if (!file.type.startsWith('image/')) {
-      showNotification('Only image files are allowed', 'error');
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      showNotification('Only image and video files are allowed', 'error');
       imageUploadInput.value = '';
       return;
     }
@@ -2481,12 +2487,12 @@ if (imageUploadInput) {
       const data = await response.json();
 
       if (data.success) {
-        // Send the image URL as a message
-        const imageUrl = window.location.origin + data.imageUrl;
-        socket.emit('chat message', imageUrl);
-        showNotification('Image uploaded successfully!', 'success');
+        // Send the file URL as a message
+        const fileUrl = window.location.origin + data.imageUrl;
+        socket.emit('chat message', fileUrl);
+        showNotification('File uploaded successfully!', 'success');
       } else {
-        showNotification('Failed to upload image: ' + data.error, 'error');
+        showNotification('Failed to upload file: ' + data.error, 'error');
       }
     } catch (error) {
       console.error('Error uploading image:', error);

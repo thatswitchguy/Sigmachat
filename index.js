@@ -37,16 +37,17 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
   fileFilter: function (req, file, cb) {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const allowedTypes = /jpeg|jpg|png|gif|webp|mp4|webm|mov|avi|mkv|ogg/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
+    const isImage = file.mimetype.startsWith('image/');
+    const isVideo = file.mimetype.startsWith('video/');
     
-    if (mimetype && extname) {
+    if ((isImage || isVideo) && extname) {
       return cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed!'));
+      cb(new Error('Only image and video files are allowed!'));
     }
   }
 });
@@ -1624,7 +1625,7 @@ app.put('/api/servers/:serverId/channels/:channelId/messages/:messageId', (req, 
   const index = messages.findIndex(m => m.id === messageId || m.timestamp === messageId);
 
   if (index === -1) {
-    return res.status(404).json({ error: 'Message not found' });
+    return res.status(404).json({ error: 'Message not found, try refreshing the page' });
   }
 
   const message = messages[index];
@@ -1666,7 +1667,7 @@ app.delete('/api/servers/:serverId/channels/:channelId/messages/:messageId', (re
   const index = messages.findIndex(m => m.id === messageId || m.timestamp === messageId);
 
   if (index === -1) {
-    return res.status(404).json({ error: 'Message not found' });
+    return res.status(404).json({ error: 'Message not found, try refreshing the page' });
   }
 
   const message = messages[index];
@@ -1712,7 +1713,7 @@ app.put('/api/dm/:targetUser/messages/:messageId', (req, res) => {
 
   const index = dmHistory.findIndex(m => m.id === messageId || m.timestamp === messageId);
   if (index === -1) {
-    return res.status(404).json({ error: 'Message not found' });
+    return res.status(404).json({ error: 'Message not found, try refreshing the page' });
   }
 
   const message = dmHistory[index];
@@ -1777,7 +1778,7 @@ app.delete('/api/dm/:targetUser/messages/:messageId', (req, res) => {
 
   const index = dmHistory.findIndex(m => m.id === messageId || m.timestamp === messageId);
   if (index === -1) {
-    return res.status(404).json({ error: 'Message not found' });
+    return res.status(404).json({ error: 'Message not found, try refreshing the page' });
   }
 
   const message = dmHistory[index];
@@ -2252,7 +2253,7 @@ app.post('/api/servers/:serverId/channels/:channelId/messages/:messageId/poll/vo
   const messages = loadServerMessages(serverId, channelId);
   const messageIndex = messages.findIndex(m => m.id === messageId);
 
-  if (messageIndex === -1) return res.status(404).json({ error: 'Message not found' });
+  if (messageIndex === -1) return res.status(404).json({ error: 'Message not found, try refreshing the page' });
 
   try {
     const pollData = JSON.parse(messages[messageIndex].message);
