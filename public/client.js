@@ -596,28 +596,6 @@ function appendMessage(messageData, index, type) {
   processedParts.push(processedMessage.substring(lastIndex));
   processedMessage = processedParts.join('');
 
-  // Shift + Enter handling for textarea
-  const inputEl = document.getElementById('input');
-  if (inputEl) {
-    inputEl.addEventListener('input', function() {
-      this.style.height = '40px';
-      const newHeight = Math.min(this.scrollHeight, 100);
-      this.style.height = (this.value === '' ? 40 : newHeight) + 'px';
-      this.style.overflowY = this.scrollHeight > 100 ? 'auto' : 'hidden';
-    });
-
-    inputEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        const form = inputEl.closest('form');
-        if (form) {
-          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-          inputEl.style.height = 'auto';
-          inputEl.style.overflowY = 'hidden';
-        }
-      }
-    });
-  }
 
   const date = messageData.date || '';
   const time = messageData.time || '';
@@ -1166,7 +1144,29 @@ function setupAuraHandler() {
 function setupEventListeners() {
     setupAuraHandler();
   setupSidebarToggle();
-  
+
+  // Textarea auto-expand and Enter-to-submit — set up once here, not per-message
+  const textInput = document.getElementById('input');
+  if (textInput) {
+    textInput.addEventListener('input', function() {
+      this.style.height = '40px';
+      const newHeight = Math.min(this.scrollHeight, 200);
+      this.style.height = (this.value === '' ? 40 : newHeight) + 'px';
+      this.style.overflowY = this.scrollHeight > 200 ? 'auto' : 'hidden';
+    });
+    textInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const form = textInput.closest('form');
+        if (form) {
+          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+          textInput.style.height = '40px';
+          textInput.style.overflowY = 'hidden';
+        }
+      }
+    });
+  }
+
   const uploadBtn = document.getElementById('direct-upload-btn');
   const pollBtn = document.getElementById('direct-poll-btn');
   
