@@ -213,6 +213,31 @@
       </div>
     </div>
 
+    <div id="announcement-modal" class="modal" style="display: none;">
+      <div class="modal-header">
+        <h2>📢 Create Announcement</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Title</label>
+          <input type="text" id="announcement-title-input" placeholder="Announcement title..." maxlength="100">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="announcement-desc-input" placeholder="Write your announcement here..." maxlength="1000" rows="4" style="width:100%; resize:vertical; background:#40444b; border:1px solid #202225; color:#dcddde; border-radius:4px; padding:8px; font-size:14px; box-sizing:border-box;"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Image URL (optional)</label>
+          <input type="text" id="announcement-image-input" placeholder="Paste an image URL...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-cancel">Cancel</button>
+        <button class="btn-primary" id="announcement-submit">Send Announcement</button>
+      </div>
+    </div>
+
     <div id="poll-modal" class="modal" style="display: none;">
       <div class="modal-header">
         <h2>Create Poll</h2>
