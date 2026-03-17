@@ -42,6 +42,10 @@
   letter-spacing: 0.5px;
 }
 
+.plop {
+  background: #1a1a1e;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -479,7 +483,7 @@ body {
 
 #form {
   padding: 16px 20px;
-  background-color: #36393f;
+  background-color: #1a1a1e;
 }
 
 #form form {
@@ -505,7 +509,7 @@ body {
 
 #input {
   flex: 1;
-  background: #40444b;
+  background: #1a1a1e;
   border: none;
   border-radius: 8px;
   padding: 10px 15px;
@@ -602,6 +606,7 @@ body {
 }
 
 .chat-input-buttons {
+  background: #1a1a1e;
   display: flex;
   gap: 12px;
   align-items: center;
@@ -765,7 +770,7 @@ input:checked + .slider:before {
 }
 
 .announcement-card {
-  background: #1a1a1e;
+  background: #242429;
   border: 1px solid #1a1a1e;
   border-left: 4px solid #f0a500;
   border-radius: 8px;
@@ -1315,7 +1320,7 @@ input:checked + .slider:before {
 
 #form {
   padding: 16px 20px;
-  background-color: #36393f;
+  background-color: #1a1a1e;
 }
 
 #form form {

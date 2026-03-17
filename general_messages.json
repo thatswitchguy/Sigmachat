@@ -172,12 +172,6 @@
     "time": "06:30 PM"
   },
   {
-    "username": "other_banana",
-    "message": "im new",
-    "date": "Nov 27, 2025",
-    "time": "08:24 PM"
-  },
-  {
     "username": "thatswitchguy",
     "message": "hello",
     "date": "Nov 29, 2025",
@@ -188,11 +182,5 @@
     "message": "test",
     "date": "Nov 29, 2025",
     "time": "09:33 AM"
-  },
-  {
-    "username": "other_banana",
-    "message": "hello?",
-    "date": "Nov 29, 2025",
-    "time": "09:36 AM"
   }
 ]

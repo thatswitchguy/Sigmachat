@@ -236,6 +236,12 @@ function initializeApp() {
     const adminBtn = document.getElementById('admin-control-btn');
     if (adminBtn) adminBtn.style.display = 'block';
   }
+
+  // Only thatswitchguy can create servers
+  if (username !== 'thatswitchguy') {
+    const addServerBtn = document.getElementById('add-server-btn');
+    if (addServerBtn) addServerBtn.style.display = 'none';
+  }
 }
 
 function updateUserPanel() {
@@ -1310,7 +1316,9 @@ function setupEventListeners() {
   document.getElementById('announcement-submit')?.addEventListener('click', () => {
     const title = document.getElementById('announcement-title-input').value.trim();
     const description = document.getElementById('announcement-desc-input').value.trim();
-    const image = document.getElementById('announcement-image-input').value.trim();
+    const imageUrlInput = document.getElementById('announcement-image-input').value.trim();
+    const imageFileInput = document.getElementById('announcement-image-file');
+    const imageFile = imageFileInput?.files?.[0];
 
     if (!title) {
       showNotification('Please enter an announcement title.', 'warning');
@@ -1321,23 +1329,42 @@ function setupEventListeners() {
       return;
     }
 
-    const announcementData = {
-      type: 'announcement',
-      title,
-      description,
-      image: image || null
-    };
+    function sendAnnouncement(imageUrl) {
+      const announcementData = {
+        type: 'announcement',
+        title,
+        description,
+        image: imageUrl || null
+      };
+      const message = JSON.stringify(announcementData);
+      const inputEl = document.getElementById('input');
+      inputEl.value = message;
+      document.querySelector('#form form').dispatchEvent(new Event('submit'));
+      inputEl.value = '';
+      closeModal();
+      document.getElementById('announcement-title-input').value = '';
+      document.getElementById('announcement-desc-input').value = '';
+      document.getElementById('announcement-image-input').value = '';
+      if (imageFileInput) imageFileInput.value = '';
+    }
 
-    const message = JSON.stringify(announcementData);
-    const inputEl = document.getElementById('input');
-    inputEl.value = message;
-    document.querySelector('#form form').dispatchEvent(new Event('submit'));
-    inputEl.value = '';
-    closeModal();
-
-    document.getElementById('announcement-title-input').value = '';
-    document.getElementById('announcement-desc-input').value = '';
-    document.getElementById('announcement-image-input').value = '';
+    if (imageFile) {
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      formData.append('serverId', currentServer || 'sigmachat');
+      fetch('/api/upload-image', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            sendAnnouncement(data.imageUrl);
+          } else {
+            showNotification(data.error || 'Image upload failed.', 'error');
+          }
+        })
+        .catch(() => showNotification('Image upload failed.', 'error'));
+    } else {
+      sendAnnouncement(imageUrlInput || null);
+    }
   });
 
   // Create server submit

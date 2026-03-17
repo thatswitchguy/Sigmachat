@@ -933,6 +933,10 @@ app.post('/api/servers', (req, res) => {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
+  if (!isSuperAdmin(currentUser)) {
+    return res.status(403).json({ error: 'Only the owner can create servers.' });
+  }
+
   if (!name || name.length < 2 || name.length > 50) {
     return res.status(400).json({ error: 'Server name must be between 2 and 50 characters' });
   }

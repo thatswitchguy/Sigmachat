@@ -280,8 +280,12 @@
           <textarea id="announcement-desc-input" placeholder="Write your announcement here..." maxlength="1000" rows="4" style="width:100%; resize:vertical; background:#40444b; border:1px solid #202225; color:#dcddde; border-radius:4px; padding:8px; font-size:14px; box-sizing:border-box;"></textarea>
         </div>
         <div class="form-group">
-          <label>Image URL (optional)</label>
-          <input type="text" id="announcement-image-input" placeholder="Paste an image URL...">
+          <label>Image (optional)</label>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <input type="file" id="announcement-image-file" accept="image/*" style="color:#dcddde;font-size:13px;">
+            <div style="color:#72767d;font-size:12px;">— or paste an image URL —</div>
+            <input type="text" id="announcement-image-input" placeholder="https://...">
+          </div>
         </div>
       </div>
       <div class="modal-footer">
