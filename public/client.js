@@ -913,6 +913,7 @@ let gridViewActive = false;
 let gridIframeActive = false;
 let gridContextTarget = null;
 let gridEditingId = null;
+let gridPrevSidebarDisplay = 'flex';
 
 function showGridView() {
     const sidebar = document.getElementById('sidebar');
@@ -921,7 +922,10 @@ function showGridView() {
     const gridIframeView = document.getElementById('grid-iframe-view');
     const auraBtn = document.getElementById('aura-btn');
 
-    if (sidebar) sidebar.style.display = 'flex';
+    if (sidebar) {
+        gridPrevSidebarDisplay = sidebar.style.display || 'flex';
+        sidebar.style.display = 'none';
+    }
     if (mainChat) mainChat.style.display = 'none';
     if (gridIframeView) gridIframeView.style.display = 'none';
     if (gridView) gridView.style.display = 'flex';
@@ -935,11 +939,13 @@ function showGridView() {
 }
 
 function hideGridView() {
+    const sidebar = document.getElementById('sidebar');
     const mainChat = document.getElementById('main-chat');
     const gridView = document.getElementById('grid-view');
     const gridIframeView = document.getElementById('grid-iframe-view');
     const auraBtn = document.getElementById('aura-btn');
 
+    if (sidebar) sidebar.style.display = gridPrevSidebarDisplay;
     if (mainChat) mainChat.style.display = 'flex';
     if (gridView) gridView.style.display = 'none';
     if (gridIframeView) gridIframeView.style.display = 'none';

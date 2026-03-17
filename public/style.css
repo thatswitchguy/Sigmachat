@@ -337,7 +337,7 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: #36393f;
+  background-color: #1a1a1e;
 }
 
 #chat-header {
@@ -437,7 +437,7 @@ body {
   flex: 1;
   padding: 16px 20px;
   overflow-y: auto;
-  background-color: #36393f;
+  background-color: #1a1a1e;
   scrollbar-width: thin;
   scrollbar-color: #202225 #2f3136;
   position: relative;
@@ -1274,7 +1274,7 @@ input:checked + .slider:before {
   flex: 1;
   padding: 16px 20px;
   overflow-y: auto;
-  background-color: #36393f;
+  background-color: #1a1a1e;
   scrollbar-width: thin;
   scrollbar-color: #202225 #2f3136;
 }
