@@ -2278,6 +2278,75 @@ app.post('/api/servers/:serverId/channels/:channelId/messages/:messageId/poll/vo
   }
 });
 
+// ============== GRID LINKS ==============
+const gridLinksFile = path.join(__dirname, 'grid_links.json');
+let gridLinks = [];
+try {
+  if (fs.existsSync(gridLinksFile)) {
+    gridLinks = JSON.parse(fs.readFileSync(gridLinksFile, 'utf8'));
+  } else {
+    fs.writeFileSync(gridLinksFile, '[]');
+  }
+} catch (e) {
+  console.error('Error loading grid links:', e);
+}
+
+function saveGridLinks() {
+  try {
+    fs.writeFileSync(gridLinksFile, JSON.stringify(gridLinks, null, 2));
+  } catch (e) {
+    console.error('Error saving grid links:', e);
+  }
+}
+
+app.get('/api/grid-links', (req, res) => {
+  res.json(gridLinks);
+});
+
+app.post('/api/grid-links', (req, res) => {
+  const user = req.username;
+  if (!isSuperAdmin(user)) return res.status(403).json({ error: 'Only the super admin can add links' });
+  const { label, iframeUrl, shareableLink, emoji } = req.body;
+  if (!label || !iframeUrl) return res.status(400).json({ error: 'Label and iframe URL are required' });
+  const link = {
+    id: Date.now().toString(),
+    label,
+    iframeUrl,
+    shareableLink: shareableLink || iframeUrl,
+    emoji: emoji || '🌐'
+  };
+  gridLinks.push(link);
+  saveGridLinks();
+  res.json({ success: true, link });
+});
+
+app.put('/api/grid-links/:id', (req, res) => {
+  const user = req.username;
+  if (!isSuperAdmin(user)) return res.status(403).json({ error: 'Only the super admin can edit links' });
+  const { label, iframeUrl, shareableLink, emoji } = req.body;
+  const idx = gridLinks.findIndex(l => l.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Link not found' });
+  gridLinks[idx] = {
+    ...gridLinks[idx],
+    label: label || gridLinks[idx].label,
+    iframeUrl: iframeUrl || gridLinks[idx].iframeUrl,
+    shareableLink: shareableLink || iframeUrl || gridLinks[idx].shareableLink,
+    emoji: emoji || gridLinks[idx].emoji
+  };
+  saveGridLinks();
+  res.json({ success: true, link: gridLinks[idx] });
+});
+
+app.delete('/api/grid-links/:id', (req, res) => {
+  const user = req.username;
+  if (!isSuperAdmin(user)) return res.status(403).json({ error: 'Only the super admin can delete links' });
+  const idx = gridLinks.findIndex(l => l.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Link not found' });
+  gridLinks.splice(idx, 1);
+  saveGridLinks();
+  res.json({ success: true });
+});
+
 http.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
   console.log(`Access your app via the Replit webview`);

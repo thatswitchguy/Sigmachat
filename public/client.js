@@ -782,7 +782,6 @@ function appendAnnouncement(messageData, announcementData) {
             <span class="timestamp">[${time}]</span>
             <span class="username">${messageData.username}:</span>
             <div class="announcement-card">
-              <div class="announcement-badge">📢 Announcement</div>
               <div class="announcement-title">${announcementData.title}</div>
               <div class="announcement-desc">${announcementData.description}</div>
               ${imageHtml}
@@ -908,57 +907,247 @@ function setupPlusBtn() {
   }
 }
 
+// ============ GRID VIEW SYSTEM ============
+let gridLinks = [];
+let gridViewActive = false;
+let gridIframeActive = false;
+let gridContextTarget = null;
+let gridEditingId = null;
+
+function showGridView() {
+    const sidebar = document.getElementById('sidebar');
+    const mainChat = document.getElementById('main-chat');
+    const gridView = document.getElementById('grid-view');
+    const gridIframeView = document.getElementById('grid-iframe-view');
+    const auraBtn = document.getElementById('aura-btn');
+
+    if (sidebar) sidebar.style.display = 'flex';
+    if (mainChat) mainChat.style.display = 'none';
+    if (gridIframeView) gridIframeView.style.display = 'none';
+    if (gridView) gridView.style.display = 'flex';
+
+    document.querySelectorAll('.server-icon').forEach(icon => icon.classList.remove('active'));
+    if (auraBtn) auraBtn.classList.add('active');
+
+    gridViewActive = true;
+    gridIframeActive = false;
+    loadGridLinks();
+}
+
+function hideGridView() {
+    const mainChat = document.getElementById('main-chat');
+    const gridView = document.getElementById('grid-view');
+    const gridIframeView = document.getElementById('grid-iframe-view');
+    const auraBtn = document.getElementById('aura-btn');
+
+    if (mainChat) mainChat.style.display = 'flex';
+    if (gridView) gridView.style.display = 'none';
+    if (gridIframeView) gridIframeView.style.display = 'none';
+    if (auraBtn) auraBtn.classList.remove('active');
+
+    gridViewActive = false;
+    gridIframeActive = false;
+}
+
+function openGridIframe(link) {
+    const gridView = document.getElementById('grid-view');
+    const gridIframeView = document.getElementById('grid-iframe-view');
+    const gridIframe = document.getElementById('grid-iframe');
+    const gridIframeTitle = document.getElementById('grid-iframe-title');
+
+    if (gridView) gridView.style.display = 'none';
+    if (gridIframeView) gridIframeView.style.display = 'flex';
+    if (gridIframe) gridIframe.src = link.iframeUrl;
+    if (gridIframeTitle) gridIframeTitle.textContent = `${link.emoji || '🌐'} ${link.label}`;
+    gridIframeActive = true;
+}
+
+function loadGridLinks() {
+    fetch('/api/grid-links')
+        .then(r => r.json())
+        .then(data => {
+            gridLinks = data;
+            renderGridLinks();
+        })
+        .catch(() => {});
+}
+
+function renderGridLinks() {
+    const container = document.getElementById('grid-container');
+    if (!container) return;
+
+    const isSuperUser = username === 'thatswitchguy';
+
+    if (isSuperUser) {
+        const addBtn = document.getElementById('grid-add-btn');
+        if (addBtn) addBtn.style.display = 'block';
+    }
+
+    if (gridLinks.length === 0) {
+        container.innerHTML = `
+            <div class="grid-empty">
+                <div class="grid-empty-icon">🔗</div>
+                <div class="grid-empty-text">${isSuperUser ? 'No links yet. Click "+ Add Link" to get started.' : 'No links have been added yet.'}</div>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = '';
+    gridLinks.forEach(link => {
+        const btn = document.createElement('div');
+        btn.className = 'grid-btn';
+        btn.dataset.linkId = link.id;
+        btn.innerHTML = `
+            <div class="grid-btn-emoji">${link.emoji || '🌐'}</div>
+            <div class="grid-btn-label">${link.label}</div>
+            <div class="grid-btn-hint">right-click</div>
+        `;
+
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openGridIframe(link);
+        });
+
+        btn.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            showGridContextMenu(e.clientX, e.clientY, link);
+        });
+
+        container.appendChild(btn);
+    });
+}
+
+function showGridContextMenu(x, y, link) {
+    const menu = document.getElementById('grid-context-menu');
+    const editItem = document.getElementById('grid-ctx-edit');
+    const deleteItem = document.getElementById('grid-ctx-delete');
+    const isSuperUser = username === 'thatswitchguy';
+
+    gridContextTarget = link;
+
+    if (editItem) editItem.style.display = isSuperUser ? 'block' : 'none';
+    if (deleteItem) deleteItem.style.display = isSuperUser ? 'block' : 'none';
+
+    menu.style.display = 'block';
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+
+    const rect = menu.getBoundingClientRect();
+    if (rect.right > window.innerWidth) menu.style.left = (x - rect.width) + 'px';
+    if (rect.bottom > window.innerHeight) menu.style.top = (y - rect.height) + 'px';
+}
+
+function hideGridContextMenu() {
+    const menu = document.getElementById('grid-context-menu');
+    if (menu) menu.style.display = 'none';
+    gridContextTarget = null;
+}
+
+function openGridLinkModal(link) {
+    gridEditingId = link ? link.id : null;
+    const modalTitle = document.getElementById('grid-link-modal-title');
+    if (modalTitle) modalTitle.textContent = link ? 'Edit Link' : 'Add Link';
+
+    document.getElementById('grid-link-label').value = link ? link.label : '';
+    document.getElementById('grid-link-emoji').value = link ? (link.emoji || '') : '';
+    document.getElementById('grid-link-iframe-url').value = link ? link.iframeUrl : '';
+    document.getElementById('grid-link-shareable').value = link ? link.shareableLink : '';
+
+    openModal('grid-link-modal');
+}
+
 function setupAuraHandler() {
     if (document.getElementById('aura-handler-init')) return;
-    
+
     const auraBtn = document.getElementById('aura-btn');
     if (auraBtn) {
-        const handleAuraClick = () => {
-            const sidebar = document.getElementById('sidebar');
-            const mainChat = document.getElementById('main-chat');
-            const auraEmbed = document.getElementById('aura-embed-container');
-            const expandSidebarBtn = document.getElementById('expand-sidebar-btn');
-
-            if (sidebar) sidebar.style.display = 'none';
-            if (mainChat) mainChat.style.display = 'none';
-            if (expandSidebarBtn) expandSidebarBtn.style.display = 'none';
-            if (auraEmbed) auraEmbed.style.display = 'flex';
-
-            document.querySelectorAll('.server-icon').forEach(icon => icon.classList.remove('active'));
-            auraBtn.classList.add('active');
-        };
-
-        auraBtn.addEventListener('click', handleAuraClick);
-        
-        // Handle G key press
-        document.addEventListener('keydown', (e) => {
-            // Don't trigger if user is typing in an input or textarea
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-            
-            if (e.key.toLowerCase() === 'g') {
-                handleAuraClick();
+        auraBtn.addEventListener('click', () => {
+            if (gridViewActive || gridIframeActive) {
+                hideGridView();
+            } else {
+                showGridView();
             }
         });
-        
+
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (e.key.toLowerCase() === 'g') {
+                if (gridViewActive || gridIframeActive) {
+                    hideGridView();
+                } else {
+                    showGridView();
+                }
+            }
+        });
+
         const marker = document.createElement('div');
         marker.id = 'aura-handler-init';
         marker.style.display = 'none';
         document.body.appendChild(marker);
     }
 
-    // Restore view when other server icons are clicked
-    document.addEventListener('click', (e) => {
-        const serverIcon = e.target.closest('.server-icon:not(#aura-btn)');
-        if (serverIcon) {
-            const sidebar = document.getElementById('sidebar');
-            const mainChat = document.getElementById('main-chat');
-            const auraEmbed = document.getElementById('aura-embed-container');
-            
-            if (sidebar) sidebar.style.display = 'flex';
-            if (mainChat) mainChat.style.display = 'flex';
-            if (auraEmbed) auraEmbed.style.display = 'none';
-            if (auraBtn) auraBtn.classList.remove('active');
+    document.getElementById('grid-iframe-back')?.addEventListener('click', () => {
+        const gridView = document.getElementById('grid-view');
+        const gridIframeView = document.getElementById('grid-iframe-view');
+        const gridIframe = document.getElementById('grid-iframe');
+        if (gridView) gridView.style.display = 'flex';
+        if (gridIframeView) gridIframeView.style.display = 'none';
+        if (gridIframe) gridIframe.src = '';
+        gridIframeActive = false;
+    });
+
+    document.getElementById('grid-ctx-copy')?.addEventListener('click', () => {
+        if (gridContextTarget) {
+            navigator.clipboard.writeText(gridContextTarget.shareableLink || gridContextTarget.iframeUrl)
+                .then(() => showNotification('Link copied!', 'success'))
+                .catch(() => showNotification('Could not copy link', 'error'));
         }
+        hideGridContextMenu();
+    });
+
+    document.getElementById('grid-ctx-open')?.addEventListener('click', () => {
+        if (gridContextTarget) {
+            window.open(gridContextTarget.shareableLink || gridContextTarget.iframeUrl, '_blank');
+        }
+        hideGridContextMenu();
+    });
+
+    document.getElementById('grid-ctx-edit')?.addEventListener('click', () => {
+        if (gridContextTarget) openGridLinkModal(gridContextTarget);
+        hideGridContextMenu();
+    });
+
+    document.getElementById('grid-ctx-delete')?.addEventListener('click', () => {
+        if (!gridContextTarget) { hideGridContextMenu(); return; }
+        const id = gridContextTarget.id;
+        hideGridContextMenu();
+        fetch(`/api/grid-links/${id}`, { method: 'DELETE' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Link deleted', 'success');
+                    loadGridLinks();
+                } else {
+                    showNotification(data.error || 'Failed to delete', 'error');
+                }
+            });
+    });
+
+    document.getElementById('grid-add-btn')?.addEventListener('click', () => {
+        openGridLinkModal(null);
+    });
+
+    document.addEventListener('click', (e) => {
+        const menu = document.getElementById('grid-context-menu');
+        if (menu && !menu.contains(e.target)) hideGridContextMenu();
+
+        const serverIcon = e.target.closest('.server-icon:not(#aura-btn)');
+        if (serverIcon) hideGridView();
+    });
+
+    document.addEventListener('contextmenu', (e) => {
+        if (!e.target.closest('.grid-btn')) hideGridContextMenu();
     });
 }
 
@@ -1078,6 +1267,37 @@ function setupEventListeners() {
         <input type="text" class="poll-option-input" placeholder="Option 2" maxlength="50">
       </div>
     `;
+  });
+
+  // Grid link modal submit
+  document.getElementById('grid-link-submit')?.addEventListener('click', () => {
+    const label = document.getElementById('grid-link-label').value.trim();
+    const emoji = document.getElementById('grid-link-emoji').value.trim();
+    const iframeUrl = document.getElementById('grid-link-iframe-url').value.trim();
+    const shareableLink = document.getElementById('grid-link-shareable').value.trim();
+
+    if (!label) { showNotification('Please enter a label.', 'warning'); return; }
+    if (!iframeUrl) { showNotification('Please enter an iframe URL.', 'warning'); return; }
+
+    const body = { label, emoji: emoji || '🌐', iframeUrl, shareableLink: shareableLink || iframeUrl };
+    const url = gridEditingId ? `/api/grid-links/${gridEditingId}` : '/api/grid-links';
+    const method = gridEditingId ? 'PUT' : 'POST';
+
+    fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          showNotification(gridEditingId ? 'Link updated!' : 'Link added!', 'success');
+          closeModal();
+          loadGridLinks();
+        } else {
+          showNotification(data.error || 'Failed to save link.', 'error');
+        }
+      });
   });
 
   // Announcement submit

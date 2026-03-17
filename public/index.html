@@ -109,6 +109,29 @@
     <div id="aura-embed-container" style="display: none; flex: 1; height: 100vh;">
       <iframe src="https://sites.google.com/denbighhigh.co.uk/aura/home" style="width: 100%; height: 100%; border: none;" onclick="window.open('https://sites.google.com/denbighhigh.co.uk/aura/home', '_blank'); return false;"></iframe>
     </div>
+
+    <div id="grid-view" style="display: none; flex: 1; flex-direction: column; height: 100vh; overflow: hidden;">
+      <div id="grid-header">
+        <h3>🔗 Links</h3>
+        <button id="grid-add-btn" style="display: none;" title="Add Link">+ Add Link</button>
+      </div>
+      <div id="grid-container"></div>
+    </div>
+
+    <div id="grid-iframe-view" style="display: none; flex: 1; flex-direction: column; height: 100vh;">
+      <div id="grid-iframe-header">
+        <button id="grid-iframe-back">← Back to Links</button>
+        <span id="grid-iframe-title"></span>
+      </div>
+      <iframe id="grid-iframe" src="" style="flex: 1; border: none; width: 100%; height: 100%;"></iframe>
+    </div>
+  </div>
+
+  <div id="grid-context-menu" style="display: none;">
+    <div id="grid-ctx-edit" class="grid-ctx-item" style="display: none;">✏️ Edit Link</div>
+    <div id="grid-ctx-delete" class="grid-ctx-item grid-ctx-danger" style="display: none;">🗑️ Delete Link</div>
+    <div id="grid-ctx-copy" class="grid-ctx-item">🔗 Copy Link</div>
+    <div id="grid-ctx-open" class="grid-ctx-item">↗ Open in New Tab</div>
   </div>
 
   <div id="confirm-notification-overlay" class="modal-overlay" style="display: none;">
@@ -210,6 +233,35 @@
       <div class="modal-footer">
         <button class="btn-secondary modal-cancel">Cancel</button>
         <button class="btn-primary" id="edit-channel-submit">Save Changes</button>
+      </div>
+    </div>
+
+    <div id="grid-link-modal" class="modal" style="display: none;">
+      <div class="modal-header">
+        <h2 id="grid-link-modal-title">Add Link</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Label</label>
+          <input type="text" id="grid-link-label" placeholder="e.g. YouTube" maxlength="40">
+        </div>
+        <div class="form-group">
+          <label>Emoji (optional)</label>
+          <input type="text" id="grid-link-emoji" placeholder="🌐" maxlength="4" style="width: 80px;">
+        </div>
+        <div class="form-group">
+          <label>Iframe URL</label>
+          <input type="text" id="grid-link-iframe-url" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label>Shareable Link (what others can copy)</label>
+          <input type="text" id="grid-link-shareable" placeholder="https://... (defaults to iframe URL)">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-cancel">Cancel</button>
+        <button class="btn-primary" id="grid-link-submit">Save</button>
       </div>
     </div>
 
