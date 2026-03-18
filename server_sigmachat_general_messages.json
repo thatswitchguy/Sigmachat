@@ -12,5 +12,14 @@
     "message": "Click on the G to try out new features!\nRight click (two fingers tap mouse pad on chromebook) to edit or delete messages",
     "date": "Mar 18, 2026",
     "time": "05:02 AM"
+  },
+  {
+    "id": "mmvl57ezhjvy1hdl3",
+    "username": "thatswitchguy",
+    "message": "test",
+    "date": "Mar 18, 2026",
+    "time": "05:13 AM",
+    "edited": true,
+    "editedAt": "5:14:44 AM"
   }
 ]

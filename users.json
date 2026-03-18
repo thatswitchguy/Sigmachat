@@ -8,5 +8,10 @@
     "username": "test account",
     "password": "$2b$10$6CpQQHZzwiR4wt4RQgFH5OgKMAnR17nB2Z1EtIQVjg01vke3IVpNK",
     "createdAt": "2025-11-27T20:06:32.770Z"
+  },
+  "test": {
+    "username": "test",
+    "password": "$2a$10$/iIL0ubSz7KlHbFgJOyM.u8t9UOQ4BJwNpdZDV.96OUcWvfzATcx6",
+    "createdAt": "2026-03-18T05:03:50.184Z"
   }
 }

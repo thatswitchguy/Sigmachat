@@ -16,7 +16,12 @@
   },
   "other_banana": {
     "bannedBy": "thatswitchguy",
-    "bannedAt": 1773773509966,
+    "bannedAt": 1773810756604,
+    "expiresAt": null
+  },
+  "Sigma": {
+    "bannedBy": "thatswitchguy",
+    "bannedAt": 1773810761634,
     "expiresAt": null
   }
 }
