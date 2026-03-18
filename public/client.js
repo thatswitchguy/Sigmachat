@@ -236,12 +236,6 @@ function initializeApp() {
     const adminBtn = document.getElementById('admin-control-btn');
     if (adminBtn) adminBtn.style.display = 'block';
   }
-
-  // Only thatswitchguy can create servers
-  if (username !== 'thatswitchguy') {
-    const addServerBtn = document.getElementById('add-server-btn');
-    if (addServerBtn) addServerBtn.style.display = 'none';
-  }
 }
 
 function updateUserPanel() {
@@ -596,6 +590,28 @@ function appendMessage(messageData, index, type) {
   processedParts.push(processedMessage.substring(lastIndex));
   processedMessage = processedParts.join('');
 
+  // Shift + Enter handling for textarea
+  const inputEl = document.getElementById('input');
+  if (inputEl) {
+    inputEl.addEventListener('input', function() {
+      this.style.height = '40px';
+      const newHeight = Math.min(this.scrollHeight, 100);
+      this.style.height = (this.value === '' ? 40 : newHeight) + 'px';
+      this.style.overflowY = this.scrollHeight > 100 ? 'auto' : 'hidden';
+    });
+
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const form = inputEl.closest('form');
+        if (form) {
+          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+          inputEl.style.height = 'auto';
+          inputEl.style.overflowY = 'hidden';
+        }
+      }
+    });
+  }
 
   const date = messageData.date || '';
   const time = messageData.time || '';
@@ -1144,29 +1160,7 @@ function setupAuraHandler() {
 function setupEventListeners() {
     setupAuraHandler();
   setupSidebarToggle();
-
-  // Textarea auto-expand and Enter-to-submit — set up once here, not per-message
-  const textInput = document.getElementById('input');
-  if (textInput) {
-    textInput.addEventListener('input', function() {
-      this.style.height = '40px';
-      const newHeight = Math.min(this.scrollHeight, 200);
-      this.style.height = (this.value === '' ? 40 : newHeight) + 'px';
-      this.style.overflowY = this.scrollHeight > 200 ? 'auto' : 'hidden';
-    });
-    textInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        const form = textInput.closest('form');
-        if (form) {
-          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-          textInput.style.height = '40px';
-          textInput.style.overflowY = 'hidden';
-        }
-      }
-    });
-  }
-
+  
   const uploadBtn = document.getElementById('direct-upload-btn');
   const pollBtn = document.getElementById('direct-poll-btn');
   
@@ -1316,9 +1310,7 @@ function setupEventListeners() {
   document.getElementById('announcement-submit')?.addEventListener('click', () => {
     const title = document.getElementById('announcement-title-input').value.trim();
     const description = document.getElementById('announcement-desc-input').value.trim();
-    const imageUrlInput = document.getElementById('announcement-image-input').value.trim();
-    const imageFileInput = document.getElementById('announcement-image-file');
-    const imageFile = imageFileInput?.files?.[0];
+    const image = document.getElementById('announcement-image-input').value.trim();
 
     if (!title) {
       showNotification('Please enter an announcement title.', 'warning');
@@ -1329,42 +1321,23 @@ function setupEventListeners() {
       return;
     }
 
-    function sendAnnouncement(imageUrl) {
-      const announcementData = {
-        type: 'announcement',
-        title,
-        description,
-        image: imageUrl || null
-      };
-      const message = JSON.stringify(announcementData);
-      const inputEl = document.getElementById('input');
-      inputEl.value = message;
-      document.querySelector('#form form').dispatchEvent(new Event('submit'));
-      inputEl.value = '';
-      closeModal();
-      document.getElementById('announcement-title-input').value = '';
-      document.getElementById('announcement-desc-input').value = '';
-      document.getElementById('announcement-image-input').value = '';
-      if (imageFileInput) imageFileInput.value = '';
-    }
+    const announcementData = {
+      type: 'announcement',
+      title,
+      description,
+      image: image || null
+    };
 
-    if (imageFile) {
-      const formData = new FormData();
-      formData.append('image', imageFile);
-      formData.append('serverId', currentServer || 'sigmachat');
-      fetch('/api/upload-image', { method: 'POST', body: formData })
-        .then(r => r.json())
-        .then(data => {
-          if (data.success) {
-            sendAnnouncement(data.imageUrl);
-          } else {
-            showNotification(data.error || 'Image upload failed.', 'error');
-          }
-        })
-        .catch(() => showNotification('Image upload failed.', 'error'));
-    } else {
-      sendAnnouncement(imageUrlInput || null);
-    }
+    const message = JSON.stringify(announcementData);
+    const inputEl = document.getElementById('input');
+    inputEl.value = message;
+    document.querySelector('#form form').dispatchEvent(new Event('submit'));
+    inputEl.value = '';
+    closeModal();
+
+    document.getElementById('announcement-title-input').value = '';
+    document.getElementById('announcement-desc-input').value = '';
+    document.getElementById('announcement-image-input').value = '';
   });
 
   // Create server submit
