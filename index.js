@@ -86,13 +86,19 @@ const sessionMiddleware = session({
 
 app.use(sessionMiddleware);
 
-// File paths for persistent storage
+// ============== FILE PATHS FOR PERSISTENT STORAGE ==============
 const usersFile = path.join(__dirname, 'users.json');
 const roomsFile = path.join(__dirname, 'rooms.json');
 const generalMessagesFile = path.join(__dirname, 'general_messages.json');
+const suggestionsMessagesFile = path.join(__dirname, 'suggestions_messages.json');
+const techSupportMessagesFile = path.join(__dirname, 'tech_support_messages.json');
 const bannedUsersFile = path.join(__dirname, 'banned_users.json');
 const serversFile = path.join(__dirname, 'servers.json');
 const adminRolesFile = path.join(__dirname, 'admin_roles.json');
+const gridLinksFile = path.join(__dirname, 'grid_links.json');
+const profilePicturesFile = path.join(__dirname, 'profile_pictures.json');
+const userSettingsFile = path.join(__dirname, 'user_settings.json');
+const roomMembersFile = path.join(__dirname, 'room_members.json');
 
 // ============== ADMIN ROLES SYSTEM ==============
 let adminRoles = { superAdmin: 'thatswitchguy', coAdmins: [] };
@@ -247,9 +253,6 @@ let rooms = { ...defaultRooms };
 let roomMembers = {};
 let additionalRoomsCreated = 0;
 
-// Track room memberships (who can access which rooms)
-const roomMembersFile = path.join(__dirname, 'room_members.json');
-
 // First load room members from file
 try {
   if (fs.existsSync(roomMembersFile)) {
@@ -314,7 +317,6 @@ try {
 }
 
 // Load suggestions room messages
-const suggestionsMessagesFile = path.join(__dirname, 'suggestions_messages.json');
 try {
   if (fs.existsSync(suggestionsMessagesFile)) {
     const messageData = fs.readFileSync(suggestionsMessagesFile, 'utf8');
@@ -326,7 +328,6 @@ try {
 }
 
 // Load tech-support room messages
-const techSupportMessagesFile = path.join(__dirname, 'tech_support_messages.json');
 try {
   if (fs.existsSync(techSupportMessagesFile)) {
     const messageData = fs.readFileSync(techSupportMessagesFile, 'utf8');
@@ -336,9 +337,6 @@ try {
   console.error('Error loading tech-support messages:', error);
   roomMessages['tech-support'] = [];
 }
-
-// File path for profile pictures
-const profilePicturesFile = path.join(__dirname, 'profile_pictures.json');
 
 // Load profile pictures from file
 let profilePictures = {};
@@ -351,9 +349,6 @@ try {
   console.error('Error loading profile pictures:', error);
   profilePictures = {};
 }
-
-// File path for user settings
-const userSettingsFile = path.join(__dirname, 'user_settings.json');
 
 // Load user settings from file
 let userSettings = {};
@@ -410,19 +405,11 @@ function saveRoomMessages(roomId) {
   try {
     let fileName;
     switch(roomId) {
-      case 'general':
-        fileName = generalMessagesFile;
-        break;
-      case 'suggestions':
-        fileName = path.join(__dirname, 'suggestions_messages.json');
-        break;
-      case 'tech-support':
-        fileName = path.join(__dirname, 'tech_support_messages.json');
-        break;
-      default:
-        return;
+      case 'general':        fileName = generalMessagesFile; break;
+      case 'suggestions':    fileName = suggestionsMessagesFile; break;
+      case 'tech-support':   fileName = techSupportMessagesFile; break;
+      default: return;
     }
-
     const messagesToSave = roomMessages[roomId].slice(-500);
     fs.writeFileSync(fileName, JSON.stringify(messagesToSave, null, 2));
   } catch (error) {
@@ -457,6 +444,27 @@ function saveBannedUsers() {
     fs.writeFileSync(bannedUsersFile, JSON.stringify(bannedUsers, null, 2));
   } catch (error) {
     console.error('Error saving banned users:', error);
+  }
+}
+
+// ============== GRID LINKS ==============
+let gridLinks = [];
+try {
+  if (fs.existsSync(gridLinksFile)) {
+    gridLinks = JSON.parse(fs.readFileSync(gridLinksFile, 'utf8'));
+  } else {
+    fs.writeFileSync(gridLinksFile, '[]');
+  }
+} catch (e) {
+  console.error('Error loading grid links:', e);
+  gridLinks = [];
+}
+
+function saveGridLinks() {
+  try {
+    fs.writeFileSync(gridLinksFile, JSON.stringify(gridLinks, null, 2));
+  } catch (e) {
+    console.error('Error saving grid links:', e);
   }
 }
 
@@ -2282,27 +2290,7 @@ app.post('/api/servers/:serverId/channels/:channelId/messages/:messageId/poll/vo
   }
 });
 
-// ============== GRID LINKS ==============
-const gridLinksFile = path.join(__dirname, 'grid_links.json');
-let gridLinks = [];
-try {
-  if (fs.existsSync(gridLinksFile)) {
-    gridLinks = JSON.parse(fs.readFileSync(gridLinksFile, 'utf8'));
-  } else {
-    fs.writeFileSync(gridLinksFile, '[]');
-  }
-} catch (e) {
-  console.error('Error loading grid links:', e);
-}
-
-function saveGridLinks() {
-  try {
-    fs.writeFileSync(gridLinksFile, JSON.stringify(gridLinks, null, 2));
-  } catch (e) {
-    console.error('Error saving grid links:', e);
-  }
-}
-
+// ============== GRID LINKS ROUTES ==============
 app.get('/api/grid-links', (req, res) => {
   res.json(gridLinks);
 });
@@ -2352,6 +2340,19 @@ app.delete('/api/grid-links/:id', (req, res) => {
 });
 
 http.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n=== SigmaChat Server Started ===`);
   console.log(`Server running on http://0.0.0.0:${PORT}`);
-  console.log(`Access your app via the Replit webview`);
+  console.log(`\n--- Data loaded from JSON ---`);
+  console.log(`  Users:           ${Object.keys(users).length}`);
+  console.log(`  Servers:         ${Object.keys(servers).length}`);
+  console.log(`  Grid links:      ${gridLinks.length}`);
+  console.log(`  Banned users:    ${Object.keys(bannedUsers).length}`);
+  console.log(`  Blocked users:   ${Object.keys(blockedUsers).length}`);
+  console.log(`  Profile pics:    ${Object.keys(profilePictures).length}`);
+  console.log(`  User settings:   ${Object.keys(userSettings).length}`);
+  console.log(`  General msgs:    ${roomMessages.general.length}`);
+  console.log(`  Suggestions msgs:${roomMessages.suggestions.length}`);
+  console.log(`  Tech-support msgs:${roomMessages['tech-support'].length}`);
+  console.log(`  Admin roles:     superAdmin=${adminRoles.superAdmin}, coAdmins=${(adminRoles.coAdmins||[]).length}`);
+  console.log(`================================\n`);
 });
