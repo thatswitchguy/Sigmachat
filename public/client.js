@@ -782,7 +782,6 @@ function appendAnnouncement(messageData, announcementData) {
             <span class="timestamp">[${time}]</span>
             <span class="username">${messageData.username}:</span>
             <div class="announcement-card">
-              <div class="announcement-badge">📢 Announcement</div>
               <div class="announcement-title">${announcementData.title}</div>
               <div class="announcement-desc">${announcementData.description}</div>
               ${imageHtml}

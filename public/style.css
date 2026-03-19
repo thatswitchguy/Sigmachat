@@ -50,7 +50,7 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #36393f;
+  background-color: #1a1a1e;
   color: #dcddde;
   height: 100vh;
   overflow: hidden;
@@ -434,7 +434,7 @@ body {
   flex: 1;
   padding: 16px 20px;
   overflow-y: auto;
-  background-color: #36393f;
+  background-color: #1a1a1e;
   scrollbar-width: thin;
   scrollbar-color: #202225 #2f3136;
   position: relative;
@@ -476,12 +476,13 @@ body {
 
 #form {
   padding: 16px 20px;
-  background-color: #36393f;
+  background-color: #1a1a1e;
 }
 
 #form form {
   display: flex;
   gap: 8px;
+  
 }
 
 #upload-image-btn {
@@ -762,8 +763,7 @@ input:checked + .slider:before {
 }
 
 .announcement-card {
-  background: linear-gradient(135deg, #1e2a3a 0%, #2a1e3a 100%);
-  border: 1px solid #f0a500;
+  background: #242429;
   border-left: 4px solid #f0a500;
   border-radius: 8px;
   padding: 16px;
@@ -1271,7 +1271,7 @@ input:checked + .slider:before {
   flex: 1;
   padding: 16px 20px;
   overflow-y: auto;
-  background-color: #36393f;
+  background-color: #1a1a1e;
   scrollbar-width: thin;
   scrollbar-color: #202225 #2f3136;
 }
@@ -1312,7 +1312,7 @@ input:checked + .slider:before {
 
 #form {
   padding: 16px 20px;
-  background-color: #36393f;
+  background-color: #242429;
 }
 
 #form form {
@@ -1322,7 +1322,7 @@ input:checked + .slider:before {
 
 #input {
   flex: 1;
-  background: #40444b;
+  background: #1a1a1e;
   border: none;
   border-radius: 8px;
   padding: 10px 15px;
