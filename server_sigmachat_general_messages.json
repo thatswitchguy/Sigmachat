@@ -5,5 +5,12 @@
     "message": "{\"type\":\"announcement\",\"title\":\"Sigmachat v1.4.1\",\"description\":\"New features:\\n- New look\\n- Better saving\\n- Hopefully syncs across school\",\"image\":null}",
     "date": "Mar 18, 2026",
     "time": "10:36 PM"
+  },
+  {
+    "id": "mmwzzube4qqgv3vbb",
+    "username": "test account",
+    "message": "hi",
+    "date": "Mar 19, 2026",
+    "time": "04:56 AM"
   }
 ]
