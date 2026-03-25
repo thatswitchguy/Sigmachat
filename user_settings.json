@@ -4,7 +4,7 @@
     "dataUsage": true,
     "desktopNotifications": true,
     "messageSounds": true,
-    "incognitoMode": false
+    "incognitoMode": true
   },
   "other_banana": {
     "allowDMs": true,

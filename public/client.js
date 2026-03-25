@@ -529,15 +529,6 @@ function appendMessage(messageData, index, type) {
     } catch (e) {}
   }
 
-  // Check for announcement
-  if (processedMessage.startsWith('{"type":"announcement"')) {
-    try {
-      const announcementData = JSON.parse(processedMessage);
-      appendAnnouncement(messageData, announcementData);
-      return;
-    } catch (e) {}
-  }
-
   if (processedMessage.includes('@')) {
     processedMessage = processedMessage.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
   }
@@ -737,57 +728,6 @@ function appendPoll(messageData, pollData) {
             </div>
           </div>
           ${pollActions}
-        </div>
-      `;
-    });
-
-  messagesContainer.appendChild(messageDiv);
-}
-
-function appendAnnouncement(messageData, announcementData) {
-  const messagesContainer = document.getElementById('messages');
-  const messageDiv = document.createElement('div');
-  messageDiv.className = 'message';
-  messageDiv.dataset.messageId = messageData.id;
-
-  const date = messageData.date || '';
-  const time = messageData.time || '';
-
-  fetch(`/api/user-profile/${messageData.username}`)
-    .then(r => r.json())
-    .then(profile => {
-      let avatar;
-      if (profile.profilePicture) {
-        avatar = `<img src="${profile.profilePicture}" alt="${messageData.username}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;margin-right:8px;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                  <div style="display:none;width:32px;height:32px;border-radius:50%;background-color:#5865f2;align-items:center;justify-content:center;color:white;font-weight:bold;margin-right:8px;">${messageData.username.charAt(0).toUpperCase()}</div>`;
-      } else {
-        avatar = `<div style="width:32px;height:32px;border-radius:50%;background-color:#5865f2;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;margin-right:8px;">${messageData.username.charAt(0).toUpperCase()}</div>`;
-      }
-
-      const deleteAction = (messageData.username === username || isAdmin) ? `
-        <div class="message-actions" style="display:none;margin-left:8px;">
-          <button class="delete-btn" onclick="deleteMessage('${currentServer}', '${currentChannel}', '${messageData.id}', 'room')">Delete</button>
-        </div>
-      ` : '';
-
-      const imageHtml = announcementData.image
-        ? `<img src="${announcementData.image}" alt="Announcement image" class="announcement-image" onclick="openImageModal('${announcementData.image}')">`
-        : '';
-
-      messageDiv.innerHTML = `
-        <div style="display:flex;align-items:flex-start;">
-          ${avatar}
-          <div style="flex:1;">
-            ${date ? `<div class="message-date">${date}</div>` : ''}
-            <span class="timestamp">[${time}]</span>
-            <span class="username">${messageData.username}:</span>
-            <div class="announcement-card">
-              <div class="announcement-title">${announcementData.title}</div>
-              <div class="announcement-desc">${announcementData.description}</div>
-              ${imageHtml}
-            </div>
-          </div>
-          ${deleteAction}
         </div>
       `;
     });
@@ -1077,40 +1017,6 @@ function setupEventListeners() {
         <input type="text" class="poll-option-input" placeholder="Option 2" maxlength="50">
       </div>
     `;
-  });
-
-  // Announcement submit
-  document.getElementById('announcement-submit')?.addEventListener('click', () => {
-    const title = document.getElementById('announcement-title-input').value.trim();
-    const description = document.getElementById('announcement-desc-input').value.trim();
-    const image = document.getElementById('announcement-image-input').value.trim();
-
-    if (!title) {
-      showNotification('Please enter an announcement title.', 'warning');
-      return;
-    }
-    if (!description) {
-      showNotification('Please enter an announcement description.', 'warning');
-      return;
-    }
-
-    const announcementData = {
-      type: 'announcement',
-      title,
-      description,
-      image: image || null
-    };
-
-    const message = JSON.stringify(announcementData);
-    const inputEl = document.getElementById('input');
-    inputEl.value = message;
-    document.querySelector('#form form').dispatchEvent(new Event('submit'));
-    inputEl.value = '';
-    closeModal();
-
-    document.getElementById('announcement-title-input').value = '';
-    document.getElementById('announcement-desc-input').value = '';
-    document.getElementById('announcement-image-input').value = '';
   });
 
   // Create server submit
@@ -2061,16 +1967,6 @@ document.querySelector('#form form').addEventListener('submit', (e) => {
   e.preventDefault();
   if (input.value.trim()) {
     const message = input.value.trim();
-
-    if (message.toLowerCase() === '/announcement') {
-      if (isGlobalAdmin) {
-        openModal('announcement-modal');
-      } else {
-        showNotification('Only co-admins and super admins can send announcements.', 'error');
-      }
-      input.value = '';
-      return;
-    }
 
     if (currentDM) {
       // Send DM
