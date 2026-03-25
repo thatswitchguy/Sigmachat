@@ -13,5 +13,15 @@
     "bannedBy": "thatswitchguy",
     "bannedAt": 1764407183689,
     "expiresAt": null
+  },
+  "other_banana": {
+    "bannedBy": "thatswitchguy",
+    "bannedAt": 1774456515028,
+    "expiresAt": null
+  },
+  "test account": {
+    "bannedBy": "thatswitchguy",
+    "bannedAt": 1774457009188,
+    "expiresAt": null
   }
 }

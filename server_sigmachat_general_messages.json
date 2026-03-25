@@ -1,28 +1,5 @@
 [
   {
-    "id": "mkpp7lrelpvwvvpq9",
-    "username": "other_banana",
-    "message": "well hello",
-    "date": "Jan 22, 2026",
-    "time": "05:00 PM",
-    "edited": true,
-    "editedAt": "5:05:55 PM"
-  },
-  {
-    "id": "ml40he381ds44l5l7",
-    "username": "other_banana",
-    "message": "good, its very boring on here",
-    "date": "Feb 1, 2026",
-    "time": "05:25 PM"
-  },
-  {
-    "id": "ml40ht0foa57cfquk",
-    "username": "other_banana",
-    "message": "What's project M?",
-    "date": "Feb 1, 2026",
-    "time": "05:25 PM"
-  },
-  {
     "id": "mmqo96ivot63rrjjr",
     "username": "thatswitchguy",
     "message": "right click to delete or edit messages",
@@ -35,5 +12,33 @@
     "message": "(two fingers lightly tap the mouse move thing)",
     "date": "Mar 14, 2026",
     "time": "06:42 PM"
+  },
+  {
+    "id": "mn69npsu861u844v4",
+    "username": "thatswitchguy",
+    "message": "hi",
+    "date": "Mar 25, 2026",
+    "time": "04:37 PM"
+  },
+  {
+    "id": "mn69vf3s38papqkeh",
+    "username": "thatswitchguy",
+    "message": "hey",
+    "date": "Mar 25, 2026",
+    "time": "04:43 PM"
+  },
+  {
+    "id": "mn6a4we343nit0snv",
+    "username": "test-other",
+    "message": "hi",
+    "date": "Mar 25, 2026",
+    "time": "04:50 PM"
+  },
+  {
+    "id": "mn6aa3dqlwnilfvpe",
+    "username": "thatswitchguy",
+    "message": "no go away",
+    "date": "Mar 25, 2026",
+    "time": "04:54 PM"
   }
 ]

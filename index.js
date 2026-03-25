@@ -1995,7 +1995,7 @@ io.on('connection', (socket) => {
     let ts = formatTimestamp();
     socket.to(currentRoom).emit('chat message', {
       username: 'System',
-      message: `${user} left #${currentChannelId}.`,
+      message: `System: ${user} left #${currentChannelId}.`,
       date: ts.date,
       time: ts.time
     });
@@ -2172,7 +2172,7 @@ io.on('connection', (socket) => {
       if (currentRoom) {
         socket.to(currentRoom).emit('chat message', {
           username: 'System',
-          message: `${user} left #${currentRoom}.`,
+          message: ``,
           timestamp: new Date().toLocaleTimeString()
         });
       }

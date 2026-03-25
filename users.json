@@ -4,14 +4,9 @@
     "password": "$2b$10$3.1WWaDWN3xdWjuoDLpFa.Lt2SerRx/A4vGxe4k/nWxc//V06XU1q",
     "createdAt": "2025-06-29T14:12:05.766Z"
   },
-  "test account": {
-    "username": "test account",
-    "password": "$2b$10$6CpQQHZzwiR4wt4RQgFH5OgKMAnR17nB2Z1EtIQVjg01vke3IVpNK",
-    "createdAt": "2025-11-27T20:06:32.770Z"
-  },
-  "other_banana": {
-    "username": "other_banana",
-    "password": "$2b$10$1vCEhf7Ca7H55LMOLT69QeRqythoWA3k1uQJXCZGpO0qH7NCJZW9W",
-    "createdAt": "2025-11-27T20:21:41.200Z"
+  "test-other": {
+    "username": "test-other",
+    "password": "$2a$10$dBmtdYcdlJi4wuCl2/B7d.jWLC6siKDU5uaCGx4pXhku7dL5Lh7qW",
+    "createdAt": "2026-03-25T16:43:52.715Z"
   }
 }
