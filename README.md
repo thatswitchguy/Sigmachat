@@ -6,7 +6,7 @@ It works (looks best) on PC/laptop, or a suitably sized IPad.
 
 Link: ➤ <kbd>[**Sigmachat**](https://sigmachat2.onrender.com/)</kbd>
 
-Replit fork link: ➤ <kbd>[**Replit fork link**](https://replit.com/@thatswitchguy/sigmachat)</kbd>
+Replit fork link: ➤ <kbd>[**Replit fork link**](https://replit.com/@thatswitchguy/Sigmachat)</kbd>
 
 ## Features
 
