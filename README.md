@@ -1,7 +1,20 @@
-This is a small chatting website I made - it's not much and I'm using this repo to then host on render for free (hopefully it stays free forever).
+# Sigmachat v1.3.6
 
-This is because Replit (the website I made it on) stopped my web hosting and I don't want to pay £20 a month just for a small website that is actually quite laggy.
+This is a small chatting app I made with Node.js and Socket.io. 
 
-So, it's now on GitHub with the replit fork here ➤ <kbd>[__**Replit fork link**__](https://replit.com/@thatswitchguy/Sigmachat)</kbd>
+It works (looks best) on PC/laptop, or a suitably sized IPad.
 
-I will try to publish soon with the link being here ➤ Coming soon!
+Link: ➤ <kbd>[**Sigmachat**](https://sigmachat2.onrender.com/)</kbd>
+
+Replit fork link: ➤ <kbd>[**Replit fork link**](https://replit.com/@thatswitchguy/sigmachat)</kbd>
+
+## Features
+
+- DM (Direct messaging)
+- Servers with channels
+- Profiles and users
+- Image/Video upload
+- Fast message updating
+- Dark UI (similar to discord)
+- Incognito mode
+
