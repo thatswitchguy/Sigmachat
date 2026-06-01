@@ -43,3 +43,6 @@ build = ["npm", "install"]
 [userenv.shared]
 MONGODB_URI = "mongodb+srv://khanzakariya_db_user:<Thatswitchguy@123>@thatswitchguy.slccmso.mongodb.net/?appName=thatswitchguy"
 
+[userenv.production]
+NODE_ENV = "production"
+

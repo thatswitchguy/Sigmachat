@@ -76,12 +76,15 @@ function saveBlockedUsers() {
   }
 }
 
+// Trust Replit's proxy so secure cookies work over HTTPS in production
+app.set('trust proxy', 1);
+
 // Session middleware for Socket.IO
 const sessionMiddleware = session({
-  secret: 'secret-key-change-in-production',
+  secret: process.env.SESSION_SECRET || 'secret-key-change-in-production',
   resave: true,
   saveUninitialized: true,
-  cookie: { secure: false }
+  cookie: { secure: process.env.NODE_ENV === 'production' }
 });
 
 app.use(sessionMiddleware);
