@@ -36,7 +36,6 @@ channel = "stable-25_05"
 [deployment]
 deploymentTarget = "vm"
 run = ["node", "index.js"]
-build = ["npm", "install"]
 
 [userenv]
 
