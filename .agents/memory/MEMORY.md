@@ -1,1 +1,2 @@
 - [Message archive](google-sheets-archive.md) — Google Sheets is an optional append-only audit archive; local JSON remains the live fallback.
+- [Neon message storage](neon-message-storage.md) — Neon stores chat histories while local JSON remains a migration-safe cache and fallback.

@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const googleSheetsSync = require('./google-sheets-sync');
+const neonDb = require('./neon-db');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http, {
@@ -204,6 +205,7 @@ function saveServerMessages(serverId, channelId, messages) {
   try {
     const messagesToSave = messages.slice(-500);
     fs.writeFileSync(file, JSON.stringify(messagesToSave, null, 2));
+    neonDb.saveConversation(`channel:${serverId}:${channelId}`, messagesToSave);
   } catch (error) {
     console.error(`Error saving messages for ${serverId}/${channelId}:`, error);
   }
@@ -441,6 +443,7 @@ function saveDMMessages(user1, user2, messages) {
     const dmFile = path.join(__dirname, `dm_${dmKey}.json`);
     const messagesToSave = messages.slice(-500);
     fs.writeFileSync(dmFile, JSON.stringify(messagesToSave, null, 2));
+    neonDb.saveConversation(`dm:${[user1, user2].sort().join(':')}`, messagesToSave);
   } catch (error) {
     console.error('Error saving DM messages:', error);
   }
@@ -448,6 +451,47 @@ function saveDMMessages(user1, user2, messages) {
 
 function syncMessageEvent(event) {
   googleSheetsSync.record(event);
+}
+
+async function hydrateNeonMessages() {
+  if (!await neonDb.initialize()) return;
+
+  // Import local channel history once, then use Neon as the source on later starts.
+  for (const serverId of Object.keys(servers)) {
+    for (const channelId of Object.keys(servers[serverId].channels || {})) {
+      const localMessages = loadServerMessages(serverId, channelId);
+      const databaseMessages = await neonDb.getConversation(`channel:${serverId}:${channelId}`);
+      if (databaseMessages.length > 0) {
+        fs.writeFileSync(
+          getServerMessagesFile(serverId, channelId),
+          JSON.stringify(databaseMessages.slice(-500), null, 2)
+        );
+      } else if (localMessages.length > 0) {
+        await neonDb.saveConversation(`channel:${serverId}:${channelId}`, localMessages);
+      }
+    }
+  }
+
+  // Import and restore direct-message histories using the same stable key as saves.
+  const dmFiles = fs.readdirSync(__dirname)
+    .filter(file => file.startsWith('dm_') && file.endsWith('.json'));
+  for (const file of dmFiles) {
+    const usersKey = file.slice(3, -5);
+    const conversationKey = `dm:${usersKey.split('_').sort().join(':')}`;
+    const filePath = path.join(__dirname, file);
+    let localMessages = [];
+    try {
+      localMessages = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    } catch (error) {
+      console.error(`Error loading ${file} for Neon migration:`, error.message);
+    }
+    const databaseMessages = await neonDb.getConversation(conversationKey);
+    if (databaseMessages.length > 0) {
+      fs.writeFileSync(filePath, JSON.stringify(databaseMessages.slice(-500), null, 2));
+    } else if (localMessages.length > 0) {
+      await neonDb.saveConversation(conversationKey, localMessages);
+    }
+  }
 }
 
 // Save profile pictures to file
@@ -2376,7 +2420,15 @@ app.post('/api/servers/:serverId/channels/:channelId/messages/:messageId/poll/vo
   }
 });
 
-http.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on http://0.0.0.0:${PORT}`);
-  console.log(`Access your app via the Replit webview`);
+async function startServer() {
+  await hydrateNeonMessages();
+  http.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
+    console.log(`Access your app via the Replit webview`);
+  });
+}
+
+startServer().catch(error => {
+  console.error('Server startup error:', error);
+  process.exit(1);
 });
