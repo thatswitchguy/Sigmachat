@@ -1,0 +1,1 @@
+- [Message archive](google-sheets-archive.md) — Google Sheets is an optional append-only audit archive; local JSON remains the live fallback.

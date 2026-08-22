@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const googleSheetsSync = require('./google-sheets-sync');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http, {
@@ -443,6 +444,10 @@ function saveDMMessages(user1, user2, messages) {
   } catch (error) {
     console.error('Error saving DM messages:', error);
   }
+}
+
+function syncMessageEvent(event) {
+  googleSheetsSync.record(event);
 }
 
 // Save profile pictures to file
@@ -1645,6 +1650,21 @@ app.put('/api/servers/:serverId/channels/:channelId/messages/:messageId', (req, 
   messages[index].editedAt = new Date().toLocaleTimeString();
 
   saveServerMessages(serverId, channelId, messages);
+  syncMessageEvent({
+    eventType: 'edited',
+    messageId: message.id || message.timestamp,
+    conversationType: 'channel',
+    serverId,
+    channelId,
+    room: `${serverId}:${channelId}`,
+    sender: message.username,
+    recipient: '',
+    message: messages[index].message,
+    date: message.date || '',
+    time: message.time || '',
+    edited: true,
+    deleted: false
+  });
 
   io.to(`${serverId}:${channelId}`).emit('message edited', {
     serverId,
@@ -1681,6 +1701,21 @@ app.delete('/api/servers/:serverId/channels/:channelId/messages/:messageId', (re
 
   messages.splice(index, 1);
   saveServerMessages(serverId, channelId, messages);
+  syncMessageEvent({
+    eventType: 'deleted',
+    messageId: message.id || message.timestamp,
+    conversationType: 'channel',
+    serverId,
+    channelId,
+    room: `${serverId}:${channelId}`,
+    sender: message.username,
+    recipient: '',
+    message: message.message,
+    date: message.date || '',
+    time: message.time || '',
+    edited: Boolean(message.edited),
+    deleted: true
+  });
 
   io.to(`${serverId}:${channelId}`).emit('message deleted', {
     serverId,
@@ -1733,6 +1768,21 @@ app.put('/api/dm/:targetUser/messages/:messageId', (req, res) => {
   dmHistory[index].editedAt = new Date().toLocaleTimeString();
 
   saveDMMessages(req.username, targetUser, dmHistory);
+  syncMessageEvent({
+    eventType: 'edited',
+    messageId: message.id || message.timestamp,
+    conversationType: 'direct',
+    serverId: '',
+    channelId: '',
+    room: `dm:${[req.username, targetUser].sort().join(':')}`,
+    sender: message.from,
+    recipient: message.to,
+    message: dmHistory[index].message,
+    date: message.date || '',
+    time: message.time || '',
+    edited: true,
+    deleted: false
+  });
 
   const targetSocket = Array.from(io.sockets.sockets.values())
     .find(s => s.username === targetUser);
@@ -1791,6 +1841,21 @@ app.delete('/api/dm/:targetUser/messages/:messageId', (req, res) => {
 
   dmHistory.splice(index, 1);
   saveDMMessages(req.username, targetUser, dmHistory);
+  syncMessageEvent({
+    eventType: 'deleted',
+    messageId: message.id || message.timestamp,
+    conversationType: 'direct',
+    serverId: '',
+    channelId: '',
+    room: `dm:${[req.username, targetUser].sort().join(':')}`,
+    sender: message.from,
+    recipient: message.to,
+    message: message.message,
+    date: message.date || '',
+    time: message.time || '',
+    edited: Boolean(message.edited),
+    deleted: true
+  });
 
   const targetSocket = Array.from(io.sockets.sockets.values())
     .find(s => s.username === targetUser);
@@ -2034,6 +2099,21 @@ io.on('connection', (socket) => {
     const messages = loadServerMessages(currentServerId, currentChannelId);
     messages.push(messageData);
     saveServerMessages(currentServerId, currentChannelId, messages);
+    syncMessageEvent({
+      eventType: 'created',
+      messageId: messageData.id,
+      conversationType: 'channel',
+      serverId: currentServerId,
+      channelId: currentChannelId,
+      room: currentRoom,
+      sender: user,
+      recipient: '',
+      message: messageData.message,
+      date: messageData.date,
+      time: messageData.time,
+      edited: false,
+      deleted: false
+    });
 
     io.to(currentRoom).emit('chat message', messageData);
   });
@@ -2071,6 +2151,21 @@ io.on('connection', (socket) => {
 
     dmHistory.push(messageData);
     saveDMMessages(user, targetUser, dmHistory);
+    syncMessageEvent({
+      eventType: 'created',
+      messageId: messageData.id,
+      conversationType: 'direct',
+      serverId: '',
+      channelId: '',
+      room: `dm:${[user, targetUser].sort().join(':')}`,
+      sender: user,
+      recipient: targetUser,
+      message: messageData.message,
+      date: messageData.date,
+      time: messageData.time,
+      edited: false,
+      deleted: false
+    });
 
     const targetSocket = Array.from(io.sockets.sockets.values())
       .find(s => s.username === targetUser);
