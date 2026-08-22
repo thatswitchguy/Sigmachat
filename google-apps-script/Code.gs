@@ -9,9 +9,9 @@
  */
 const SHEET_NAME = 'Messages';
 // Copy the ID from the target Google Sheet URL:
-// https://docs.google.com/spreadsheets/d/1lefeaIXnYCECLOZTkVMVDT0Isg3IqMYht7_yvwEcJN8/edit
-const SPREADSHEET_ID = '1lefeaIXnYCECLOZTkVMVDT0Isg3IqMYht7_yvwEcJN8';
-const TOKEN = 'n0thing_g0od_here_312';
+// https://docs.google.com/spreadsheets/d/THIS_PART_IS_THE_ID/edit
+const SPREADSHEET_ID = 'REPLACE_WITH_TARGET_SPREADSHEET_ID';
+const TOKEN = 'REPLACE_WITH_A_LONG_RANDOM_TOKEN';
 const HEADERS = [
   'eventId', 'eventType', 'recordedAt', 'messageId', 'messageDate', 'messageTime',
   'conversationType', 'serverId', 'channelId', 'room', 'sender', 'recipient',
