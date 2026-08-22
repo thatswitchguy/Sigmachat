@@ -8,6 +8,9 @@
  * Put the same value in GOOGLE_SHEETS_WEBHOOK_TOKEN in Replit.
  */
 const SHEET_NAME = 'Messages';
+// Copy the ID from the target Google Sheet URL:
+// https://docs.google.com/spreadsheets/d/THIS_PART_IS_THE_ID/edit
+const SPREADSHEET_ID = 'REPLACE_WITH_TARGET_SPREADSHEET_ID';
 const TOKEN = 'REPLACE_WITH_A_LONG_RANDOM_TOKEN';
 const HEADERS = [
   'eventId', 'eventType', 'recordedAt', 'messageId', 'messageDate', 'messageTime',
@@ -52,7 +55,10 @@ function doPost(e) {
 }
 
 function getMessagesSheet() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  if (SPREADSHEET_ID === 'REPLACE_WITH_TARGET_SPREADSHEET_ID') {
+    throw new Error('Set SPREADSHEET_ID in Code.gs before deploying');
+  }
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
   let sheet = spreadsheet.getSheetByName(SHEET_NAME);
   if (!sheet) sheet = spreadsheet.insertSheet(SHEET_NAME);
   if (sheet.getLastRow() === 0) {

@@ -27,12 +27,15 @@ temporary Google outage does not prevent sending messages.
 1. Create a new Google Sheet.
 2. Open **Extensions → Apps Script**.
 3. Replace the editor contents with the code in `google-apps-script/Code.gs`.
-4. Change `REPLACE_WITH_A_LONG_RANDOM_TOKEN` to a long random value. Do not commit
-   or share this value.
-5. Click **Deploy → New deployment**.
-6. Choose **Web app**, set **Execute as** to **Me**, set **Who has access** to
+4. Change `REPLACE_WITH_TARGET_SPREADSHEET_ID` to the ID of the spreadsheet that
+   should receive the messages. It is the part between `/d/` and `/edit` in the
+   Google Sheet URL.
+5. Change `REPLACE_WITH_A_LONG_RANDOM_TOKEN` to a long random value. Do not
+   commit or share this value.
+6. Click **Deploy → New deployment**.
+7. Choose **Web app**, set **Execute as** to **Me**, set **Who has access** to
    **Anyone**, then deploy and copy the Web app URL.
-7. Approve Google's authorization prompt. The script creates a frozen, formatted
+8. Approve Google's authorization prompt. The script creates a frozen, formatted
    `Messages` tab automatically on its first request.
 
 ### 2. Configure Replit
