@@ -33,6 +33,11 @@
       </hidden>
       -->
       <div class="server-list-spacer"></div>
+      <button type="button" id="meeting-button" class="server-meeting-button" aria-label="Start or join a meeting" title="Meet with your server">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4.75 7.25A2.25 2.25 0 0 1 7 5h7.5a2.25 2.25 0 0 1 2.25 2.25v1.1l3.23-2.15a1.25 1.25 0 0 1 1.94 1.04v9.52a1.25 1.25 0 0 1-1.94 1.04l-3.23-2.15v1.1A2.25 2.25 0 0 1 14.5 19H7a2.25 2.25 0 0 1-2.25-2.25z"/>
+        </svg>
+      </button>
     </div>
 
     <button id="expand-sidebar-btn" title="Expand Sidebar" style="display: none; position: absolute; left: 80px; top: 50%; transform: translateY(-50%); background: #2f3136; border: 1px solid #202225; color: #b5bac1; cursor: pointer; font-size: 16px; padding: 8px 4px; border-radius: 0 4px 4px 0; z-index: 100;">▶</button>
@@ -115,6 +120,101 @@
       <iframe src="https://sites.google.com/denbighhigh.co.uk/aura/home" style="width: 100%; height: 100%; border: none;" onclick="window.open('https://sites.google.com/denbighhigh.co.uk/aura/home', '_blank'); return false;"></iframe>
     </div>
   </div>
+
+  <section id="meeting-overlay" class="meeting-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="meeting-title">
+    <div class="meeting-window">
+      <header class="meeting-header">
+        <div class="meeting-heading">
+          <span class="meeting-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 7.25A2.25 2.25 0 0 1 7 5h7.5a2.25 2.25 0 0 1 2.25 2.25v1.1l3.23-2.15a1.25 1.25 0 0 1 1.94 1.04v9.52a1.25 1.25 0 0 1-1.94 1.04l-3.23-2.15v1.1A2.25 2.25 0 0 1 14.5 19H7a2.25 2.25 0 0 1-2.25-2.25z"/></svg>
+          </span>
+          <div>
+            <p class="meeting-eyebrow">SERVER MEETING</p>
+            <h2 id="meeting-title">A little face time</h2>
+            <p class="meeting-server-line"><span id="meeting-server-name">Your server</span><span class="meeting-dot" aria-hidden="true"></span><span id="meeting-status" role="status" aria-live="polite">Ready when you are</span></p>
+          </div>
+        </div>
+        <button type="button" id="meeting-close-btn" class="meeting-close" aria-label="Close meeting window">
+          <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="m5 5 10 10M15 5 5 15"/></svg>
+        </button>
+      </header>
+
+      <div class="meeting-body">
+        <main class="meeting-stage-column">
+          <div id="meeting-video-grid" class="meeting-video-grid" aria-label="Meeting video participants">
+            <article class="meeting-tile meeting-tile-local" aria-label="You, camera preview">
+              <video id="meeting-local-video" autoplay muted playsinline aria-label="Your camera preview"></video>
+              <div class="meeting-camera-placeholder" aria-hidden="true">
+                <span class="meeting-avatar meeting-avatar-you">Y</span>
+                <span>Camera preview</span>
+              </div>
+              <div class="meeting-tile-caption"><span class="meeting-speaking-dot" aria-hidden="true"></span>You <span class="meeting-you-tag">YOU</span></div>
+            </article>
+            <article class="meeting-tile meeting-tile-empty" aria-label="Open seat for another participant">
+              <div class="meeting-empty-art" aria-hidden="true">
+                <span class="meeting-empty-orbit meeting-orbit-one"></span>
+                <span class="meeting-empty-orbit meeting-orbit-two"></span>
+                <span class="meeting-empty-plus">+</span>
+              </div>
+              <div class="meeting-empty-copy"><strong>Room to join</strong><span>Invite someone into the conversation</span></div>
+            </article>
+          </div>
+          <div class="meeting-invite-note">
+            <span class="meeting-note-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" focusable="false"><path d="M10 2.75v9.5m0 0 3.5-3.5M10 12.25l-3.5-3.5M4 13.75v2A1.5 1.5 0 0 0 5.5 17.25h9a1.5 1.5 0 0 0 1.5-1.5v-2"/></svg>
+            </span>
+            <span><strong>Good conversations start here.</strong> Your server is just one click away.</span>
+          </div>
+        </main>
+
+        <aside class="meeting-people-panel" aria-label="People in the meeting">
+          <div class="meeting-people-heading">
+            <div><p class="meeting-eyebrow">TOGETHER</p><h3>In this room</h3></div>
+            <span class="meeting-count" aria-label="1 participant">1</span>
+          </div>
+          <ul id="meeting-participant-list" class="meeting-participant-list" aria-label="Meeting participant list">
+            <li class="meeting-person">
+              <span class="meeting-person-avatar meeting-avatar-you">Y</span>
+              <span class="meeting-person-meta"><strong>You</strong><small>Here to listen</small></span>
+              <span class="meeting-person-state" aria-label="Microphone on"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10a2.5 2.5 0 0 0 2.5-2.5v-3a2.5 2.5 0 0 0-5 0v3A2.5 2.5 0 0 0 8 10Zm4-2.5a4 4 0 0 1-8 0M8 11.5v2m-2 0h4"/></svg></span>
+            </li>
+          </ul>
+          <div class="meeting-room-tip">
+            <span class="meeting-tip-line" aria-hidden="true"></span>
+            <p><strong>Make yourself at home.</strong><br>People in this server can drop in whenever they like.</p>
+          </div>
+          <div class="meeting-invite-card">
+            <span class="meeting-invite-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" focusable="false"><path d="M10 3v14M3 10h14"/></svg>
+            </span>
+            <span><strong>Invite your people</strong><small>Share the meeting with your server</small></span>
+          </div>
+        </aside>
+      </div>
+
+      <footer class="meeting-footer">
+        <div class="meeting-footer-context"><span class="meeting-live-indicator" aria-hidden="true"></span><span>Private to this server</span></div>
+        <div class="meeting-controls" aria-label="Meeting controls">
+          <button type="button" id="meeting-mic-toggle" class="meeting-control" aria-label="Mute microphone" title="Mute microphone">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-5a3.5 3.5 0 0 0-7 0v5A3.5 3.5 0 0 0 12 15Zm6-3.5a6 6 0 0 1-12 0M12 18v3m-3 0h6"/></svg>
+            <span>Mute</span>
+          </button>
+          <button type="button" id="meeting-camera-toggle" class="meeting-control" aria-label="Turn camera off" title="Turn camera off">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.75 7.5A2.25 2.25 0 0 1 7 5.25h6.5a2.25 2.25 0 0 1 2.25 2.25v1.1l3.4-2.27a1 1 0 0 1 1.55.83v9.68a1 1 0 0 1-1.55.83l-3.4-2.27v1.1A2.25 2.25 0 0 1 13.5 18.75H7a2.25 2.25 0 0 1-2.25-2.25z"/></svg>
+            <span>Camera</span>
+          </button>
+          <button type="button" id="meeting-screen-share" class="meeting-control meeting-share-control" aria-label="Share your screen" title="Share your screen">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.75" y="4.75" width="16.5" height="12" rx="2"/><path d="M8 21h8m-4-4.25V21m-2-9 2-2 2 2m-2-2v5"/></svg>
+            <span>Share screen</span>
+          </button>
+        </div>
+        <div class="meeting-exit-controls">
+          <button type="button" id="meeting-leave" class="meeting-leave">Leave</button>
+          <button type="button" id="meeting-end" class="meeting-end">End meeting</button>
+        </div>
+      </footer>
+    </div>
+  </section>
 
   <section id="stream-viewer-overlay" class="stream-viewer-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="stream-viewer-title">
     <div class="stream-viewer">
@@ -280,5 +380,6 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="/client.js"></script>
   <script src="/streaming.js"></script>
+  <script src="/meetings.js"></script>
 </body>
 </html>

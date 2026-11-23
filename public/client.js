@@ -320,6 +320,7 @@ function renderServerList() {
 function selectServer(serverId) {
   currentServer = serverId;
   currentDM = null;
+  window.dispatchEvent(new CustomEvent('server-selected', { detail: { serverId } }));
   
   document.querySelectorAll('.server-icon').forEach(icon => {
     icon.classList.toggle('active', icon.dataset.serverId === serverId);
@@ -545,29 +546,58 @@ function escapeMessageHtml(value) {
   })[character]);
 }
 
-function getGoogleDriveImagePreviewUrl(rawUrl) {
+
+function getGoogleDriveImagePreviewUrl(rawUrl, width = 1600) {
   try {
-    const url = new URL(rawUrl);
-    if (!['http:', 'https:'].includes(url.protocol) ||
-        !['drive.google.com', 'www.drive.google.com'].includes(url.hostname.toLowerCase())) {
+    const url = new URL(rawUrl.trim());
+
+    if (!['http:', 'https:'].includes(url.protocol)) return null;
+
+    const hostname = url.hostname.toLowerCase();
+
+    if (!['drive.google.com', 'www.drive.google.com'].includes(hostname)) {
       return null;
     }
 
-    const filePathMatch = url.pathname.match(/\/file\/d\/([a-zA-Z0-9_-]{10,})(?:\/|$)/);
-    const supportedQueryPath = /^\/(?:open|uc|thumbnail)$/i.test(url.pathname);
-    if (!filePathMatch && !supportedQueryPath) return null;
+    let fileId = null;
 
-    const fileId = filePathMatch?.[1] || url.searchParams.get('id');
-    if (!fileId || !/^[a-zA-Z0-9_-]{10,}$/.test(fileId)) return null;
+    // Standard Google Drive file link
+    const filePathMatch = url.pathname.match(
+      /\/file\/d\/([a-zA-Z0-9_-]{10,})(?:\/|$)/
+    );
 
-    const previewUrl = new URL('https://drive.google.com/uc');
-    previewUrl.searchParams.set('export', 'view');
+    if (filePathMatch) {
+      fileId = filePathMatch[1];
+    }
+
+    // Other supported Google Drive URL formats
+    if (!fileId && /^\/(open|uc|thumbnail)$/i.test(url.pathname)) {
+      fileId = url.searchParams.get('id');
+    }
+
+    // Validate the file ID
+    if (!fileId || !/^[a-zA-Z0-9_-]{10,}$/.test(fileId)) {
+      return null;
+    }
+
+    // Generate a direct image thumbnail URL
+    const previewUrl = new URL('https://drive.google.com/thumbnail');
+
     previewUrl.searchParams.set('id', fileId);
+    previewUrl.searchParams.set('sz', `w${Math.max(100, Math.min(4000, width))}`);
+
     return previewUrl.toString();
+
   } catch {
     return null;
   }
 }
+
+// Use this for all image URLs
+function getImageSrc(rawUrl) {
+  return getGoogleDriveImagePreviewUrl(rawUrl) || rawUrl;
+}
+
 
 function renderPlainMessageText(text) {
   return escapeMessageHtml(text).replace(/@(\w+)/g, '<span class="mention">@$1</span>');

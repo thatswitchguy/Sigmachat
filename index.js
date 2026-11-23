@@ -1216,6 +1216,11 @@ app.delete('/api/servers/:serverId', (req, res) => {
     return res.status(400).json({ error: 'Cannot delete the default server' });
   }
 
+  endServerMeeting(serverId, 'server-deleted');
+  for (const [streamId, stream] of Array.from(activeStreams.entries())) {
+    if (stream.room.startsWith(`${serverId}:`)) endActiveStream(streamId);
+  }
+
   // Delete all message files for this server's channels
   if (server.channels) {
     Object.keys(server.channels).forEach(channelId => {
@@ -1542,6 +1547,7 @@ app.post('/api/servers/:serverId/leave', (req, res) => {
 
   server.members = (server.members || []).filter(m => m !== currentUser);
   server.admins = (server.admins || []).filter(a => a !== currentUser);
+  removeMeetingParticipantsForUser(serverId, currentUser);
   saveServers();
 
   res.json({ success: true });
@@ -1594,6 +1600,9 @@ app.put('/api/servers/:serverId/members/:targetUser', (req, res) => {
       return res.status(400).json({ error: 'Invalid action' });
   }
 
+  if (!isServerMember(serverId, targetUser)) {
+    removeMeetingParticipantsForUser(serverId, targetUser);
+  }
   saveServers();
   res.json({ success: true });
 });
@@ -2214,8 +2223,155 @@ function formatTimestamp() {
 
 // Active screen shares are temporary and are scoped to the authenticated chat room.
 const activeStreams = new Map();
+// Meetings are temporary and allow one active meeting per server in this server process.
+const activeMeetings = new Map();
 const TYPING_TIMEOUT_MS = 20_000;
 const typingByRoom = new Map();
+
+function serverPresenceRoom(serverId) {
+  return `server-presence:${serverId}`;
+}
+
+function serverMeetingRoom(serverId, meetingId) {
+  return `server-meeting:${serverId}:${meetingId}`;
+}
+
+function getPublicMeetingState(meeting) {
+  return {
+    serverId: meeting.serverId,
+    meetingId: meeting.meetingId,
+    hostSocketId: meeting.hostSocketId,
+    hostUsername: meeting.hostUsername,
+    startedAt: meeting.startedAt,
+    participants: Array.from(meeting.participants.values(), participant => ({ ...participant }))
+  };
+}
+
+function publishServerMeetingState(serverId) {
+  const meeting = activeMeetings.get(serverId);
+  io.to(serverPresenceRoom(serverId)).emit('meeting:server-state', {
+    serverId,
+    active: Boolean(meeting),
+    meetingId: meeting?.meetingId || null,
+    hostUsername: meeting?.hostUsername || null
+  });
+}
+
+function endActiveStream(streamId) {
+  const stream = activeStreams.get(streamId);
+  if (!stream) return false;
+  activeStreams.delete(streamId);
+  io.to(stream.room).emit('stream:ended', {
+    streamId,
+    username: stream.username,
+    room: stream.room
+  });
+  return true;
+}
+
+function endServerMeeting(serverId, reason = 'host-ended') {
+  const meeting = activeMeetings.get(serverId);
+  if (!meeting) return false;
+
+  activeMeetings.delete(serverId);
+  const room = serverMeetingRoom(serverId, meeting.meetingId);
+  io.to(room).emit('meeting:ended', {
+    serverId,
+    meetingId: meeting.meetingId,
+    reason
+  });
+
+  for (const socketId of meeting.participants.keys()) {
+    const participantSocket = io.sockets.sockets.get(socketId);
+    if (!participantSocket) continue;
+    participantSocket.leave(room);
+    if (participantSocket.data.meetingServerId === serverId) {
+      participantSocket.data.meetingServerId = null;
+    }
+  }
+
+  publishServerMeetingState(serverId);
+  return true;
+}
+
+function publishMeetingState(meeting) {
+  io.to(serverMeetingRoom(meeting.serverId, meeting.meetingId))
+    .emit('meeting:state', getPublicMeetingState(meeting));
+  publishServerMeetingState(meeting.serverId);
+}
+
+function addMeetingParticipant(socket, meeting) {
+  const alreadyJoined = meeting.participants.has(socket.id);
+  if (!alreadyJoined) {
+    meeting.participants.set(socket.id, {
+      socketId: socket.id,
+      username: socket.username,
+      joinedAt: Date.now(),
+      microphoneEnabled: false,
+      cameraEnabled: false,
+      screenSharing: false
+    });
+  }
+
+  socket.data.meetingServerId = meeting.serverId;
+  socket.join(serverMeetingRoom(meeting.serverId, meeting.meetingId));
+  socket.emit('meeting:joined', getPublicMeetingState(meeting));
+  publishMeetingState(meeting);
+}
+
+function removeMeetingParticipant(serverId, socketId, notifyRemoved = false) {
+  const meeting = activeMeetings.get(serverId);
+  const participant = meeting?.participants.get(socketId);
+  if (!meeting || !participant) return false;
+
+  const room = serverMeetingRoom(serverId, meeting.meetingId);
+  meeting.participants.delete(socketId);
+  const participantSocket = io.sockets.sockets.get(socketId);
+  if (participantSocket) {
+    if (notifyRemoved) {
+      participantSocket.emit('meeting:removed', {
+        serverId,
+        meetingId: meeting.meetingId,
+        message: 'You no longer have access to this server meeting.'
+      });
+    }
+    participantSocket.leave(room);
+    if (participantSocket.data.meetingServerId === serverId) {
+      participantSocket.data.meetingServerId = null;
+    }
+  }
+  io.to(room).emit('meeting:participant-left', {
+    socketId,
+    username: participant.username
+  });
+
+  if (meeting.participants.size === 0) {
+    endServerMeeting(serverId, 'meeting-empty');
+    return true;
+  }
+
+  if (meeting.hostSocketId === socketId) {
+    const nextHost = Array.from(meeting.participants.values())
+      .sort((a, b) => a.joinedAt - b.joinedAt)[0];
+    meeting.hostSocketId = nextHost.socketId;
+    meeting.hostUsername = nextHost.username;
+    io.to(room).emit('meeting:host-changed', {
+      hostSocketId: meeting.hostSocketId,
+      hostUsername: meeting.hostUsername
+    });
+  }
+  publishMeetingState(meeting);
+  return true;
+}
+
+function removeMeetingParticipantsForUser(serverId, username) {
+  const meeting = activeMeetings.get(serverId);
+  if (!meeting) return;
+  const socketIds = Array.from(meeting.participants.values())
+    .filter(participant => participant.username === username)
+    .map(participant => participant.socketId);
+  socketIds.forEach(socketId => removeMeetingParticipant(serverId, socketId, true));
+}
 
 function broadcastTypingUpdate(room, username, active) {
   io.to(room).emit('typing:update', { room, username, active });
@@ -2379,6 +2535,21 @@ io.on('connection', (socket) => {
     typingRoom = null;
   }
 
+  function getOwnMeeting() {
+    const serverId = socket.data.meetingServerId;
+    const meeting = serverId && activeMeetings.get(serverId);
+    if (!meeting || !meeting.participants.has(socket.id) ||
+        !isServerMember(serverId, user)) return null;
+    return meeting;
+  }
+
+  function leaveOwnMeeting() {
+    const serverId = socket.data.meetingServerId;
+    if (!serverId || !removeMeetingParticipant(serverId, socket.id)) {
+      socket.data.meetingServerId = null;
+    }
+  }
+
   function startSocketTyping() {
     if (!hasJoinedRoom || !currentRoom || currentRoom.startsWith('dm:')) return;
     if (typingRoom && typingRoom !== currentRoom) stopSocketTyping();
@@ -2387,14 +2558,7 @@ io.on('connection', (socket) => {
   }
 
   function stopOwnStream() {
-    const stream = activeStreams.get(socket.id);
-    if (!stream) return;
-    activeStreams.delete(socket.id);
-    io.to(stream.room).emit('stream:ended', {
-      streamId: socket.id,
-      username: user,
-      room: stream.room
-    });
+    endActiveStream(socket.id);
   }
 
   // Parse room format: "serverId:channelId" or plain "channelId" (legacy)
@@ -2430,6 +2594,7 @@ io.on('connection', (socket) => {
   socket.on('join', (data) => {
     stopSocketTyping();
     let requestedRoom = (data && data.room) || 'sigmachat:general';
+    const previousServerId = currentServerId;
     
     const { serverId, channelId } = parseRoom(requestedRoom);
     
@@ -2444,6 +2609,10 @@ io.on('connection', (socket) => {
     }
     
     currentRoom = `${currentServerId}:${currentChannelId}`;
+    if (previousServerId !== currentServerId) {
+      socket.leave(serverPresenceRoom(previousServerId));
+    }
+    socket.join(serverPresenceRoom(currentServerId));
     socket.username = user;
     socket.join(currentRoom);
     hasJoinedRoom = true;
@@ -2471,6 +2640,7 @@ io.on('connection', (socket) => {
       return;
     }
 
+    const previousServerId = currentServerId;
     stopOwnStream();
     stopSocketTyping();
     socket.leave(currentRoom);
@@ -2478,6 +2648,10 @@ io.on('connection', (socket) => {
     currentServerId = serverId;
     currentChannelId = channelId;
     currentRoom = `${serverId}:${channelId}`;
+    if (previousServerId !== serverId) {
+      socket.leave(serverPresenceRoom(previousServerId));
+    }
+    socket.join(serverPresenceRoom(serverId));
     socket.join(currentRoom);
     sendTypingSnapshot(socket, currentRoom);
 
@@ -2538,6 +2712,10 @@ io.on('connection', (socket) => {
   socket.on('stream:start', () => {
     if (!hasJoinedRoom || currentRoom.startsWith('dm:')) {
       socket.emit('stream:error', { message: 'Screen sharing is only available in a chat channel.' });
+      return;
+    }
+    if (activeMeetings.has(currentServerId)) {
+      socket.emit('stream:error', { message: 'Channel screen sharing is paused while this server has an active meeting.' });
       return;
     }
     if (activeStreams.has(socket.id)) return;
@@ -2604,6 +2782,176 @@ io.on('connection', (socket) => {
     const stream = activeStreams.get(streamId);
     if (!stream || stream.room !== currentRoom || socket.id === streamId) return;
     io.to(streamId).emit('stream:viewer-left', { streamId, viewerId: socket.id });
+  });
+
+  socket.on('meeting:status', (payload = {}, acknowledge) => {
+    const serverId = typeof payload.serverId === 'string' ? payload.serverId : currentServerId;
+    if (!servers[serverId] || !isServerMember(serverId, user)) {
+      if (typeof acknowledge === 'function') {
+        acknowledge({ success: false, error: 'You do not have access to this server.' });
+      }
+      return;
+    }
+
+    const meeting = activeMeetings.get(serverId);
+    const response = {
+      success: true,
+      serverId,
+      active: Boolean(meeting),
+      meeting: meeting ? getPublicMeetingState(meeting) : null
+    };
+    socket.emit('meeting:server-state', {
+      serverId,
+      active: response.active,
+      meetingId: meeting?.meetingId || null,
+      hostUsername: meeting?.hostUsername || null
+    });
+    if (typeof acknowledge === 'function') acknowledge(response);
+  });
+
+  socket.on('meeting:start', (payload = {}, acknowledge) => {
+    const serverId = typeof payload.serverId === 'string' ? payload.serverId : currentServerId;
+    if (!hasJoinedRoom || !servers[serverId] || !isServerMember(serverId, user)) {
+      if (typeof acknowledge === 'function') {
+        acknowledge({ success: false, error: 'Join a server you belong to before starting a meeting.' });
+      }
+      return;
+    }
+
+    const existingMeeting = activeMeetings.get(serverId);
+    if (existingMeeting) {
+      if (typeof acknowledge === 'function') {
+        acknowledge({
+          success: false,
+          code: 'meeting-already-running',
+          meeting: getPublicMeetingState(existingMeeting)
+        });
+      }
+      return;
+    }
+
+    const meeting = {
+      serverId,
+      meetingId: generateId(),
+      hostSocketId: socket.id,
+      hostUsername: user,
+      startedAt: Date.now(),
+      participants: new Map()
+    };
+    // Set the lock before emitting or awaiting anything so competing starts cannot both win.
+    activeMeetings.set(serverId, meeting);
+
+    for (const [streamId, stream] of Array.from(activeStreams.entries())) {
+      if (stream.room.startsWith(`${serverId}:`)) endActiveStream(streamId);
+    }
+
+    if (socket.data.meetingServerId) leaveOwnMeeting();
+    addMeetingParticipant(socket, meeting);
+    if (typeof acknowledge === 'function') {
+      acknowledge({ success: true, meeting: getPublicMeetingState(meeting) });
+    }
+  });
+
+  socket.on('meeting:join', (payload = {}, acknowledge) => {
+    const serverId = typeof payload.serverId === 'string' ? payload.serverId : currentServerId;
+    if (!servers[serverId] || !isServerMember(serverId, user)) {
+      if (typeof acknowledge === 'function') {
+        acknowledge({ success: false, error: 'You do not have access to this server.' });
+      }
+      return;
+    }
+
+    const meeting = activeMeetings.get(serverId);
+    if (!meeting) {
+      if (typeof acknowledge === 'function') {
+        acknowledge({ success: false, code: 'no-active-meeting', error: 'There is no active meeting in this server.' });
+      }
+      return;
+    }
+
+    if (socket.data.meetingServerId && socket.data.meetingServerId !== serverId) {
+      leaveOwnMeeting();
+    }
+    addMeetingParticipant(socket, meeting);
+    if (typeof acknowledge === 'function') {
+      acknowledge({ success: true, meeting: getPublicMeetingState(meeting) });
+    }
+  });
+
+  socket.on('meeting:leave', (payload, acknowledge) => {
+    leaveOwnMeeting();
+    if (typeof acknowledge === 'function') acknowledge({ success: true });
+  });
+
+  socket.on('meeting:end', (payload, acknowledge) => {
+    const meeting = getOwnMeeting();
+    if (!meeting) {
+      if (typeof acknowledge === 'function') {
+        acknowledge({ success: false, error: 'You are not in an active meeting.' });
+      }
+      return;
+    }
+    if (meeting.hostSocketId !== socket.id) {
+      if (typeof acknowledge === 'function') {
+        acknowledge({ success: false, error: 'Only the meeting host can end this meeting.' });
+      }
+      return;
+    }
+
+    endServerMeeting(meeting.serverId, 'host-ended');
+    if (typeof acknowledge === 'function') acknowledge({ success: true });
+  });
+
+  socket.on('meeting:media-state', (payload = {}) => {
+    const meeting = getOwnMeeting();
+    if (!meeting || !payload || typeof payload !== 'object') return;
+    const participant = meeting.participants.get(socket.id);
+    participant.microphoneEnabled = payload.microphoneEnabled === true;
+    participant.cameraEnabled = payload.cameraEnabled === true;
+    participant.screenSharing = payload.screenSharing === true;
+    io.to(serverMeetingRoom(meeting.serverId, meeting.meetingId)).emit('meeting:media-state', {
+      socketId: socket.id,
+      username: user,
+      microphoneEnabled: participant.microphoneEnabled,
+      cameraEnabled: participant.cameraEnabled,
+      screenSharing: participant.screenSharing
+    });
+    publishServerMeetingState(meeting.serverId);
+  });
+
+  function forwardMeetingSignal(eventName, payload, fieldName) {
+    const meeting = getOwnMeeting();
+    if (!meeting || !payload || typeof payload !== 'object') return;
+    const targetSocket = io.sockets.sockets.get(payload.to);
+    if (!targetSocket || !meeting.participants.has(payload.to) ||
+        targetSocket.data.meetingServerId !== meeting.serverId ||
+        !isServerMember(meeting.serverId, targetSocket.username)) return;
+    targetSocket.emit(eventName, {
+      from: socket.id,
+      username: user,
+      [fieldName]: payload[fieldName]
+    });
+  }
+
+  socket.on('meeting:offer', (payload = {}) => {
+    const description = payload?.description;
+    if (!description || description.type !== 'offer' ||
+        typeof description.sdp !== 'string' || description.sdp.length > 100000) return;
+    forwardMeetingSignal('meeting:offer', payload, 'description');
+  });
+
+  socket.on('meeting:answer', (payload = {}) => {
+    const description = payload?.description;
+    if (!description || description.type !== 'answer' ||
+        typeof description.sdp !== 'string' || description.sdp.length > 100000) return;
+    forwardMeetingSignal('meeting:answer', payload, 'description');
+  });
+
+  socket.on('meeting:ice', (payload = {}) => {
+    const candidate = payload?.candidate;
+    if (!candidate || typeof candidate !== 'object' ||
+        typeof candidate.candidate !== 'string' || candidate.candidate.length > 4096) return;
+    forwardMeetingSignal('meeting:ice', payload, 'candidate');
   });
 
   socket.on('dm message', (data) => {
@@ -2751,6 +3099,7 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     stopOwnStream();
+    leaveOwnMeeting();
     stopSocketTyping();
     if (user) {
       onlineUsers.delete(user);
