@@ -535,6 +535,119 @@ function hideMessageActions(element) {
   if (actions) actions.style.display = 'none';
 }
 
+function escapeMessageHtml(value) {
+  return String(value).replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[character]);
+}
+
+function getGoogleDriveImagePreviewUrl(rawUrl) {
+  try {
+    const url = new URL(rawUrl);
+    if (!['http:', 'https:'].includes(url.protocol) ||
+        !['drive.google.com', 'www.drive.google.com'].includes(url.hostname.toLowerCase())) {
+      return null;
+    }
+
+    const filePathMatch = url.pathname.match(/\/file\/d\/([a-zA-Z0-9_-]{10,})(?:\/|$)/);
+    const supportedQueryPath = /^\/(?:open|uc|thumbnail)$/i.test(url.pathname);
+    if (!filePathMatch && !supportedQueryPath) return null;
+
+    const fileId = filePathMatch?.[1] || url.searchParams.get('id');
+    if (!fileId || !/^[a-zA-Z0-9_-]{10,}$/.test(fileId)) return null;
+
+    const previewUrl = new URL('https://drive.google.com/uc');
+    previewUrl.searchParams.set('export', 'view');
+    previewUrl.searchParams.set('id', fileId);
+    return previewUrl.toString();
+  } catch {
+    return null;
+  }
+}
+
+function renderPlainMessageText(text) {
+  return escapeMessageHtml(text).replace(/@(\w+)/g, '<span class="mention">@$1</span>');
+}
+
+function formatMessageContent(message) {
+  const text = String(message || '');
+  const urlRegex = /(https?:\/\/[^\s<>]+)/gi;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = urlRegex.exec(text)) !== null) {
+    parts.push(renderPlainMessageText(text.slice(lastIndex, match.index)));
+
+    const rawUrl = match[0];
+    const punctuationMatch = rawUrl.match(/[.,!?;:)\]]+$/);
+    const punctuation = punctuationMatch ? punctuationMatch[0] : '';
+    const url = punctuation ? rawUrl.slice(0, -punctuation.length) : rawUrl;
+    const safeUrl = escapeMessageHtml(url);
+    const drivePreviewUrl = getGoogleDriveImagePreviewUrl(url);
+    const youtubeMatch = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/i);
+    const isImage = /\.(jpg|jpeg|png|gif|webp|svg)(\?[^#\s]*)?(?:#.*)?$/i.test(url);
+    const isVideo = /\.(mp4|webm|mov|avi|mkv|ogg)(\?[^#\s]*)?(?:#.*)?$/i.test(url);
+
+    if (drivePreviewUrl) {
+      const safePreviewUrl = escapeMessageHtml(drivePreviewUrl);
+      parts.push(
+        `<span class="drive-image-preview">` +
+          `<img src="${safePreviewUrl}" data-image-url="${safePreviewUrl}" alt="Google Drive image preview" class="message-image">` +
+          `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="message-link drive-image-original">Open in Google Drive</a>` +
+          `<span class="drive-preview-unavailable" hidden>Preview unavailable. Check the file's sharing settings; the Drive link is above.</span>` +
+        `</span>`
+      );
+    } else if (youtubeMatch) {
+      const videoId = youtubeMatch[1];
+      const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      parts.push(
+        `<div class="youtube-embed" ondblclick="window.open('${watchUrl}', '_blank')">` +
+          `<iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" ` +
+          `allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>` +
+        `</div>`
+      );
+    } else if (isVideo) {
+      parts.push(`<video src="${safeUrl}" class="message-video" controls preload="metadata"></video>`);
+    } else if (isImage) {
+      parts.push(`<img src="${safeUrl}" data-image-url="${safeUrl}" alt="Image" class="message-image">`);
+    } else {
+      parts.push(`<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="message-link">${safeUrl}</a>`);
+    }
+
+    parts.push(escapeMessageHtml(punctuation));
+    lastIndex = match.index + rawUrl.length;
+  }
+
+  parts.push(renderPlainMessageText(text.slice(lastIndex)));
+  return parts.join('');
+}
+
+function attachMessageContentHandlers(root) {
+  if (!root || typeof root.querySelectorAll !== 'function') return;
+
+  root.querySelectorAll('img.message-image').forEach(image => {
+    if (image.dataset.imageHandlerAttached) return;
+    image.dataset.imageHandlerAttached = 'true';
+    image.addEventListener('click', () => {
+      openImageModal(image.dataset.imageUrl || image.currentSrc || image.src);
+    });
+  });
+
+  root.querySelectorAll('.drive-image-preview img').forEach(image => {
+    image.addEventListener('error', () => {
+      image.hidden = true;
+      image.style.display = 'none';
+      const fallback = image.closest('.drive-image-preview')?.querySelector('.drive-preview-unavailable');
+      if (fallback) fallback.hidden = false;
+    }, { once: true });
+  });
+}
+
 function appendMessage(messageData, index, type) {
   const messagesContainer = document.getElementById('messages');
   const messageDiv = document.createElement('div');
@@ -549,68 +662,18 @@ function appendMessage(messageData, index, type) {
     return;
   }
 
-  let processedMessage = messageData.message || '';
-  
-  // Check for poll
-  if (processedMessage.startsWith('{"type":"poll"')) {
+  const messageText = messageData.message || '';
+
+  // Check for poll before converting links or escaping message text.
+  if (messageText.startsWith('{"type":"poll"')) {
     try {
-      const pollData = JSON.parse(processedMessage);
+      const pollData = JSON.parse(messageText);
       appendPoll(messageData, pollData);
       return;
     } catch (e) {}
   }
 
-  if (processedMessage.includes('@')) {
-    processedMessage = processedMessage.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
-  }
-
-  const urls = [];
-  const urlRegex = /(https?:\/\/[^\s]+)/gi;
-  let match;
-  
-  // First, find all URLs and their types
-  const processedParts = [];
-  let lastIndex = 0;
-  
-  while ((match = urlRegex.exec(processedMessage)) !== null) {
-    // Add text before the URL
-    processedParts.push(processedMessage.substring(lastIndex, match.index));
-    
-    let url = match[0];
-    // Clean up trailing punctuation that might be caught in the regex
-    const trailingPunctuation = /[.,!?;:]+$/;
-    const punctuationMatch = url.match(trailingPunctuation);
-    let punctuation = '';
-    if (punctuationMatch) {
-      punctuation = punctuationMatch[0];
-      url = url.substring(0, url.length - punctuation.length);
-    }
-
-    const youtubeMatch = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
-    const isImage = url.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?$/i);
-    const isVideo = url.match(/\.(mp4|webm|mov|avi|mkv|ogg)(\?[^\s]*)?$/i);
-    
-    if (youtubeMatch) {
-      const videoId = youtubeMatch[1];
-      const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-      processedParts.push(`<div class="youtube-embed" ondblclick="window.open('${fullUrl}', '_blank')">
-        <iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-      </div>${punctuation}`);
-    } else if (isVideo) {
-      processedParts.push(`<video src="${url}" class="message-video" controls preload="metadata"></video>${punctuation}`);
-    } else if (isImage) {
-      processedParts.push(`<img src="${url}" alt="Image" class="message-image" onclick="openImageModal('${url}')">${punctuation}`);
-    } else {
-      processedParts.push(`<a href="${url}" target="_blank" class="message-link">${url}</a>${punctuation}`);
-    }
-    
-    lastIndex = match.index + url.length + punctuation.length;
-    urlRegex.lastIndex = lastIndex;
-  }
-  
-  // Add remaining text
-  processedParts.push(processedMessage.substring(lastIndex));
-  processedMessage = processedParts.join('');
+  const processedMessage = formatMessageContent(messageText);
 
   const date = messageData.date || '';
   const time = messageData.time || '';
@@ -657,6 +720,7 @@ function appendMessage(messageData, index, type) {
           ${messageActions}
         </div>
       `;
+      attachMessageContentHandlers(messageDiv);
       autoScrollIfAtBottom();
     })
     .catch(() => {
@@ -673,6 +737,7 @@ function appendMessage(messageData, index, type) {
           ${messageActions}
         </div>
       `;
+      attachMessageContentHandlers(messageDiv);
       autoScrollIfAtBottom();
     });
 
@@ -1464,21 +1529,7 @@ function loadRoomMessages(roomId) {
           messageDiv.innerHTML = `<span class="content">${messageData.message}</span>`;
           messages.appendChild(messageDiv);
         } else {
-          // Process mentions, links, and images in the message
-          let processedMessage = messageData.message;
-          if (processedMessage.includes('@')) {
-            processedMessage = processedMessage.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
-          }
-
-          processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
-          processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(mp4|webm|mov|avi|mkv|ogg)(\?[^\s]*)?)/gi, '<video src="$1" class="message-video" controls preload="metadata"></video>');
-
-          processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, function(match) {
-            if (match.match(/\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|mov|avi|mkv|ogg)/i)) {
-              return match;
-            }
-            return '<a href="' + match + '" target="_blank" class="message-link">' + match + '</a>';
-          });
+          const processedMessage = formatMessageContent(messageData.message || '');
 
           // Get user's profile picture
           fetch(`/api/user-profile/${messageData.username}`)
@@ -1514,6 +1565,7 @@ function loadRoomMessages(roomId) {
                   ${messageActions}
                 </div>
               `;
+              attachMessageContentHandlers(messageDiv);
             })
             .catch(() => {
               const editedIndicator = messageData.edited ? ` <span class="edited">(edited at ${messageData.editedAt})</span>` : '';
@@ -1538,6 +1590,7 @@ function loadRoomMessages(roomId) {
                   ${messageActions}
                 </div>
               `;
+              attachMessageContentHandlers(messageDiv);
             });
           messages.appendChild(messageDiv);
         }
@@ -2145,25 +2198,7 @@ socket.on('chat message', (data) => {
   if (data.username === 'System') {
     messageDiv.innerHTML = `<span class="content">${data.message}</span>`;
   } else {
-    // Process mentions, links, and images in the message
-    let processedMessage = data.message;
-    if (processedMessage.includes('@')) {
-      processedMessage = processedMessage.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
-    }
-
-    // Process images FIRST (before links to prevent double wrapping)
-    // Match image URLs with common extensions (with or without query parameters)
-    processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?)/gi, '<img src="$1" alt="Image" class="message-image" onclick="openImageModal(\'$1\')">');
-    processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+\.(mp4|webm|mov|avi|mkv|ogg)(\?[^\s]*)?)/gi, '<video src="$1" class="message-video" controls preload="metadata"></video>');
-
-    // Process remaining links (that aren't already images)
-    processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, function(match) {
-      // Don't link if it's already an image or video
-      if (match.match(/\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|mov|avi|mkv|ogg)/i)) {
-        return match;
-      }
-      return '<a href="' + match + '" target="_blank" class="message-link">' + match + '</a>';
-    });
+    const processedMessage = formatMessageContent(data.message || '');
 
     // Get user's profile picture
     fetch(`/api/user-profile/${data.username}`)
@@ -2197,6 +2232,7 @@ socket.on('chat message', (data) => {
             ${messageActions}
           </div>
         `;
+        attachMessageContentHandlers(messageDiv);
       })
       .catch(() => {
         // Fallback without profile picture
@@ -2220,6 +2256,7 @@ socket.on('chat message', (data) => {
             ${messageActions}
           </div>
         `;
+        attachMessageContentHandlers(messageDiv);
       });
   }
 
