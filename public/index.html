@@ -4,6 +4,7 @@
   <title>Sigmachat</title>
   <link rel="icon" type="image/png" href="/favicon.png" id="favicon-link">
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/meetings.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script>
     (function() {
@@ -129,14 +130,20 @@
             <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 7.25A2.25 2.25 0 0 1 7 5h7.5a2.25 2.25 0 0 1 2.25 2.25v1.1l3.23-2.15a1.25 1.25 0 0 1 1.94 1.04v9.52a1.25 1.25 0 0 1-1.94 1.04l-3.23-2.15v1.1A2.25 2.25 0 0 1 14.5 19H7a2.25 2.25 0 0 1-2.25-2.25z"/></svg>
           </span>
           <div>
-            <p class="meeting-eyebrow">SERVER MEETING</p>
-            <h2 id="meeting-title">A little face time</h2>
+            <p class="meeting-eyebrow">MEETING</p>
+            <h2 id="meeting-title">Server meeting</h2>
             <p class="meeting-server-line"><span id="meeting-server-name">Your server</span><span class="meeting-dot" aria-hidden="true"></span><span id="meeting-status" role="status" aria-live="polite">Ready when you are</span></p>
           </div>
         </div>
-        <button type="button" id="meeting-close-btn" class="meeting-close" aria-label="Close meeting window">
-          <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="m5 5 10 10M15 5 5 15"/></svg>
-        </button>
+        <div class="meeting-window-actions">
+          <button type="button" id="meeting-minimize-btn" class="meeting-window-action" aria-label="Minimize meeting" title="Minimize meeting">
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10h12"/></svg>
+          </button>
+          <button type="button" id="meeting-maximize-btn" class="meeting-window-action" aria-label="Enlarge meeting" title="Enlarge meeting">
+            <svg class="meeting-expand-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M7 4H4v3m0-3 5 5m4 7h3v-3m0 3-5-5"/></svg>
+            <svg class="meeting-restore-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M7 4v3H4m0 0 5 5m4 4v-3h3m0 0-5-5"/></svg>
+          </button>
+        </div>
       </header>
 
       <div class="meeting-body">
@@ -158,12 +165,6 @@
               </div>
               <div class="meeting-empty-copy"><strong>Room to join</strong><span>Invite someone into the conversation</span></div>
             </article>
-          </div>
-          <div class="meeting-invite-note">
-            <span class="meeting-note-icon" aria-hidden="true">
-              <svg viewBox="0 0 20 20" focusable="false"><path d="M10 2.75v9.5m0 0 3.5-3.5M10 12.25l-3.5-3.5M4 13.75v2A1.5 1.5 0 0 0 5.5 17.25h9a1.5 1.5 0 0 0 1.5-1.5v-2"/></svg>
-            </span>
-            <span><strong>Good conversations start here.</strong> Your server is just one click away.</span>
           </div>
         </main>
 
@@ -195,13 +196,17 @@
       <footer class="meeting-footer">
         <div class="meeting-footer-context"><span class="meeting-live-indicator" aria-hidden="true"></span><span>Private to this server</span></div>
         <div class="meeting-controls" aria-label="Meeting controls">
-          <button type="button" id="meeting-mic-toggle" class="meeting-control" aria-label="Mute microphone" title="Mute microphone">
+          <button type="button" id="meeting-mic-toggle" class="meeting-control is-off" aria-label="Turn microphone on" aria-pressed="false" title="Turn microphone on">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-5a3.5 3.5 0 0 0-7 0v5A3.5 3.5 0 0 0 12 15Zm6-3.5a6 6 0 0 1-12 0M12 18v3m-3 0h6"/></svg>
-            <span>Mute</span>
+            <span>Unmute</span>
           </button>
-          <button type="button" id="meeting-camera-toggle" class="meeting-control" aria-label="Turn camera off" title="Turn camera off">
+          <button type="button" id="meeting-camera-toggle" class="meeting-control is-off" aria-label="Start video" aria-pressed="false" title="Start video">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.75 7.5A2.25 2.25 0 0 1 7 5.25h6.5a2.25 2.25 0 0 1 2.25 2.25v1.1l3.4-2.27a1 1 0 0 1 1.55.83v9.68a1 1 0 0 1-1.55.83l-3.4-2.27v1.1A2.25 2.25 0 0 1 13.5 18.75H7a2.25 2.25 0 0 1-2.25-2.25z"/></svg>
-            <span>Camera</span>
+            <span>Start video</span>
+          </button>
+          <button type="button" id="meeting-participants-toggle" class="meeting-control" aria-label="Hide participants panel" aria-expanded="true" title="Participants">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20m6-8a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm6-7.5a4 4 0 0 1 0 7.75m2 3.25a3.5 3.5 0 0 1 2 3.15V20"/></svg>
+            <span>Participants <b id="meeting-control-participant-count">1</b></span>
           </button>
           <button type="button" id="meeting-screen-share" class="meeting-control meeting-share-control" aria-label="Share your screen" title="Share your screen">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.75" y="4.75" width="16.5" height="12" rx="2"/><path d="M8 21h8m-4-4.25V21m-2-9 2-2 2 2m-2-2v5"/></svg>

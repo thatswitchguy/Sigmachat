@@ -2578,6 +2578,56 @@ input:checked + .slider:before {
   object-fit: cover;
 }
 
+.message-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.message-row > img,
+.message-row > div:first-child {
+  margin-right: 0 !important;
+}
+
+.message-body-column {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.message-author-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 20px;
+}
+
+.message-author-line .username {
+  font-weight: 600;
+}
+
+.message-author-line .timestamp {
+  color: #72767d;
+  font-size: 10px;
+}
+
+.message-content {
+  display: block;
+  min-width: 0;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
+.message-content .message-image,
+.message-content .drive-image-preview,
+.message-content .message-video,
+.message-content .youtube-embed {
+  display: block;
+  clear: both;
+  float: none;
+}
+
 .message-image:hover {
   opacity: 0.8;
 }

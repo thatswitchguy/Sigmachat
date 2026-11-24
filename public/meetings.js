@@ -35,6 +35,47 @@ function updateMeetingButton(state = {}) {
   button.title = isActive ? 'Join the active server meeting' : 'Start a server meeting';
 }
 
+function updateMeetingWindowActions() {
+  const overlay = document.getElementById('meeting-overlay');
+  const maximizeButton = document.getElementById('meeting-maximize-btn');
+  if (!overlay || !maximizeButton) return;
+  const label = overlay.classList.contains('is-maximized') || overlay.classList.contains('is-minimized')
+    ? 'Restore meeting'
+    : 'Enlarge meeting';
+  maximizeButton.setAttribute('aria-label', label);
+  maximizeButton.title = label;
+}
+
+function minimizeMeetingWindow() {
+  const overlay = document.getElementById('meeting-overlay');
+  if (!overlay) return;
+  overlay.classList.add('is-minimized');
+  overlay.classList.remove('is-maximized');
+  overlay.setAttribute('aria-modal', 'false');
+  updateMeetingWindowActions();
+}
+
+function restoreMeetingWindow() {
+  const overlay = document.getElementById('meeting-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('is-minimized', 'is-maximized');
+  overlay.setAttribute('aria-modal', 'true');
+  updateMeetingWindowActions();
+}
+
+function toggleMeetingMaximize() {
+  const overlay = document.getElementById('meeting-overlay');
+  if (!overlay) return;
+  if (overlay.classList.contains('is-minimized')) {
+    overlay.classList.remove('is-minimized');
+    overlay.classList.add('is-maximized');
+    overlay.setAttribute('aria-modal', 'true');
+  } else {
+    overlay.classList.toggle('is-maximized');
+  }
+  updateMeetingWindowActions();
+}
+
 function refreshMeetingStatus(serverId = currentServer) {
   if (!serverId || !socket.connected) return;
   socket.timeout(5000).emit('meeting:status', { serverId }, (error, response) => {
@@ -163,10 +204,12 @@ function renderMeetingState() {
   setMeetingStatus(`${participantCount} participant${participantCount === 1 ? '' : 's'} in the meeting`);
 
   const count = document.querySelector('.meeting-count');
+  const toolbarCount = document.getElementById('meeting-control-participant-count');
   if (count) {
     count.textContent = String(participantCount);
     count.setAttribute('aria-label', `${participantCount} participant${participantCount === 1 ? '' : 's'}`);
   }
+  if (toolbarCount) toolbarCount.textContent = String(participantCount);
 
   const localAvatar = document.querySelector('.meeting-tile-local .meeting-avatar-you');
   if (localAvatar && username) localAvatar.textContent = username.charAt(0).toUpperCase();
@@ -236,15 +279,19 @@ function updateMeetingControls() {
     const label = micEnabled ? 'Mute microphone' : 'Turn microphone on';
     micButton.setAttribute('aria-label', label);
     micButton.title = label;
-    micButton.querySelector('span').textContent = micEnabled ? 'Mute' : 'Mic off';
+    micButton.setAttribute('aria-pressed', String(micEnabled));
+    micButton.querySelector('span').textContent = micEnabled ? 'Mute' : 'Unmute';
     micButton.classList.toggle('meeting-control-active', micEnabled);
+    micButton.classList.toggle('is-off', !micEnabled);
   }
   if (cameraButton) {
     const label = cameraEnabled ? 'Turn camera off' : 'Turn camera on';
     cameraButton.setAttribute('aria-label', label);
     cameraButton.title = label;
-    cameraButton.querySelector('span').textContent = cameraEnabled ? 'Camera on' : 'Camera off';
+    cameraButton.setAttribute('aria-pressed', String(cameraEnabled));
+    cameraButton.querySelector('span').textContent = cameraEnabled ? 'Stop video' : 'Start video';
     cameraButton.classList.toggle('meeting-control-active', cameraEnabled);
+    cameraButton.classList.toggle('is-off', !cameraEnabled);
   }
   if (shareButton) {
     const label = screenSharing ? 'Stop sharing your screen' : 'Share your screen';
@@ -276,6 +323,7 @@ async function openOrStartServerMeeting() {
   const serverId = currentServer || 'sigmachat';
   if (currentMeeting?.serverId === serverId) {
     document.getElementById('meeting-overlay').hidden = false;
+    restoreMeetingWindow();
     return;
   }
   if (currentMeeting) await leaveCurrentMeeting();
@@ -438,6 +486,7 @@ async function handleMeetingJoined(state) {
   currentMeeting = state;
   const overlay = document.getElementById('meeting-overlay');
   if (overlay) overlay.hidden = false;
+  restoreMeetingWindow();
   renderMeetingState();
   const otherParticipants = state.participants.filter(participant => participant.socketId !== socket.id);
   for (const participant of otherParticipants) {
@@ -665,6 +714,7 @@ function finishMeetingLocally(markInactive = false) {
   updateMeetingControls();
   const overlay = document.getElementById('meeting-overlay');
   if (overlay) overlay.hidden = true;
+  restoreMeetingWindow();
 }
 
 document.getElementById('meeting-button')?.addEventListener('click', openOrStartServerMeeting);
@@ -672,7 +722,17 @@ document.getElementById('meeting-mic-toggle')?.addEventListener('click', () => t
 document.getElementById('meeting-camera-toggle')?.addEventListener('click', () => toggleMeetingMedia('camera'));
 document.getElementById('meeting-screen-share')?.addEventListener('click', toggleMeetingScreenShare);
 document.getElementById('meeting-leave')?.addEventListener('click', () => leaveCurrentMeeting());
-document.getElementById('meeting-close-btn')?.addEventListener('click', () => leaveCurrentMeeting());
+document.getElementById('meeting-minimize-btn')?.addEventListener('click', minimizeMeetingWindow);
+document.getElementById('meeting-maximize-btn')?.addEventListener('click', toggleMeetingMaximize);
+document.getElementById('meeting-participants-toggle')?.addEventListener('click', event => {
+  const overlay = document.getElementById('meeting-overlay');
+  if (!overlay) return;
+  const hidden = overlay.classList.toggle('is-participants-hidden');
+  const label = hidden ? 'Show participants panel' : 'Hide participants panel';
+  event.currentTarget.setAttribute('aria-expanded', String(!hidden));
+  event.currentTarget.setAttribute('aria-label', label);
+  event.currentTarget.title = label;
+});
 document.getElementById('meeting-end')?.addEventListener('click', async () => {
   if (!currentMeeting) return;
   const response = await sendMeetingRequest('meeting:end');

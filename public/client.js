@@ -547,56 +547,122 @@ function escapeMessageHtml(value) {
 }
 
 
-function getGoogleDriveImagePreviewUrl(rawUrl, width = 1600) {
+
+
+
+
+function getGoogleDriveImagePreviewUrl(rawUrl, width = 1800) {
   try {
     const url = new URL(rawUrl.trim());
 
     if (!['http:', 'https:'].includes(url.protocol)) return null;
 
-    const hostname = url.hostname.toLowerCase();
-
-    if (!['drive.google.com', 'www.drive.google.com'].includes(hostname)) {
-      return null;
-    }
+    if (!['drive.google.com', 'www.drive.google.com'].includes(
+      url.hostname.toLowerCase()
+    )) return null;
 
     let fileId = null;
 
-    // Standard Google Drive file link
-    const filePathMatch = url.pathname.match(
+    const match = url.pathname.match(
       /\/file\/d\/([a-zA-Z0-9_-]{10,})(?:\/|$)/
     );
 
-    if (filePathMatch) {
-      fileId = filePathMatch[1];
-    }
+    if (match) fileId = match[1];
 
-    // Other supported Google Drive URL formats
     if (!fileId && /^\/(open|uc|thumbnail)$/i.test(url.pathname)) {
       fileId = url.searchParams.get('id');
     }
 
-    // Validate the file ID
     if (!fileId || !/^[a-zA-Z0-9_-]{10,}$/.test(fileId)) {
       return null;
     }
 
-    // Generate a direct image thumbnail URL
     const previewUrl = new URL('https://drive.google.com/thumbnail');
-
     previewUrl.searchParams.set('id', fileId);
-    previewUrl.searchParams.set('sz', `w${Math.max(100, Math.min(4000, width))}`);
+    previewUrl.searchParams.set(
+      'sz',
+      `w${Math.max(100, Math.min(4000, width))}`
+    );
 
     return previewUrl.toString();
-
   } catch {
     return null;
   }
 }
 
-// Use this for all image URLs
 function getImageSrc(rawUrl) {
-  return getGoogleDriveImagePreviewUrl(rawUrl) || rawUrl;
+  if (typeof rawUrl !== 'string' || !rawUrl.trim()) return null;
+  return getGoogleDriveImagePreviewUrl(rawUrl) || rawUrl.trim();
 }
+
+function createImageContainer(parent) {
+  const container = document.createElement('div');
+
+  container.style.display = 'flex';
+  container.style.flexDirection = 'row';
+  container.style.flexWrap = 'wrap';
+  container.style.alignItems = 'flex-start';
+  container.style.gap = '12px';
+  container.style.width = '100%';
+  container.style.maxWidth = '100%';
+  container.style.boxSizing = 'border-box';
+  container.style.clear = 'both';
+  container.style.float = 'none';
+  container.style.marginTop = '0';
+  container.style.marginBottom = '12px';
+
+  // Force two line breaks before images
+  parent.appendChild(document.createElement('br'));
+  parent.appendChild(document.createElement('br'));
+  parent.appendChild(container);
+
+  return container;
+}
+
+// Add image to container
+function addImage(imageUrl, container, options = {}) {
+  if (!imageUrl || !container) return null;
+
+  const img = document.createElement('img');
+
+  img.src = getImageSrc(imageUrl);
+  img.alt = options.alt || 'Image';
+  img.loading = 'lazy';
+  img.referrerPolicy = 'no-referrer';
+
+  // Image size: 800px by default
+  img.style.display = 'block';
+  img.style.maxWidth = options.maxWidth || '800px';
+  img.style.maxHeight = options.maxHeight || '800px';
+  img.style.width = 'auto';
+  img.style.height = 'auto';
+  img.style.objectFit = 'contain';
+  img.style.borderRadius = '6px';
+  img.style.flexShrink = '0';
+
+  img.onerror = () => {
+    console.error('Failed to load image:', imageUrl);
+    img.remove();
+  };
+
+  container.appendChild(img);
+
+  return img;
+}
+
+// Add multiple images below the message
+function addImages(imageUrls, messageElement, options = {}) {
+  if (!messageElement || !Array.isArray(imageUrls)) return null;
+
+  const container = createImageContainer(messageElement);
+
+  imageUrls.forEach(url => {
+    addImage(url, container, options);
+  });
+
+  return container;
+}
+
 
 
 function renderPlainMessageText(text) {
@@ -738,13 +804,15 @@ function appendMessage(messageData, index, type) {
       }
 
       messageDiv.innerHTML = `
-        <div style="display: flex; align-items: flex-start;">
+        <div class="message-row">
           ${avatar}
-          <div style="flex: 1;">
+          <div class="message-body-column">
             ${date ? `<div class="message-date">${date}</div>` : ''}
-            <span class="timestamp">[${time}]</span>
-            <span class="username">${displayUsername}:</span>
-            <span class="content">${processedMessage}</span>
+            <div class="message-author-line">
+              <span class="username">${displayUsername}</span>
+              <span class="timestamp">[${time}]</span>
+            </div>
+            <div class="content message-content">${processedMessage}</div>
             ${editedIndicator}
           </div>
           ${messageActions}
@@ -755,13 +823,15 @@ function appendMessage(messageData, index, type) {
     })
     .catch(() => {
       messageDiv.innerHTML = `
-        <div style="display: flex; align-items: flex-start;">
+        <div class="message-row">
           <div style="width: 32px; height: 32px; border-radius: 50%; background-color: #5865f2; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 8px;">${displayUsername.charAt(0).toUpperCase()}</div>
-          <div style="flex: 1;">
+          <div class="message-body-column">
             ${date ? `<div class="message-date">${date}</div>` : ''}
-            <span class="timestamp">[${time}]</span>
-            <span class="username">${displayUsername}:</span>
-            <span class="content">${processedMessage}</span>
+            <div class="message-author-line">
+              <span class="username">${displayUsername}</span>
+              <span class="timestamp">[${time}]</span>
+            </div>
+            <div class="content message-content">${processedMessage}</div>
             ${editedIndicator}
           </div>
           ${messageActions}
@@ -1583,13 +1653,15 @@ function loadRoomMessages(roomId) {
               const date = messageData.date || '';
               const time = messageData.time || '';
               messageDiv.innerHTML = `
-                <div style="display: flex; align-items: center;">
+                <div class="message-row">
                   ${avatarContent}
-                  <div style="flex: 1;">
+                  <div class="message-body-column">
                     ${date ? `<div class="message-date">${date}</div>` : ''}
-                    <span class="timestamp">[${time}]</span>
-                    <span class="username">${messageData.username}:</span>
-                    <span class="content">${processedMessage}</span>
+                    <div class="message-author-line">
+                      <span class="username">${messageData.username}</span>
+                      <span class="timestamp">[${time}]</span>
+                    </div>
+                    <div class="content message-content">${processedMessage}</div>
                     ${editedIndicator}
                   </div>
                   ${messageActions}
@@ -1609,12 +1681,14 @@ function loadRoomMessages(roomId) {
               const date = messageData.date || '';
               const time = messageData.time || '';
               messageDiv.innerHTML = `
-                <div style="display: flex; align-items: center;">
-                  <div style="flex: 1;">
+                <div class="message-row">
+                  <div class="message-body-column">
                     ${date ? `<div class="message-date">${date}</div>` : ''}
-                    <span class="timestamp">[${time}]</span>
-                    <span class="username">${messageData.username}:</span>
-                    <span class="content">${processedMessage}</span>
+                    <div class="message-author-line">
+                      <span class="username">${messageData.username}</span>
+                      <span class="timestamp">[${time}]</span>
+                    </div>
+                    <div class="content message-content">${processedMessage}</div>
                     ${editedIndicator}
                   </div>
                   ${messageActions}
@@ -2251,13 +2325,15 @@ socket.on('chat message', (data) => {
         const msgDate = data.date || '';
         const msgTime = data.time || '';
         messageDiv.innerHTML = `
-          <div style="display: flex; align-items: center;">
+          <div class="message-row">
             ${avatarContent}
-            <div style="flex: 1;">
+            <div class="message-body-column">
               ${msgDate ? `<div class="message-date">${msgDate}</div>` : ''}
-              <span class="timestamp">[${msgTime}]</span>
-              <span class="username">${data.username}:</span>
-              <span class="content">${processedMessage}</span>
+              <div class="message-author-line">
+                <span class="username">${data.username}</span>
+                <span class="timestamp">[${msgTime}]</span>
+              </div>
+              <div class="content message-content">${processedMessage}</div>
             </div>
             ${messageActions}
           </div>
@@ -2276,12 +2352,14 @@ socket.on('chat message', (data) => {
         const msgDate2 = data.date || '';
         const msgTime2 = data.time || '';
         messageDiv.innerHTML = `
-          <div style="display: flex; align-items: center;">
-            <div style="flex: 1;">
+          <div class="message-row">
+            <div class="message-body-column">
               ${msgDate2 ? `<div class="message-date">${msgDate2}</div>` : ''}
-              <span class="timestamp">[${msgTime2}]</span>
-              <span class="username">${data.username}:</span>
-              <span class="content">${processedMessage}</span>
+              <div class="message-author-line">
+                <span class="username">${data.username}</span>
+                <span class="timestamp">[${msgTime2}]</span>
+              </div>
+              <div class="content message-content">${processedMessage}</div>
             </div>
             ${messageActions}
           </div>
