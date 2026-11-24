@@ -4,13 +4,18 @@
     "password": "$2b$10$3.1WWaDWN3xdWjuoDLpFa.Lt2SerRx/A4vGxe4k/nWxc//V06XU1q",
     "createdAt": "2025-06-29T14:12:05.766Z"
   },
-  "test123": {
-    "username": "Adam",
+  "uthman": {
+    "username": "uthman",
+    "password": "$2a$10$8Yi6oy0kuD1FFp54dmXtAeynuycJ95NNj/PCBFiU3igPCxp91.iTG",
+    "createdAt": "2026-11-24T17:54:27.644Z"
+  },
+  "adam": {
+    "username": "adam",
     "password": "$2a$10$szonTz5gNnhc6kLncsYfTOj67Hc/uWp3Latnlyj8Y4Gnxsd/EB01G",
     "createdAt": "2026-10-14T20:35:14.589Z"
   },
-  "qwerty": {
-    "username": "qwerty",
+  "musaab": {
+    "username": "musaab",
     "password": "$2a$10$cl9Ye0lWceTvMbOVj.57Z.7u5fqg6.7TVODiw3q0rzbpWvb3wOnV6",
     "createdAt": "2026-11-12T23:09:20.205Z"
   }

@@ -238,7 +238,7 @@ function renderMeetingState() {
       meta.append(name, media);
       const state = document.createElement('span');
       state.className = 'meeting-person-state';
-      state.textContent = participant.microphoneEnabled ? 'Mic on' : 'Mic off';
+  
       state.setAttribute('aria-label', participant.microphoneEnabled ? 'Microphone on' : 'Microphone off');
       item.append(avatar, meta, state);
       roster.appendChild(item);

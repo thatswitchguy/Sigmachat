@@ -1809,15 +1809,7 @@ input:checked + .slider:before {
   font-size: 10px;
 }
 
-.meeting-person-state {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  color: #67816c;
-  background: #edf0e7;
-  border-radius: 8px;
-}
+
 
 .meeting-person-state svg {
   width: 15px;
