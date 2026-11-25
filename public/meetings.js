@@ -31,6 +31,42 @@ function isPoliteMeetingPeer(peerSocketId) {
   return String(socket.id) < String(peerSocketId);
 }
 
+function getMeetingPeerTransceivers(peerConnection) {
+  const transceivers = peerConnection?.getTransceivers?.() || [];
+  // Associated transceivers follow the negotiated m-line order, which is the order every
+  // browser uses for remote tracks. Fall back to creation order before negotiation.
+  const associated = transceivers.filter(transceiver =>
+    transceiver.mid !== null && transceiver.mid !== undefined && transceiver.mid !== '');
+  return associated.length ? associated : transceivers;
+}
+
+function getMeetingTransceiverRoles(peerConnection) {
+  const audio = [];
+  const video = [];
+  getMeetingPeerTransceivers(peerConnection).forEach(transceiver => {
+    const kind = transceiver?.receiver?.track?.kind || transceiver?.sender?.track?.kind;
+    if (kind === 'audio') audio.push(transceiver);
+    else if (kind === 'video') video.push(transceiver);
+  });
+  // Both peers create their transceivers in this order: mic, camera, screen, screen audio.
+  return {
+    microphone: audio[0] || null,
+    screenAudio: audio[1] || null,
+    camera: video[0] || null,
+    screen: video[1] || null
+  };
+}
+
+function refreshMeetingTransceivers(record) {
+  if (!record?.peerConnection) return getMeetingTransceiverRoles(null);
+  const roles = getMeetingTransceiverRoles(record.peerConnection);
+  if (roles.microphone) record.audioTransceiver = roles.microphone;
+  if (roles.camera) record.cameraTransceiver = roles.camera;
+  if (roles.screen) record.screenTransceiver = roles.screen;
+  if (roles.screenAudio) record.screenAudioTransceiver = roles.screenAudio;
+  return roles;
+}
+
 function stopMeetingStreamTracks(stream) {
   if (!stream) return;
   stream.getTracks().forEach(track => {
@@ -76,12 +112,16 @@ async function getMeetingCameraStream() {
 function watchMeetingLocalTrackEnded(stream, kind) {
   const track = stream.getTracks()[0];
   if (!track) return;
-  track.onended = () => {
+  track.onended = async () => {
     if (kind === 'camera' && meetingCameraStream === stream) meetingCameraStream = null;
     else if (kind === 'microphone' && meetingMicrophoneStream === stream) meetingMicrophoneStream = null;
     else return;
     stopMeetingStreamTracks(stream);
     if (!currentMeeting) return;
+    // Never keep an ended track on a sender; the browser would publish a dead stream.
+    const senderKey = kind === 'microphone' ? 'audioTransceiver' : 'cameraTransceiver';
+    await Promise.all(Array.from(meetingPeerConnections.values(), record =>
+      meetingSendTrack(record, senderKey, null)));
     syncMeetingMediaState();
     requestMeetingRenegotiation();
     showNotification(`Your ${kind} stopped. Turn it on again to keep sharing it.`, 'warning');
@@ -234,7 +274,12 @@ function createMeetingParticipantTile(participant) {
   audio.autoplay = true;
   audio.setAttribute('aria-label', `${participant.username}'s audio`);
 
-  tile.append(cameraVideo, screenVideo, placeholder, caption, audio);
+  const screenAudio = document.createElement('audio');
+  screenAudio.className = 'meeting-screen-audio';
+  screenAudio.autoplay = true;
+  screenAudio.setAttribute('aria-label', `${participant.username}'s shared screen audio`);
+
+  tile.append(cameraVideo, screenVideo, placeholder, caption, audio, screenAudio);
   return tile;
 }
 
@@ -281,9 +326,11 @@ function updateMeetingParticipantTile(participant) {
   // Receivers can exist without an ontrack for this tile, so attach them directly.
   const mediaRecord = meetingPeerConnections.get(participant.socketId);
   if (mediaRecord) {
-    attachMeetingRemoteTrack(mediaRecord.cameraTransceiver, cameraVideo);
-    attachMeetingRemoteTrack(mediaRecord.screenTransceiver, screenVideo);
-    attachMeetingRemoteTrack(mediaRecord.audioTransceiver, tile.querySelector('.meeting-remote-audio'));
+    const roles = refreshMeetingTransceivers(mediaRecord);
+    attachMeetingRemoteTrack(roles.camera, cameraVideo);
+    attachMeetingRemoteTrack(roles.screen, screenVideo);
+    attachMeetingRemoteTrack(roles.microphone, tile.querySelector('.meeting-remote-audio'));
+    attachMeetingRemoteTrack(roles.screenAudio, tile.querySelector('.meeting-screen-audio'));
   }
 
   const hasCamera = Boolean(participant.cameraEnabled && cameraVideo?.srcObject);
@@ -342,7 +389,7 @@ function renderMeetingState() {
       const name = document.createElement('strong');
       name.textContent = participant.socketId === socket.id ? `${username || 'You'} (you)` : (participant.username || 'Participant');
       const media = document.createElement('small');
-      media.textContent = `${participant.microphoneEnabled ? 'Mic on' : 'Mic off'} · ${participant.cameraEnabled ? 'Camera on' : 'Camera off'}`;
+      media.textContent = `${participant.microphoneEnabled ? 'Mic on' : 'Mic off'} · ${participant.cameraEnabled ? 'Camera on' : 'Camera off'}${participant.screenSharing ? ' · Sharing screen' : ''}`;
       meta.append(name, media);
       const state = document.createElement('span');
       state.className = 'meeting-person-state';
@@ -502,6 +549,7 @@ function createMeetingPeerConnection(participant) {
   const audioTransceiver = peerConnection.addTransceiver('audio', { direction: 'sendrecv' });
   const cameraTransceiver = peerConnection.addTransceiver('video', { direction: 'sendrecv' });
   const screenTransceiver = peerConnection.addTransceiver('video', { direction: 'sendrecv' });
+  const screenAudioTransceiver = peerConnection.addTransceiver('audio', { direction: 'sendrecv' });
   const record = {
     socketId: participant.socketId,
     username: participant.username,
@@ -509,10 +557,12 @@ function createMeetingPeerConnection(participant) {
     audioTransceiver,
     cameraTransceiver,
     screenTransceiver,
+    screenAudioTransceiver,
     polite: isPoliteMeetingPeer(participant.socketId),
     makingOffer: false,
     ignoreOffer: false,
-    hasOffered: false
+    hasOffered: false,
+    lastIceRestartAt: 0
   };
   meetingPeerConnections.set(participant.socketId, record);
   ensureMeetingParticipantTile(participant);
@@ -528,14 +578,22 @@ function createMeetingPeerConnection(participant) {
   peerConnection.ontrack = event => {
     const tile = ensureMeetingParticipantTile({ socketId: participant.socketId, username: record.username });
     if (!tile) return;
+    const roles = refreshMeetingTransceivers(record);
     let mediaElement;
 
-    if (event.transceiver === audioTransceiver) {
+    if (event.transceiver === roles.microphone) {
       mediaElement = tile.querySelector('.meeting-remote-audio');
-    } else if (event.transceiver === cameraTransceiver) {
+    } else if (event.transceiver === roles.camera) {
       mediaElement = tile.querySelector('.meeting-tile-camera');
-    } else if (event.transceiver === screenTransceiver) {
+    } else if (event.transceiver === roles.screen) {
       mediaElement = tile.querySelector('.meeting-tile-screen');
+    } else if (event.transceiver === roles.screenAudio) {
+      mediaElement = tile.querySelector('.meeting-screen-audio');
+    }
+    if (!mediaElement) {
+      mediaElement = event.track.kind === 'video'
+        ? tile.querySelector('.meeting-tile-camera')
+        : tile.querySelector('.meeting-remote-audio');
     }
     if (!mediaElement) return;
 
@@ -560,34 +618,62 @@ function createMeetingPeerConnection(participant) {
     if (currentParticipant) updateMeetingParticipantTile(currentParticipant);
   };
   peerConnection.onconnectionstatechange = () => {
+    if (!currentMeeting) return;
+    const participantCount = currentMeeting.participants?.length || 1;
     if (peerConnection.connectionState === 'connected') {
-      setMeetingStatus(`${currentMeeting?.participants?.length || 1} participant${(currentMeeting?.participants?.length || 1) === 1 ? '' : 's'} in the meeting`);
+      setMeetingStatus(`${participantCount} participant${participantCount === 1 ? '' : 's'} in the meeting`);
     } else if (peerConnection.connectionState === 'failed') {
-      setMeetingStatus('A participant could not connect. Network restrictions may block peer-to-peer calls.');
+      restartMeetingConnection(record);
     }
   };
 
   return record;
 }
 
+function meetingSendTrack(record, transceiverKey, track) {
+  const sender = record?.[transceiverKey]?.sender;
+  if (!sender) return Promise.resolve();
+  return sender.replaceTrack(track).catch(error => {
+    console.warn(`Could not update the meeting ${transceiverKey}:`, error);
+  });
+}
+
 async function attachLocalTracks(record) {
+  if (!record) return;
+  refreshMeetingTransceivers(record);
   const microphoneTrack = meetingMicrophoneStream?.getAudioTracks()[0] || null;
   const cameraTrack = meetingCameraStream?.getVideoTracks()[0] || null;
   const screenTrack = meetingScreenStream?.getVideoTracks()[0] || null;
+  const screenAudioTrack = meetingScreenStream?.getAudioTracks()[0] || null;
   await Promise.all([
-    record.audioTransceiver.sender.replaceTrack(microphoneTrack),
-    record.cameraTransceiver.sender.replaceTrack(cameraTrack),
-    record.screenTransceiver.sender.replaceTrack(screenTrack)
+    meetingSendTrack(record, 'audioTransceiver', microphoneTrack),
+    meetingSendTrack(record, 'cameraTransceiver', cameraTrack),
+    meetingSendTrack(record, 'screenTransceiver', screenTrack),
+    meetingSendTrack(record, 'screenAudioTransceiver', screenAudioTrack)
   ]);
 }
 
-async function sendMeetingOffer(record) {
+function restartMeetingConnection(record) {
+  if (!record?.peerConnection || !currentMeeting) return;
+  const now = Date.now();
+  // A failed connection can recover on a new network path, but not in a tight loop.
+  if (record.lastIceRestartAt && now - record.lastIceRestartAt < 5000) {
+    setMeetingStatus('A participant could not connect. Network restrictions may block peer-to-peer calls.');
+    return;
+  }
+  if (record.peerConnection.signalingState !== 'stable') return;
+  record.lastIceRestartAt = now;
+  setMeetingStatus(`Reconnecting to ${record.username || 'a participant'}…`);
+  sendMeetingOffer(record, { iceRestart: true });
+}
+
+async function sendMeetingOffer(record, options = {}) {
   const peerConnection = record?.peerConnection;
   if (!peerConnection || !currentMeeting) return;
   if (peerConnection.signalingState !== 'stable') return;
   try {
     record.makingOffer = true;
-    const offer = await peerConnection.createOffer();
+    const offer = await peerConnection.createOffer(options);
     if (peerConnection.signalingState !== 'stable') return;
     await peerConnection.setLocalDescription(offer);
     socket.emit('meeting:offer', {
@@ -734,14 +820,31 @@ async function toggleMeetingMedia(kind) {
 }
 
 async function tuneMeetingScreenSender(sender) {
+  if (!sender) return;
   try {
     const parameters = sender.getParameters();
+    if (!parameters.encodings || !parameters.encodings.length) parameters.encodings = [{}];
     // Keep text and detail readable instead of letting the encoder drop resolution.
+    parameters.encodings[0].maxBitrate = 4_000_000;
+    parameters.encodings[0].maxFramerate = 30;
     parameters.degradationPreference = 'maintain-resolution';
-    if (parameters.encodings?.length) parameters.encodings[0].maxBitrate = 2_500_000;
     await sender.setParameters(parameters);
   } catch (error) {
-    console.warn('Could not raise the meeting screen share quality:', error);
+    console.warn('The browser could not apply the preferred screen-share quality:', error);
+  }
+}
+
+async function getMeetingScreenStream() {
+  const displayConstraints = {
+    video: { frameRate: { ideal: 30 }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+    audio: true
+  };
+  try {
+    return await navigator.mediaDevices.getDisplayMedia(displayConstraints);
+  } catch (error) {
+    if (error?.name === 'NotAllowedError' || error?.name === 'AbortError') throw error;
+    // Some browsers refuse system audio or picky display constraints, so retry with a plain capture.
+    return navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
   }
 }
 
@@ -749,12 +852,12 @@ async function stopMeetingScreenShare(notifyServer = true) {
   const stream = meetingScreenStream;
   if (!stream) return;
   meetingScreenStream = null;
-  try {
-    await Promise.all(Array.from(meetingPeerConnections.values(), record =>
-      record.screenTransceiver.sender.replaceTrack(null)));
-  } catch (error) {
-    console.warn('Could not stop sharing the meeting screen:', error);
-  }
+  await Promise.all(Array.from(meetingPeerConnections.values(), record =>
+    Promise.all([
+      meetingSendTrack(record, 'screenTransceiver', null),
+      meetingSendTrack(record, 'screenAudioTransceiver', null)
+    ])
+  ));
   stopMeetingStreamTracks(stream);
   syncMeetingMediaState(notifyServer);
   requestMeetingRenegotiation();
@@ -773,21 +876,42 @@ async function toggleMeetingScreenShare() {
 
   let stream = null;
   try {
-    stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-    const track = stream.getVideoTracks()[0];
-    if (!track) {
+    stream = await getMeetingScreenStream();
+    const videoTrack = stream.getVideoTracks()[0];
+    if (!videoTrack) {
       stopMeetingStreamTracks(stream);
       throw new Error('No screen was selected.');
     }
+
+    try {
+      await videoTrack.applyConstraints({
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        frameRate: { ideal: 30 }
+      });
+    } catch (constraintError) {
+      console.warn('The browser kept its default screen capture resolution:', constraintError);
+    }
+
+    videoTrack.contentHint = 'detail';
+    const audioTrack = stream.getAudioTracks()[0] || null;
+    if (audioTrack) audioTrack.contentHint = 'music';
+
     meetingScreenStream = stream;
-    track.contentHint = 'detail';
-    track.onended = () => {
+    videoTrack.onended = () => {
       if (meetingScreenStream === stream) stopMeetingScreenShare();
     };
+
     await Promise.all(Array.from(meetingPeerConnections.values(), record => {
-      const sender = record.screenTransceiver.sender;
-      return sender.replaceTrack(track).then(() => tuneMeetingScreenSender(sender));
+      const sender = record.screenTransceiver?.sender;
+      if (!sender) return Promise.resolve();
+      return sender.replaceTrack(videoTrack).then(() => tuneMeetingScreenSender(sender));
     }));
+    if (audioTrack) {
+      await Promise.all(Array.from(meetingPeerConnections.values(), record =>
+        meetingSendTrack(record, 'screenAudioTransceiver', audioTrack)));
+    }
+
     syncMeetingMediaState();
     requestMeetingRenegotiation();
   } catch (error) {
@@ -795,9 +919,9 @@ async function toggleMeetingScreenShare() {
     stopMeetingStreamTracks(stream);
     updateMeetingControls();
     showNotification(
-      error.name === 'NotAllowedError' || error.name === 'AbortError'
+      error?.name === 'NotAllowedError' || error?.name === 'AbortError'
         ? 'Screen sharing was cancelled.'
-        : `Could not share your screen. ${error.message || ''}`.trim(),
+        : `Could not share your screen. ${error?.message || ''}`.trim(),
       'warning'
     );
   }
@@ -843,6 +967,14 @@ function finishMeetingLocally(markInactive = false) {
   restoreMeetingWindow();
 }
 
+function resumeMeetingAudioPlayback() {
+  // Browsers can hold remote audio until the user interacts with the meeting window.
+  document.querySelectorAll('#meeting-video-grid audio').forEach(audio => {
+    if (audio.srcObject) audio.play().catch(() => {});
+  });
+}
+
+document.getElementById('meeting-overlay')?.addEventListener('click', resumeMeetingAudioPlayback);
 document.getElementById('meeting-button')?.addEventListener('click', openOrStartServerMeeting);
 document.getElementById('meeting-mic-toggle')?.addEventListener('click', () => toggleMeetingMedia('microphone'));
 document.getElementById('meeting-camera-toggle')?.addEventListener('click', () => toggleMeetingMedia('camera'));
