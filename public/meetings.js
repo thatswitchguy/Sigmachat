@@ -31,13 +31,17 @@ function isPoliteMeetingPeer(peerSocketId) {
   return String(socket.id) < String(peerSocketId);
 }
 
+
 function getMeetingPeerTransceivers(peerConnection) {
-  // Always preserve the original transceiver order:
-  // microphone, camera, screen, screen audio.
-  // Filtering by MID can accidentally shift the media roles
-  // while some transceivers are still being negotiated.
-  return peerConnection?.getTransceivers?.() || [];
+  // A rolled-back simultaneous offer can leave the original, unnegotiated
+  // transceivers behind. The remote offer then creates the negotiated set.
+  // Prefer transceivers with an MID so tracks are attached to the actual
+  // media sections; before negotiation, fall back to the original set.
+  const transceivers = peerConnection?.getTransceivers?.() || [];
+  const negotiated = transceivers.filter(transceiver => transceiver.mid !== null);
+  return negotiated.length ? negotiated : transceivers;
 }
+
 
 function getMeetingTransceiverRoles(peerConnection) {
   const audio = [];
