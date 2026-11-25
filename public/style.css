@@ -1459,6 +1459,7 @@ input:checked + .slider:before {
 }
 
 #meeting-local-video[hidden],
+.meeting-tile-local .meeting-camera-placeholder[hidden],
 .meeting-tile-remote video[hidden],
 .meeting-remote-placeholder[hidden] {
   display: none;
