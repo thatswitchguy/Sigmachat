@@ -32,12 +32,11 @@ function isPoliteMeetingPeer(peerSocketId) {
 }
 
 function getMeetingPeerTransceivers(peerConnection) {
-  const transceivers = peerConnection?.getTransceivers?.() || [];
-  // Associated transceivers follow the negotiated m-line order, which is the order every
-  // browser uses for remote tracks. Fall back to creation order before negotiation.
-  const associated = transceivers.filter(transceiver =>
-    transceiver.mid !== null && transceiver.mid !== undefined && transceiver.mid !== '');
-  return associated.length ? associated : transceivers;
+  // Always preserve the original transceiver order:
+  // microphone, camera, screen, screen audio.
+  // Filtering by MID can accidentally shift the media roles
+  // while some transceivers are still being negotiated.
+  return peerConnection?.getTransceivers?.() || [];
 }
 
 function getMeetingTransceiverRoles(peerConnection) {
@@ -123,7 +122,6 @@ function watchMeetingLocalTrackEnded(stream, kind) {
     await Promise.all(Array.from(meetingPeerConnections.values(), record =>
       meetingSendTrack(record, senderKey, null)));
     syncMeetingMediaState();
-    requestMeetingRenegotiation();
     showNotification(`Your ${kind} stopped. Turn it on again to keep sharing it.`, 'warning');
   };
 }
@@ -669,13 +667,20 @@ function restartMeetingConnection(record) {
 
 async function sendMeetingOffer(record, options = {}) {
   const peerConnection = record?.peerConnection;
-  if (!peerConnection || !currentMeeting) return;
+
+  if (!peerConnection || !currentMeeting || record.makingOffer) return;
   if (peerConnection.signalingState !== 'stable') return;
+
   try {
+    // Prevent multiple offers from being created simultaneously.
     record.makingOffer = true;
+
     const offer = await peerConnection.createOffer(options);
+
     if (peerConnection.signalingState !== 'stable') return;
+
     await peerConnection.setLocalDescription(offer);
+
     socket.emit('meeting:offer', {
       to: record.socketId,
       description: peerConnection.localDescription
@@ -686,12 +691,6 @@ async function sendMeetingOffer(record, options = {}) {
   } finally {
     record.makingOffer = false;
   }
-}
-
-function requestMeetingRenegotiation() {
-  meetingPeerConnections.forEach(record => {
-    if (record.peerConnection.signalingState === 'stable') sendMeetingOffer(record);
-  });
 }
 
 async function createMeetingOffer(participant) {
@@ -734,11 +733,12 @@ async function handleMeetingOffer({ from, username: participantName, description
     if (record.ignoreOffer) return;
 
     if (offerCollision) {
-      // Both devices offered at once: this side rolls back and answers instead.
-      await Promise.all([
-        peerConnection.setLocalDescription({ type: 'rollback' }),
-        peerConnection.setRemoteDescription(new RTCSessionDescription(description))
-      ]);
+      // Roll back first, then apply the incoming offer.
+      await peerConnection.setLocalDescription({ type: 'rollback' });
+
+      await peerConnection.setRemoteDescription(
+        new RTCSessionDescription(description)
+      );
     } else {
       await peerConnection.setRemoteDescription(new RTCSessionDescription(description));
     }
@@ -816,7 +816,6 @@ async function toggleMeetingMedia(kind) {
   }
 
   syncMeetingMediaState();
-  requestMeetingRenegotiation();
 }
 
 async function tuneMeetingScreenSender(sender) {
@@ -860,7 +859,6 @@ async function stopMeetingScreenShare(notifyServer = true) {
   ));
   stopMeetingStreamTracks(stream);
   syncMeetingMediaState(notifyServer);
-  requestMeetingRenegotiation();
 }
 
 async function toggleMeetingScreenShare() {
@@ -913,7 +911,6 @@ async function toggleMeetingScreenShare() {
     }
 
     syncMeetingMediaState();
-    requestMeetingRenegotiation();
   } catch (error) {
     if (meetingScreenStream === stream) meetingScreenStream = null;
     stopMeetingStreamTracks(stream);
