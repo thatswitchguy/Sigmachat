@@ -27,31 +27,25 @@ function setMeetingStatus(message) {
 }
 
 function isPoliteMeetingPeer(peerSocketId) {
-  // Exactly one side of a pair gives way when both devices offer at the same time.
   return String(socket.id) < String(peerSocketId);
 }
 
-
 function getMeetingPeerTransceivers(peerConnection) {
-  // A rolled-back simultaneous offer can leave the original, unnegotiated
-  // transceivers behind. The remote offer then creates the negotiated set.
-  // Prefer transceivers with an MID so tracks are attached to the actual
-  // media sections; before negotiation, fall back to the original set.
   const transceivers = peerConnection?.getTransceivers?.() || [];
   const negotiated = transceivers.filter(transceiver => transceiver.mid !== null);
   return negotiated.length ? negotiated : transceivers;
 }
 
-
 function getMeetingTransceiverRoles(peerConnection) {
   const audio = [];
   const video = [];
+
   getMeetingPeerTransceivers(peerConnection).forEach(transceiver => {
     const kind = transceiver?.receiver?.track?.kind || transceiver?.sender?.track?.kind;
     if (kind === 'audio') audio.push(transceiver);
     else if (kind === 'video') video.push(transceiver);
   });
-  // Both peers create their transceivers in this order: mic, camera, screen, screen audio.
+
   return {
     microphone: audio[0] || null,
     screenAudio: audio[1] || null,
@@ -62,16 +56,32 @@ function getMeetingTransceiverRoles(peerConnection) {
 
 function refreshMeetingTransceivers(record) {
   if (!record?.peerConnection) return getMeetingTransceiverRoles(null);
+
   const roles = getMeetingTransceiverRoles(record.peerConnection);
+
   if (roles.microphone) record.audioTransceiver = roles.microphone;
   if (roles.camera) record.cameraTransceiver = roles.camera;
   if (roles.screen) record.screenTransceiver = roles.screen;
   if (roles.screenAudio) record.screenAudioTransceiver = roles.screenAudio;
+
+  return roles;
+}
+
+function prepareMeetingTransceiversForAnswer(record) {
+  const roles = refreshMeetingTransceivers(record);
+
+  Object.values(roles).forEach(transceiver => {
+    if (transceiver && transceiver.currentDirection !== 'inactive') {
+      transceiver.direction = 'sendrecv';
+    }
+  });
+
   return roles;
 }
 
 function stopMeetingStreamTracks(stream) {
   if (!stream) return;
+
   stream.getTracks().forEach(track => {
     track.onended = null;
     if (track.readyState !== 'ended') track.stop();
@@ -100,31 +110,57 @@ function describeMeetingMediaError(error = {}, kind = 'camera') {
 }
 
 async function getMeetingCameraStream() {
-  const videoConstraints = { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } };
+  const videoConstraints = {
+    facingMode: 'user',
+    width: { ideal: 1280 },
+    height: { ideal: 720 }
+  };
+
   try {
-    return await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints });
+    return await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: videoConstraints
+    });
   } catch (error) {
-    if (error.name !== 'OverconstrainedError' && error.name !== 'ConstraintNotSatisfiedError' && error.name !== 'TypeError') {
+    if (
+      error.name !== 'OverconstrainedError' &&
+      error.name !== 'ConstraintNotSatisfiedError' &&
+      error.name !== 'TypeError'
+    ) {
       throw error;
     }
-    // Older phones reject the detailed camera settings, so fall back to any camera they expose.
-    return navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+
+    return navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: true
+    });
   }
 }
 
 function watchMeetingLocalTrackEnded(stream, kind) {
   const track = stream.getTracks()[0];
   if (!track) return;
+
   track.onended = async () => {
-    if (kind === 'camera' && meetingCameraStream === stream) meetingCameraStream = null;
-    else if (kind === 'microphone' && meetingMicrophoneStream === stream) meetingMicrophoneStream = null;
-    else return;
+    if (kind === 'camera' && meetingCameraStream === stream) {
+      meetingCameraStream = null;
+    } else if (kind === 'microphone' && meetingMicrophoneStream === stream) {
+      meetingMicrophoneStream = null;
+    } else {
+      return;
+    }
+
     stopMeetingStreamTracks(stream);
     if (!currentMeeting) return;
-    // Never keep an ended track on a sender; the browser would publish a dead stream.
-    const senderKey = kind === 'microphone' ? 'audioTransceiver' : 'cameraTransceiver';
+
+    const senderKey = kind === 'microphone'
+      ? 'audioTransceiver'
+      : 'cameraTransceiver';
+
     await Promise.all(Array.from(meetingPeerConnections.values(), record =>
-      meetingSendTrack(record, senderKey, null)));
+      meetingSendTrack(record, senderKey, null)
+    ));
+
     syncMeetingMediaState();
     showNotification(`Your ${kind} stopped. Turn it on again to keep sharing it.`, 'warning');
   };
@@ -133,6 +169,7 @@ function watchMeetingLocalTrackEnded(stream, kind) {
 function syncMeetingMediaState(notifyServer = true) {
   updateMeetingControls();
   if (!currentMeeting) return;
+
   currentMeeting.participants = currentMeeting.participants.map(participant =>
     participant.socketId === socket.id
       ? {
@@ -143,7 +180,9 @@ function syncMeetingMediaState(notifyServer = true) {
         }
       : participant
   );
+
   renderMeetingState();
+
   if (notifyServer && socket.connected) {
     socket.emit('meeting:media-state', {
       microphoneEnabled: Boolean(meetingMicrophoneStream),
@@ -156,19 +195,27 @@ function syncMeetingMediaState(notifyServer = true) {
 function updateMeetingButton(state = {}) {
   const button = document.getElementById('meeting-button');
   if (!button) return;
+
   const isActive = state.active === true;
   button.dataset.active = String(isActive);
-  button.setAttribute('aria-label', isActive ? 'Join the active server meeting' : 'Start a server meeting');
+  button.setAttribute(
+    'aria-label',
+    isActive ? 'Join the active server meeting' : 'Start a server meeting'
+  );
   button.title = isActive ? 'Join the active server meeting' : 'Start a server meeting';
 }
 
 function updateMeetingWindowActions() {
   const overlay = document.getElementById('meeting-overlay');
   const maximizeButton = document.getElementById('meeting-maximize-btn');
+
   if (!overlay || !maximizeButton) return;
-  const label = overlay.classList.contains('is-maximized') || overlay.classList.contains('is-minimized')
+
+  const label = overlay.classList.contains('is-maximized') ||
+    overlay.classList.contains('is-minimized')
     ? 'Restore meeting'
     : 'Enlarge meeting';
+
   maximizeButton.setAttribute('aria-label', label);
   maximizeButton.title = label;
 }
@@ -176,6 +223,7 @@ function updateMeetingWindowActions() {
 function minimizeMeetingWindow() {
   const overlay = document.getElementById('meeting-overlay');
   if (!overlay) return;
+
   overlay.classList.add('is-minimized');
   overlay.classList.remove('is-maximized');
   overlay.setAttribute('aria-modal', 'false');
@@ -185,6 +233,7 @@ function minimizeMeetingWindow() {
 function restoreMeetingWindow() {
   const overlay = document.getElementById('meeting-overlay');
   if (!overlay) return;
+
   overlay.classList.remove('is-minimized', 'is-maximized');
   overlay.setAttribute('aria-modal', 'true');
   updateMeetingWindowActions();
@@ -193,6 +242,7 @@ function restoreMeetingWindow() {
 function toggleMeetingMaximize() {
   const overlay = document.getElementById('meeting-overlay');
   if (!overlay) return;
+
   if (overlay.classList.contains('is-minimized')) {
     overlay.classList.remove('is-minimized');
     overlay.classList.add('is-maximized');
@@ -200,30 +250,41 @@ function toggleMeetingMaximize() {
   } else {
     overlay.classList.toggle('is-maximized');
   }
+
   updateMeetingWindowActions();
 }
 
 function refreshMeetingStatus(serverId = currentServer) {
   if (!serverId || !socket.connected) return;
+
   socket.timeout(5000).emit('meeting:status', { serverId }, (error, response) => {
     if (error || !response?.success) return;
+
     meetingStatesByServer.set(serverId, response);
     if (serverId === currentServer) updateMeetingButton(response);
   });
 }
 
 function getMeetingParticipant(socketId) {
-  return currentMeeting?.participants?.find(participant => participant.socketId === socketId);
+  return currentMeeting?.participants?.find(
+    participant => participant.socketId === socketId
+  );
 }
 
 function setMeetingParticipant(socketId, updates) {
   if (!currentMeeting || !socketId) return;
+
   const participants = currentMeeting.participants || [];
   let participant = participants.find(item => item.socketId === socketId);
+
   if (!participant) {
-    participant = { socketId, username: updates.username || 'Participant' };
+    participant = {
+      socketId,
+      username: updates.username || 'Participant'
+    };
     participants.push(participant);
   }
+
   Object.assign(participant, updates);
   currentMeeting.participants = participants;
   renderMeetingState();
@@ -253,22 +314,28 @@ function createMeetingParticipantTile(participant) {
 
   const placeholder = document.createElement('div');
   placeholder.className = 'meeting-camera-placeholder meeting-remote-placeholder';
+
   const avatar = document.createElement('span');
   avatar.className = 'meeting-avatar meeting-remote-avatar';
   avatar.textContent = (participant.username || 'P').charAt(0).toUpperCase();
+
   const cameraLabel = document.createElement('span');
   cameraLabel.className = 'meeting-camera-label';
   cameraLabel.textContent = 'Camera off';
+
   placeholder.append(avatar, cameraLabel);
 
   const caption = document.createElement('div');
   caption.className = 'meeting-tile-caption';
+
   const speakingDot = document.createElement('span');
   speakingDot.className = 'meeting-speaking-dot';
   speakingDot.setAttribute('aria-hidden', 'true');
+
   const name = document.createElement('span');
   name.className = 'meeting-tile-name';
   name.textContent = participant.username || 'Participant';
+
   caption.append(speakingDot, name);
 
   const audio = document.createElement('audio');
@@ -285,6 +352,20 @@ function createMeetingParticipantTile(participant) {
   return tile;
 }
 
+function ensureMeetingParticipantTile(participant) {
+  const grid = document.getElementById('meeting-video-grid');
+  if (!grid) return null;
+
+  let tile = Array.from(grid.querySelectorAll('.meeting-tile-remote'))
+    .find(element => element.dataset.participantId === participant.socketId);
+
+  if (!tile) {
+    tile = createMeetingParticipantTile(participant);
+    grid.appendChild(tile);
+  }
+
+  return tile;
+}
 function ensureMeetingParticipantTile(participant) {
   const grid = document.getElementById('meeting-video-grid');
   if (!grid) return null;
@@ -395,7 +476,7 @@ function renderMeetingState() {
       meta.append(name, media);
       const state = document.createElement('span');
       state.className = 'meeting-person-state';
-  
+
       state.setAttribute('aria-label', participant.microphoneEnabled ? 'Microphone on' : 'Microphone off');
       item.append(avatar, meta, state);
       roster.appendChild(item);
@@ -543,29 +624,37 @@ async function flushMeetingIce(socketId, peerConnection) {
   }
 }
 
-function createMeetingPeerConnection(participant) {
+
+function createMeetingPeerConnection(participant, createOffererTransceivers = false) {
   const existing = meetingPeerConnections.get(participant.socketId);
   if (existing) return existing;
 
   const peerConnection = new RTCPeerConnection({ iceServers: streamIceServers });
-  const audioTransceiver = peerConnection.addTransceiver('audio', { direction: 'sendrecv' });
-  const cameraTransceiver = peerConnection.addTransceiver('video', { direction: 'sendrecv' });
-  const screenTransceiver = peerConnection.addTransceiver('video', { direction: 'sendrecv' });
-  const screenAudioTransceiver = peerConnection.addTransceiver('audio', { direction: 'sendrecv' });
+
+  // Only the participant creating the initial offer creates media sections.
+  // The answering peer gets the exact same transceivers from setRemoteDescription().
+  // Pre-creating another four on the answerer can leave duplicate MID-less sections.
   const record = {
     socketId: participant.socketId,
-    username: participant.username,
+    username: participant.username || 'Participant',
     peerConnection,
-    audioTransceiver,
-    cameraTransceiver,
-    screenTransceiver,
-    screenAudioTransceiver,
-    polite: isPoliteMeetingPeer(participant.socketId),
+    audioTransceiver: null,
+    cameraTransceiver: null,
+    screenTransceiver: null,
+    screenAudioTransceiver: null,
     makingOffer: false,
-    ignoreOffer: false,
+    polite: String(socket.id) < String(participant.socketId),
     hasOffered: false,
     lastIceRestartAt: 0
   };
+
+  if (createOffererTransceivers) {
+    record.audioTransceiver = peerConnection.addTransceiver('audio', { direction: 'sendrecv' });
+    record.cameraTransceiver = peerConnection.addTransceiver('video', { direction: 'sendrecv' });
+    record.screenTransceiver = peerConnection.addTransceiver('video', { direction: 'sendrecv' });
+    record.screenAudioTransceiver = peerConnection.addTransceiver('audio', { direction: 'sendrecv' });
+  }
+
   meetingPeerConnections.set(participant.socketId, record);
   ensureMeetingParticipantTile(participant);
 
@@ -580,8 +669,9 @@ function createMeetingPeerConnection(participant) {
   peerConnection.ontrack = event => {
     const tile = ensureMeetingParticipantTile({ socketId: participant.socketId, username: record.username });
     if (!tile) return;
+
     const roles = refreshMeetingTransceivers(record);
-    let mediaElement;
+    let mediaElement = null;
 
     if (event.transceiver === roles.microphone) {
       mediaElement = tile.querySelector('.meeting-remote-audio');
@@ -592,33 +682,45 @@ function createMeetingPeerConnection(participant) {
     } else if (event.transceiver === roles.screenAudio) {
       mediaElement = tile.querySelector('.meeting-screen-audio');
     }
+
+    // The transceiver mapping is authoritative. This fallback is only for
+    // browsers that deliver an ontrack event before MID/role refresh completes.
     if (!mediaElement) {
-      mediaElement = event.track.kind === 'video'
-        ? tile.querySelector('.meeting-tile-camera')
-        : tile.querySelector('.meeting-remote-audio');
+      const sameKind = event.track.kind === 'video'
+        ? tile.querySelectorAll('.meeting-tile-camera, .meeting-tile-screen')
+        : tile.querySelectorAll('.meeting-remote-audio, .meeting-screen-audio');
+      mediaElement = Array.from(sameKind).find(element => !element.srcObject);
     }
-    if (!mediaElement) return;
+    if (!mediaElement) {
+      console.warn('A meeting track arrived without a matching media slot:', {
+        participant: record.username,
+        kind: event.track.kind,
+        mid: event.transceiver?.mid
+      });
+      return;
+    }
 
     mediaElement.srcObject = new MediaStream([event.track]);
-    if (mediaElement.tagName === 'VIDEO') {
-      mediaElement.hidden = false;
-    }
+    if (mediaElement.tagName === 'VIDEO') mediaElement.hidden = false;
     mediaElement.play().catch(() => {
       if (mediaElement.tagName === 'AUDIO') {
         setMeetingStatus('Your browser blocked meeting audio. Interact with the meeting to hear participants.');
       }
     });
+
     event.track.addEventListener('ended', () => {
-      mediaElement.srcObject = null;
-      mediaElement.hidden = true;
-      if (currentMeeting) {
-        const currentParticipant = getMeetingParticipant(participant.socketId);
-        if (currentParticipant) updateMeetingParticipantTile(currentParticipant);
+      if (mediaElement.srcObject?.getTracks?.().includes(event.track)) {
+        mediaElement.srcObject = null;
       }
+      mediaElement.hidden = true;
+      const currentParticipant = getMeetingParticipant(participant.socketId);
+      if (currentParticipant) updateMeetingParticipantTile(currentParticipant);
     }, { once: true });
+
     const currentParticipant = getMeetingParticipant(participant.socketId);
     if (currentParticipant) updateMeetingParticipantTile(currentParticipant);
   };
+
   peerConnection.onconnectionstatechange = () => {
     if (!currentMeeting) return;
     const participantCount = currentMeeting.participants?.length || 1;
@@ -626,36 +728,41 @@ function createMeetingPeerConnection(participant) {
       setMeetingStatus(`${participantCount} participant${participantCount === 1 ? '' : 's'} in the meeting`);
     } else if (peerConnection.connectionState === 'failed') {
       restartMeetingConnection(record);
+    } else if (peerConnection.connectionState === 'disconnected') {
+      setMeetingStatus(`Connection to ${record.username} was interrupted. Trying to recover…`);
     }
   };
 
   return record;
-}
+  }
 
-function meetingSendTrack(record, transceiverKey, track) {
+  function meetingSendTrack(record, transceiverKey, track) {
   const sender = record?.[transceiverKey]?.sender;
   if (!sender) return Promise.resolve();
   return sender.replaceTrack(track).catch(error => {
     console.warn(`Could not update the meeting ${transceiverKey}:`, error);
   });
-}
+  }
 
-async function attachLocalTracks(record) {
+
+  async function attachLocalTracks(record) {
   if (!record) return;
   refreshMeetingTransceivers(record);
+
   const microphoneTrack = meetingMicrophoneStream?.getAudioTracks()[0] || null;
   const cameraTrack = meetingCameraStream?.getVideoTracks()[0] || null;
   const screenTrack = meetingScreenStream?.getVideoTracks()[0] || null;
   const screenAudioTrack = meetingScreenStream?.getAudioTracks()[0] || null;
+
   await Promise.all([
     meetingSendTrack(record, 'audioTransceiver', microphoneTrack),
     meetingSendTrack(record, 'cameraTransceiver', cameraTrack),
     meetingSendTrack(record, 'screenTransceiver', screenTrack),
     meetingSendTrack(record, 'screenAudioTransceiver', screenAudioTrack)
   ]);
-}
+  }
 
-function restartMeetingConnection(record) {
+  function restartMeetingConnection(record) {
   if (!record?.peerConnection || !currentMeeting) return;
   const now = Date.now();
   // A failed connection can recover on a new network path, but not in a tight loop.
@@ -667,50 +774,44 @@ function restartMeetingConnection(record) {
   record.lastIceRestartAt = now;
   setMeetingStatus(`Reconnecting to ${record.username || 'a participant'}…`);
   sendMeetingOffer(record, { iceRestart: true });
-}
+  }
 
-async function sendMeetingOffer(record, options = {}) {
+
+
+  async function sendMeetingOffer(record, options = {}) {
   const peerConnection = record?.peerConnection;
-
-  if (!peerConnection || !currentMeeting || record.makingOffer) return;
-  if (peerConnection.signalingState !== 'stable') return;
+  if (!peerConnection || !currentMeeting || record.makingOffer) return false;
+  if (peerConnection.signalingState !== 'stable') return false;
 
   try {
-    // Prevent multiple offers from being created simultaneously.
     record.makingOffer = true;
-
+    await attachLocalTracks(record);
     const offer = await peerConnection.createOffer(options);
-
-    if (peerConnection.signalingState !== 'stable') return;
+    if (peerConnection.signalingState !== 'stable') return false;
 
     await peerConnection.setLocalDescription(offer);
-
     socket.emit('meeting:offer', {
       to: record.socketId,
       description: peerConnection.localDescription
     });
+    return true;
   } catch (error) {
     console.error('Could not start a meeting connection:', error);
     setMeetingStatus(`Could not connect to ${record.username || 'a participant'}.`);
+    return false;
   } finally {
     record.makingOffer = false;
   }
-}
-
-async function createMeetingOffer(participant) {
-  try {
-    const record = createMeetingPeerConnection(participant);
-    if (record.hasOffered || record.peerConnection.remoteDescription) return;
-    record.hasOffered = true;
-    await attachLocalTracks(record);
-    await sendMeetingOffer(record);
-  } catch (error) {
-    console.error('Could not start a meeting connection:', error);
-    setMeetingStatus(`Could not connect to ${participant.username || 'a participant'}.`);
   }
-}
 
-async function handleMeetingJoined(state) {
+  async function createMeetingOffer(participant) {
+  const record = createMeetingPeerConnection(participant, true);
+  if (record.hasOffered || record.peerConnection.remoteDescription) return;
+  const sent = await sendMeetingOffer(record);
+  record.hasOffered = sent;
+  }
+
+  async function handleMeetingJoined(state) {
   if (!state?.meetingId || !Array.isArray(state.participants)) return;
   currentMeeting = state;
   const overlay = document.getElementById('meeting-overlay');
@@ -722,32 +823,47 @@ async function handleMeetingJoined(state) {
     await createMeetingOffer(participant);
   }
   document.getElementById('meeting-mic-toggle')?.focus();
-}
+  }
 
-async function handleMeetingOffer({ from, username: participantName, description } = {}) {
-  if (!currentMeeting || !from || !description) return;
+
+  async function handleMeetingOffer({ from, username: participantName, description } = {}) {
+  if (!currentMeeting || !from || !description || description.type !== 'offer') return;
+
   try {
-    const participant = getMeetingParticipant(from) || { socketId: from, username: participantName || 'Participant' };
-    const record = createMeetingPeerConnection(participant);
-    record.username = participant.username;
+    const participant = getMeetingParticipant(from) || {
+      socketId: from,
+      username: participantName || 'Participant'
+    };
+    // The joining participant is the sole offerer. The receiver must not
+    // pre-create transceivers or generate a competing offer.
+    const record = createMeetingPeerConnection(participant, false);
+    record.username = participant.username || participantName || 'Participant';
     const peerConnection = record.peerConnection;
 
+    // Initial negotiation is one-way (the newly joined participant offers).
+    // This collision handling is retained for the rare case where both peers
+    // attempt an ICE-restart offer at the same time.
+    if (peerConnection.remoteDescription?.sdp === description.sdp) return;
     const offerCollision = record.makingOffer || peerConnection.signalingState !== 'stable';
-    record.ignoreOffer = !record.polite && offerCollision;
-    if (record.ignoreOffer) return;
-
-    if (offerCollision) {
-      // Roll back first, then apply the incoming offer.
-      await peerConnection.setLocalDescription({ type: 'rollback' });
-
-      await peerConnection.setRemoteDescription(
-        new RTCSessionDescription(description)
-      );
-    } else {
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(description));
+    if (offerCollision && !record.polite) {
+      console.warn('Ignoring a colliding meeting offer on the impolite peer:', from);
+      return;
     }
+    if (offerCollision) {
+      await peerConnection.setLocalDescription({ type: 'rollback' });
+    }
+
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(description));
     await flushMeetingIce(from, peerConnection);
+
+    // setRemoteDescription creates the transceivers from the offer's m-lines.
+    // Bind our four local tracks to those exact negotiated slots before answering.
+    const roles = prepareMeetingTransceiversForAnswer(record);
+    if (!roles.microphone || !roles.camera || !roles.screen || !roles.screenAudio) {
+      throw new Error('The remote offer did not create all four meeting media sections.');
+    }
     await attachLocalTracks(record);
+
     const answer = await peerConnection.createAnswer();
     await peerConnection.setLocalDescription(answer);
     socket.emit('meeting:answer', {
@@ -758,22 +874,27 @@ async function handleMeetingOffer({ from, username: participantName, description
     console.error('Could not answer a meeting connection:', error);
     setMeetingStatus(`Could not connect to ${participantName || 'a participant'}.`);
   }
-}
+  }
 
-async function handleMeetingAnswer({ from, description } = {}) {
+
+  async function handleMeetingAnswer({ from, description } = {}) {
   const record = meetingPeerConnections.get(from);
-  if (!record || !description) return;
+  if (!record || !description || description.type !== 'answer') return;
   if (record.peerConnection.signalingState !== 'have-local-offer') return;
+
   try {
     await record.peerConnection.setRemoteDescription(new RTCSessionDescription(description));
     await flushMeetingIce(from, record.peerConnection);
+    refreshMeetingTransceivers(record);
+    // A user may have enabled or stopped media while the offer was in flight.
+    await attachLocalTracks(record);
   } catch (error) {
     console.error('Could not complete a meeting connection:', error);
     setMeetingStatus('Could not complete the meeting connection. Try leaving and joining again.');
   }
-}
+  }
 
-async function toggleMeetingMedia(kind) {
+  async function toggleMeetingMedia(kind) {
   if (!currentMeeting) return;
   const isEnabled = kind === 'microphone' ? Boolean(meetingMicrophoneStream) : Boolean(meetingCameraStream);
   if (isEnabled) {
@@ -781,7 +902,7 @@ async function toggleMeetingMedia(kind) {
     const senderKey = kind === 'microphone' ? 'audioTransceiver' : 'cameraTransceiver';
     try {
       await Promise.all(Array.from(meetingPeerConnections.values(), record =>
-        record[senderKey].sender.replaceTrack(null)));
+        meetingSendTrack(record, senderKey, null)));
     } catch (error) {
       console.warn(`Could not disable the meeting ${kind}:`, error);
     }
@@ -808,7 +929,7 @@ async function toggleMeetingMedia(kind) {
       watchMeetingLocalTrackEnded(stream, kind);
       const senderKey = kind === 'microphone' ? 'audioTransceiver' : 'cameraTransceiver';
       await Promise.all(Array.from(meetingPeerConnections.values(), record =>
-        record[senderKey].sender.replaceTrack(track)));
+        meetingSendTrack(record, senderKey, track)));
     } catch (error) {
       stopMeetingStreamTracks(stream);
       if (kind === 'microphone') meetingMicrophoneStream = null;
@@ -820,8 +941,7 @@ async function toggleMeetingMedia(kind) {
   }
 
   syncMeetingMediaState();
-}
-
+  }
 async function tuneMeetingScreenSender(sender) {
   if (!sender) return;
   try {
@@ -838,48 +958,52 @@ async function tuneMeetingScreenSender(sender) {
 }
 
 async function getMeetingScreenStream() {
-  const displayConstraints = {
-    video: { frameRate: { ideal: 30 }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+  // Match the proven /stream flow: request browser-default display capture,
+  // then tune the returned video track without making capture itself fail.
+  return navigator.mediaDevices.getDisplayMedia({
+    video: true,
     audio: true
-  };
-  try {
-    return await navigator.mediaDevices.getDisplayMedia(displayConstraints);
-  } catch (error) {
-    if (error?.name === 'NotAllowedError' || error?.name === 'AbortError') throw error;
-    // Some browsers refuse system audio or picky display constraints, so retry with a plain capture.
-    return navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-  }
+  });
 }
 
 async function stopMeetingScreenShare(notifyServer = true) {
   const stream = meetingScreenStream;
   if (!stream) return;
   meetingScreenStream = null;
+
   await Promise.all(Array.from(meetingPeerConnections.values(), record =>
     Promise.all([
       meetingSendTrack(record, 'screenTransceiver', null),
       meetingSendTrack(record, 'screenAudioTransceiver', null)
     ])
   ));
+
   stopMeetingStreamTracks(stream);
   syncMeetingMediaState(notifyServer);
 }
 
 async function toggleMeetingScreenShare() {
   if (!currentMeeting) return;
+
   if (meetingScreenStream) {
     await stopMeetingScreenShare();
     return;
   }
+
   if (typeof navigator.mediaDevices?.getDisplayMedia !== 'function') {
-    showNotification('Screen sharing is not available in this browser or on this device. Try a desktop browser such as Chrome, Edge, Firefox or Safari.', 'error');
+    showNotification(
+      'Screen sharing is not available in this browser or on this device. Try a desktop browser such as Chrome, Edge, Firefox or Safari.',
+      'error'
+    );
     return;
   }
 
   let stream = null;
+
   try {
     stream = await getMeetingScreenStream();
     const videoTrack = stream.getVideoTracks()[0];
+
     if (!videoTrack) {
       stopMeetingStreamTracks(stream);
       throw new Error('No screen was selected.');
@@ -896,29 +1020,46 @@ async function toggleMeetingScreenShare() {
     }
 
     videoTrack.contentHint = 'detail';
+
     const audioTrack = stream.getAudioTracks()[0] || null;
     if (audioTrack) audioTrack.contentHint = 'music';
 
     meetingScreenStream = stream;
-    videoTrack.onended = () => {
-      if (meetingScreenStream === stream) stopMeetingScreenShare();
-    };
 
-    await Promise.all(Array.from(meetingPeerConnections.values(), record => {
+    videoTrack.addEventListener('ended', () => {
+      if (meetingScreenStream === stream) stopMeetingScreenShare();
+    }, { once: true });
+
+    await Promise.all(Array.from(meetingPeerConnections.values(), async record => {
+      refreshMeetingTransceivers(record);
+
       const sender = record.screenTransceiver?.sender;
-      if (!sender) return Promise.resolve();
-      return sender.replaceTrack(videoTrack).then(() => tuneMeetingScreenSender(sender));
+
+      await meetingSendTrack(record, 'screenTransceiver', videoTrack);
+
+      if (sender) await tuneMeetingScreenSender(sender);
     }));
+
     if (audioTrack) {
       await Promise.all(Array.from(meetingPeerConnections.values(), record =>
-        meetingSendTrack(record, 'screenAudioTransceiver', audioTrack)));
+        meetingSendTrack(record, 'screenAudioTransceiver', audioTrack)
+      ));
     }
 
     syncMeetingMediaState();
   } catch (error) {
     if (meetingScreenStream === stream) meetingScreenStream = null;
+
+    await Promise.all(Array.from(meetingPeerConnections.values(), record =>
+      Promise.all([
+        meetingSendTrack(record, 'screenTransceiver', null),
+        meetingSendTrack(record, 'screenAudioTransceiver', null)
+      ])
+    ));
+
     stopMeetingStreamTracks(stream);
     updateMeetingControls();
+
     showNotification(
       error?.name === 'NotAllowedError' || error?.name === 'AbortError'
         ? 'Screen sharing was cancelled.'
@@ -930,41 +1071,66 @@ async function toggleMeetingScreenShare() {
 
 function closeMeetingPeer(socketId) {
   const record = meetingPeerConnections.get(socketId);
+
   if (record) record.peerConnection.close();
+
   meetingPeerConnections.delete(socketId);
   pendingMeetingIce.delete(socketId);
+
   const tile = Array.from(document.querySelectorAll('.meeting-tile-remote'))
     .find(element => element.dataset.participantId === socketId);
+
   if (tile) tile.remove();
 }
 
 async function leaveCurrentMeeting(notifyServer = true) {
   if (!currentMeeting) return;
+
   const serverId = currentMeeting.serverId;
+
   if (notifyServer && socket.connected) {
     await sendMeetingRequest('meeting:leave');
   }
+
   finishMeetingLocally();
+
   if (notifyServer) refreshMeetingStatus(serverId);
 }
 
 function finishMeetingLocally(markInactive = false) {
   const serverId = currentMeeting?.serverId;
+
   if (serverId && markInactive) {
-    meetingStatesByServer.set(serverId, { success: true, active: false, serverId, meeting: null });
+    meetingStatesByServer.set(serverId, {
+      success: true,
+      active: false,
+      serverId,
+      meeting: null
+    });
+
     if (serverId === currentServer) updateMeetingButton({ active: false });
   }
+
   meetingPeerConnections.forEach(record => record.peerConnection.close());
   meetingPeerConnections.clear();
   pendingMeetingIce.clear();
-  [meetingMicrophoneStream, meetingCameraStream, meetingScreenStream].forEach(stopMeetingStreamTracks);
+
+  [
+    meetingMicrophoneStream,
+    meetingCameraStream,
+    meetingScreenStream
+  ].forEach(stopMeetingStreamTracks);
+
   meetingMicrophoneStream = null;
   meetingCameraStream = null;
   meetingScreenStream = null;
   currentMeeting = null;
+
   updateMeetingControls();
+
   const overlay = document.getElementById('meeting-overlay');
   if (overlay) overlay.hidden = true;
+
   restoreMeetingWindow();
 }
 
@@ -975,62 +1141,108 @@ function resumeMeetingAudioPlayback() {
   });
 }
 
-document.getElementById('meeting-overlay')?.addEventListener('click', resumeMeetingAudioPlayback);
-document.getElementById('meeting-button')?.addEventListener('click', openOrStartServerMeeting);
-document.getElementById('meeting-mic-toggle')?.addEventListener('click', () => toggleMeetingMedia('microphone'));
-document.getElementById('meeting-camera-toggle')?.addEventListener('click', () => toggleMeetingMedia('camera'));
-document.getElementById('meeting-screen-share')?.addEventListener('click', toggleMeetingScreenShare);
-document.getElementById('meeting-leave')?.addEventListener('click', () => leaveCurrentMeeting());
-document.getElementById('meeting-minimize-btn')?.addEventListener('click', minimizeMeetingWindow);
-document.getElementById('meeting-maximize-btn')?.addEventListener('click', toggleMeetingMaximize);
-document.getElementById('meeting-participants-toggle')?.addEventListener('click', event => {
-  const overlay = document.getElementById('meeting-overlay');
-  if (!overlay) return;
-  const hidden = overlay.classList.toggle('is-participants-hidden');
-  const label = hidden ? 'Show participants panel' : 'Hide participants panel';
-  event.currentTarget.setAttribute('aria-expanded', String(!hidden));
-  event.currentTarget.setAttribute('aria-label', label);
-  event.currentTarget.title = label;
-});
-document.getElementById('meeting-end')?.addEventListener('click', async () => {
-  if (!currentMeeting) return;
-  const response = await sendMeetingRequest('meeting:end');
-  if (!response.success) showNotification(response.error || 'Only the host can end this meeting.', 'error');
-});
+document.getElementById('meeting-overlay')
+  ?.addEventListener('click', resumeMeetingAudioPlayback);
+
+document.getElementById('meeting-button')
+  ?.addEventListener('click', openOrStartServerMeeting);
+
+document.getElementById('meeting-mic-toggle')
+  ?.addEventListener('click', () => toggleMeetingMedia('microphone'));
+
+document.getElementById('meeting-camera-toggle')
+  ?.addEventListener('click', () => toggleMeetingMedia('camera'));
+
+document.getElementById('meeting-screen-share')
+  ?.addEventListener('click', toggleMeetingScreenShare);
+
+document.getElementById('meeting-leave')
+  ?.addEventListener('click', () => leaveCurrentMeeting());
+
+document.getElementById('meeting-minimize-btn')
+  ?.addEventListener('click', minimizeMeetingWindow);
+
+document.getElementById('meeting-maximize-btn')
+  ?.addEventListener('click', toggleMeetingMaximize);
+
+document.getElementById('meeting-participants-toggle')
+  ?.addEventListener('click', event => {
+    const overlay = document.getElementById('meeting-overlay');
+    if (!overlay) return;
+
+    const hidden = overlay.classList.toggle('is-participants-hidden');
+    const label = hidden ? 'Show participants panel' : 'Hide participants panel';
+
+    event.currentTarget.setAttribute('aria-expanded', String(!hidden));
+    event.currentTarget.setAttribute('aria-label', label);
+    event.currentTarget.title = label;
+  });
+
+document.getElementById('meeting-end')
+  ?.addEventListener('click', async () => {
+    if (!currentMeeting) return;
+
+    const response = await sendMeetingRequest('meeting:end');
+
+    if (!response.success) {
+      showNotification(
+        response.error || 'Only the host can end this meeting.',
+        'error'
+      );
+    }
+  });
 
 window.addEventListener('server-selected', event => {
   refreshMeetingStatus(event.detail?.serverId || currentServer);
 });
 
 socket.on('connect', () => refreshMeetingStatus());
+
 socket.on('meeting:server-state', state => {
   if (!state?.serverId) return;
-  meetingStatesByServer.set(state.serverId, { success: true, ...state });
+
+  meetingStatesByServer.set(state.serverId, {
+    success: true,
+    ...state
+  });
+
   if (state.serverId === currentServer) updateMeetingButton(state);
 });
+
 socket.on('meeting:joined', handleMeetingJoined);
+
 socket.on('meeting:state', state => {
   if (!currentMeeting || state?.meetingId !== currentMeeting.meetingId) return;
+
   currentMeeting = state;
   renderMeetingState();
 });
+
 socket.on('meeting:offer', handleMeetingOffer);
 socket.on('meeting:answer', handleMeetingAnswer);
+
 socket.on('meeting:ice', async ({ from, candidate } = {}) => {
   if (!from || !candidate) return;
+
   const record = meetingPeerConnections.get(from);
+
   if (!record?.peerConnection.remoteDescription) {
     queueMeetingIce(from, candidate);
     return;
   }
+
   try {
-    await record.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+    await record.peerConnection.addIceCandidate(
+      new RTCIceCandidate(candidate)
+    );
   } catch (error) {
     console.warn('Could not apply a meeting network candidate:', error);
   }
 });
+
 socket.on('meeting:media-state', state => {
   if (!currentMeeting || !state?.socketId || state.socketId === socket.id) return;
+
   setMeetingParticipant(state.socketId, {
     username: state.username,
     microphoneEnabled: state.microphoneEnabled === true,
@@ -1038,35 +1250,65 @@ socket.on('meeting:media-state', state => {
     screenSharing: state.screenSharing === true
   });
 });
+
 socket.on('meeting:participant-left', ({ socketId } = {}) => {
   if (!socketId || !currentMeeting) return;
-  currentMeeting.participants = currentMeeting.participants.filter(participant => participant.socketId !== socketId);
+
+  currentMeeting.participants = currentMeeting.participants.filter(
+    participant => participant.socketId !== socketId
+  );
+
   closeMeetingPeer(socketId);
   renderMeetingState();
 });
+
 socket.on('meeting:host-changed', ({ hostSocketId, hostUsername } = {}) => {
   if (!currentMeeting) return;
+
   currentMeeting.hostSocketId = hostSocketId;
   currentMeeting.hostUsername = hostUsername;
+
   renderMeetingState();
 });
+
 socket.on('meeting:ended', state => {
   if (!currentMeeting || state?.meetingId !== currentMeeting.meetingId) return;
+
   const serverId = currentMeeting.serverId;
+
   finishMeetingLocally(true);
-  meetingStatesByServer.set(serverId, { success: true, active: false, serverId, meeting: null });
+
+  meetingStatesByServer.set(serverId, {
+    success: true,
+    active: false,
+    serverId,
+    meeting: null
+  });
+
   if (serverId === currentServer) updateMeetingButton({ active: false });
+
   showNotification('The server meeting has ended.', 'info');
 });
+
 socket.on('meeting:removed', state => {
   if (!currentMeeting || state?.meetingId !== currentMeeting.meetingId) return;
+
   finishMeetingLocally(true);
-  showNotification(state.message || 'You were removed from this server meeting.', 'warning');
+
+  showNotification(
+    state.message || 'You were removed from this server meeting.',
+    'warning'
+  );
 });
+
 socket.on('disconnect', () => {
   if (currentMeeting) finishMeetingLocally();
 });
 
 window.addEventListener('beforeunload', () => {
-  [meetingMicrophoneStream, meetingCameraStream, meetingScreenStream].forEach(stopMeetingStreamTracks);
+  [
+    meetingMicrophoneStream,
+    meetingCameraStream,
+    meetingScreenStream
+  ].forEach(stopMeetingStreamTracks);
 });
