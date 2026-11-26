@@ -257,12 +257,20 @@ function toggleMeetingMaximize() {
 function refreshMeetingStatus(serverId = currentServer) {
   if (!serverId || !socket.connected) return;
 
-  socket.timeout(5000).emit('meeting:status', { serverId }, (error, response) => {
-    if (error || !response?.success) return;
+  socket.timeout(5000).emit(
+    'meeting:status',
+    { serverId },
+    (error, response) => {
+      if (error || !response?.success) return;
 
-    meetingStatesByServer.set(serverId, response);
-    if (serverId === currentServer) updateMeetingButton(response);
-  });
+      meetingStatesByServer.set(serverId, response);
+
+      if (serverId === currentServer) {
+        updateMeetingButton(response);
+        renderServerMeetingCard(response);
+      }
+    }
+  );
 }
 
 function getMeetingParticipant(socketId) {
@@ -1196,6 +1204,94 @@ window.addEventListener('server-selected', event => {
   refreshMeetingStatus(event.detail?.serverId || currentServer);
 });
 
+// ==========================================
+// SERVER-WIDE ACTIVE MEETING CARD
+// ==========================================
+
+function createServerMeetingCard() {
+  let card = document.getElementById('server-meeting-card');
+  if (card) return card;
+
+  const chatHeader = document.getElementById('chat-header');
+  if (!chatHeader) return null;
+
+  card = document.createElement('div');
+  card.id = 'server-meeting-card';
+  card.className = 'server-meeting-card';
+  card.hidden = true;
+
+  card.innerHTML = `
+    <div class="server-meeting-card-info">
+      <div class="server-meeting-card-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4.75 7.25A2.25 2.25 0 0 1 7 5h7.5a2.25 2.25 0 0 1 2.25 2.25v1.1l3.23-2.15a1.25 1.25 0 0 1 1.94 1.04v9.52a1.25 1.25 0 0 1-1.94 1.04l-3.23-2.15v1.1A2.25 2.25 0 0 1 14.5 19H7a2.25 2.25 0 0 1-2.25-2.25z"/>
+        </svg>
+      </div>
+
+      <div class="server-meeting-card-text">
+        <div class="server-meeting-card-title">
+          Sigma meeting
+          <span class="server-meeting-live">LIVE</span>
+        </div>
+        <div id="server-meeting-card-description">
+          Someone has started a meeting.
+        </div>
+      </div>
+    </div>
+
+    <button type="button" id="server-meeting-join">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M8 5l11 7-11 7z"/>
+      </svg>
+      <span>Join meeting</span>
+    </button>
+  `;
+
+  chatHeader.insertAdjacentElement('afterend', card);
+
+  card.querySelector('#server-meeting-join').addEventListener('click', () => {
+    openOrStartServerMeeting();
+  });
+
+  return card;
+}
+
+function renderServerMeetingCard(state) {
+  const card = createServerMeetingCard();
+  if (!card || !state) return;
+
+  // Never show another server's meeting.
+  if (state.serverId !== currentServer || !state.active) {
+    card.hidden = true;
+    return;
+  }
+
+  card.hidden = false;
+
+  const description = document.getElementById(
+    'server-meeting-card-description'
+  );
+
+  const button = document.getElementById('server-meeting-join');
+  const buttonText = button?.querySelector('span');
+
+  const count = state.participantCount ??
+    state.meeting?.participants?.length;
+
+  if (description) {
+    description.textContent = count
+      ? `${count} ${count === 1 ? 'person is' : 'people are'} in this meeting${state.hostUsername ? ` · Started by ${state.hostUsername}` : ''}`
+      : `Started by ${state.hostUsername || 'a server member'}`;
+  }
+
+  if (buttonText) {
+    buttonText.textContent =
+      currentMeeting?.serverId === currentServer
+        ? 'Open meeting'
+        : 'Join meeting';
+  }
+}
+
 socket.on('connect', () => refreshMeetingStatus());
 
 socket.on('meeting:server-state', state => {
@@ -1206,7 +1302,10 @@ socket.on('meeting:server-state', state => {
     ...state
   });
 
-  if (state.serverId === currentServer) updateMeetingButton(state);
+  if (state.serverId === currentServer) {
+    updateMeetingButton(state);
+    renderServerMeetingCard(state);
+  }
 });
 
 socket.on('meeting:joined', handleMeetingJoined);

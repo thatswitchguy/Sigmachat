@@ -2249,11 +2249,13 @@ function getPublicMeetingState(meeting) {
 
 function publishServerMeetingState(serverId) {
   const meeting = activeMeetings.get(serverId);
+
   io.to(serverPresenceRoom(serverId)).emit('meeting:server-state', {
     serverId,
     active: Boolean(meeting),
     meetingId: meeting?.meetingId || null,
-    hostUsername: meeting?.hostUsername || null
+    hostUsername: meeting?.hostUsername || null,
+    participantCount: meeting?.participants.size || 0
   });
 }
 
